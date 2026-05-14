@@ -1,0 +1,689 @@
+// ====== Supabase Client ======
+const supa = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+// ====== State ======
+const state = {
+  baby: null,
+  meals: [], // all loaded meals (around the visible range)
+  allKnownIngredients: new Set(), // for "new ingredient" detection
+  currentDate: startOfDay(new Date()),
+  viewMode: 'week', // 'week' | 'day'
+  editMode: false,
+};
+
+// ====== Date utilities ======
+function startOfDay(d) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function formatDateISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function parseDateISO(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function formatMD(d) { return `${d.getMonth()+1}/${d.getDate()}`; }
+function daysSince(birth, d) {
+  const a = startOfDay(birth).getTime();
+  const b = startOfDay(d).getTime();
+  return Math.floor((b - a) / 86400000);
+}
+function startOfWeek(d) {
+  // 주 시작을 currentDate 기준으로 두지 말고, 도영이 이유식 시작일(아기 생일+이유식시작)부터의 7일 블록 기준으로 자를까 했지만,
+  // 사용자가 자유롭게 주를 이동할 수 있도록 그냥 7일 윈도우(currentDate가 첫 칸)로 처리.
+  // 더 자연스럽게: 월요일 시작 주로 정렬
+  const x = startOfDay(d);
+  const day = x.getDay(); // 0=Sun..6=Sat
+  const offset = (day === 0 ? -6 : 1 - day); // Monday as start
+  return addDays(x, offset);
+}
+
+// ====== Data layer ======
+async function loadBaby() {
+  const { data, error } = await supa
+    .from('babyfood_babies')
+    .select('*')
+    .order('created_at', { ascending: true })
+    .limit(1);
+  if (error) { console.error(error); alert('아기 정보 로딩 실패: ' + error.message); return; }
+  state.baby = data && data[0] || null;
+}
+
+async function saveBaby(name, birth_date) {
+  if (state.baby) {
+    const { data, error } = await supa
+      .from('babyfood_babies')
+      .update({ name, birth_date })
+      .eq('id', state.baby.id)
+      .select().single();
+    if (error) throw error;
+    state.baby = data;
+  } else {
+    const { data, error } = await supa
+      .from('babyfood_babies')
+      .insert({ name, birth_date })
+      .select().single();
+    if (error) throw error;
+    state.baby = data;
+  }
+}
+
+async function loadMealsRange(startISO, endISO) {
+  const { data, error } = await supa
+    .from('babyfood_meals')
+    .select('*')
+    .eq('baby_id', state.baby.id)
+    .gte('date', startISO)
+    .lte('date', endISO)
+    .order('date', { ascending: true })
+    .order('meal_number', { ascending: true });
+  if (error) { console.error(error); alert('이유식 데이터 로딩 실패: ' + error.message); return; }
+  state.meals = data || [];
+}
+
+async function loadAllIngredientsUntil(endISO) {
+  // 새로 도입된 재료를 표시하기 위해, endISO 이전(포함)의 모든 meals를 훑어
+  // 재료 이름 set을 만든다. 단, 이번 주 안에서 처음 등장하는 재료를 "new"로 표시할 것이므로,
+  // 이번 주 시작일 이전까지의 재료들을 known으로 모은다.
+  const { data, error } = await supa
+    .from('babyfood_meals')
+    .select('date, base, toppings')
+    .eq('baby_id', state.baby.id)
+    .lt('date', endISO)
+    .order('date', { ascending: true });
+  if (error) { console.error(error); return; }
+  const known = new Set();
+  (data || []).forEach(m => {
+    (m.base || []).forEach(x => known.add(x.name));
+    (m.toppings || []).forEach(x => known.add(x.name));
+  });
+  state.allKnownIngredients = known;
+}
+
+async function upsertMeal(meal) {
+  const payload = {
+    baby_id: state.baby.id,
+    date: meal.date,
+    meal_number: meal.meal_number,
+    base: meal.base || [],
+    toppings: meal.toppings || [],
+    actual_eaten: meal.actual_eaten ?? null,
+    memo: meal.memo || '',
+    updated_at: new Date().toISOString(),
+  };
+  if (meal.id) {
+    const { data, error } = await supa
+      .from('babyfood_meals')
+      .update(payload).eq('id', meal.id)
+      .select().single();
+    if (error) throw error;
+    return data;
+  } else {
+    const { data, error } = await supa
+      .from('babyfood_meals')
+      .insert(payload)
+      .select().single();
+    if (error) throw error;
+    return data;
+  }
+}
+
+async function deleteMeal(id) {
+  const { error } = await supa.from('babyfood_meals').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ====== Helpers ======
+function mealTotalPlanned(meal) {
+  const base = (meal.base || []).reduce((s, x) => s + (Number(x.planned) || 0), 0);
+  const top = (meal.toppings || []).reduce((s, x) => s + (Number(x.planned) || 0), 0);
+  return base + top;
+}
+function dayMealsFor(dateISO) {
+  return state.meals.filter(m => m.date === dateISO);
+}
+function dayTotalPlanned(dateISO) {
+  return dayMealsFor(dateISO).reduce((s, m) => s + mealTotalPlanned(m), 0);
+}
+function dayTotalEaten(dateISO) {
+  return dayMealsFor(dateISO).reduce((s, m) => s + (Number(m.actual_eaten) || 0), 0);
+}
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function pct(actual, planned) {
+  if (!planned) return '';
+  return Math.round((actual / planned) * 100) + '%';
+}
+
+// ====== Render ======
+function render() {
+  const app = document.getElementById('app');
+  if (!state.baby) {
+    app.innerHTML = renderSetup();
+    bindSetup();
+    return;
+  }
+  app.innerHTML = `
+    ${renderHeader()}
+    ${renderTabs()}
+    ${state.viewMode === 'week' ? renderWeekView() : renderDayView()}
+  `;
+  bindGlobal();
+  if (state.viewMode === 'week') bindWeekView();
+  else bindDayView();
+}
+
+function renderSetup() {
+  const isEdit = !!state.baby;
+  const today = formatDateISO(new Date());
+  return `
+    <div class="setup">
+      <h2>${isEdit ? '아기 정보 수정' : '도영이 이유식 시작하기'}</h2>
+      <p class="desc">아기 정보를 입력하면 D+일수가 자동으로 계산돼요.</p>
+      <div class="form-group">
+        <label>아기 이름</label>
+        <input type="text" id="setup-name" value="${escapeHtml(state.baby?.name || '도영')}" />
+      </div>
+      <div class="form-group">
+        <label>생년월일</label>
+        <input type="date" id="setup-birth" value="${state.baby?.birth_date || ''}" max="${today}" />
+      </div>
+      <button id="setup-save">저장</button>
+      ${isEdit ? `<button class="btn ghost" id="setup-cancel" style="margin-top:8px;width:100%;">취소</button>` : ''}
+    </div>
+  `;
+}
+
+function bindSetup() {
+  document.getElementById('setup-save').onclick = async () => {
+    const name = document.getElementById('setup-name').value.trim();
+    const birth = document.getElementById('setup-birth').value;
+    if (!name || !birth) { alert('이름과 생년월일을 모두 입력해주세요.'); return; }
+    try {
+      await saveBaby(name, birth);
+      await refresh();
+    } catch (e) {
+      alert('저장 실패: ' + e.message);
+    }
+  };
+  const cancel = document.getElementById('setup-cancel');
+  if (cancel) cancel.onclick = () => render();
+}
+
+function renderHeader() {
+  const today = new Date();
+  const dPlus = daysSince(parseDateISO(state.baby.birth_date), today);
+  return `
+    <div class="app-header">
+      <div class="app-title">
+        ${escapeHtml(state.baby.name)}이 이유식
+        <span class="sub">오늘 D+${dPlus} · ${formatMD(today)}</span>
+      </div>
+      <button class="icon-btn" id="btn-settings" title="설정">⚙️</button>
+    </div>
+  `;
+}
+
+function renderTabs() {
+  return `
+    <div class="tabs">
+      <button class="tab ${state.viewMode==='week'?'active':''}" data-view="week">주간</button>
+      <button class="tab ${state.viewMode==='day'?'active':''}" data-view="day">하루</button>
+    </div>
+  `;
+}
+
+function bindGlobal() {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => { state.viewMode = t.dataset.view; refresh(); };
+  });
+  document.getElementById('btn-settings').onclick = () => {
+    // 설정 화면 = setup 재사용
+    document.getElementById('app').innerHTML = renderSetup();
+    bindSetup();
+  };
+}
+
+// ---------- Week View ----------
+function renderWeekView() {
+  const weekStart = startOfWeek(state.currentDate);
+  const days = Array.from({length: 7}, (_,i) => addDays(weekStart, i));
+  const dayISOs = days.map(formatDateISO);
+  const birth = parseDateISO(state.baby.birth_date);
+
+  // 끼니 번호 수집 (실제로 데이터에 존재하는 meal_numbers)
+  const mealNumbersSet = new Set();
+  days.forEach(d => dayMealsFor(formatDateISO(d)).forEach(m => mealNumbersSet.add(m.meal_number)));
+  if (mealNumbersSet.size === 0) mealNumbersSet.add(1); // 기본 1끼는 노출
+  const mealNumbers = [...mealNumbersSet].sort((a,b)=>a-b);
+
+  // header
+  let html = `
+    <div class="nav-bar">
+      <button class="nav-btn" id="week-prev">‹ 이전 주</button>
+      <div>
+        <span class="nav-label">${formatMD(days[0])} ~ ${formatMD(days[6])}</span>
+        <span class="nav-sub">D+${daysSince(birth, days[0])} ~ D+${daysSince(birth, days[6])}</span>
+      </div>
+      <div>
+        <button class="nav-btn today" id="week-today">오늘</button>
+        <button class="nav-btn" id="week-next">다음 주 ›</button>
+      </div>
+    </div>
+    <div class="week-wrap">
+      <table class="week-table">
+        <thead>
+          <tr>
+            <th class="row-label"></th>
+            ${days.map(d => `
+              <th>
+                <div>${formatMD(d)}</div>
+                <div class="day-sub">D+${daysSince(birth, d)}</div>
+              </th>
+            `).join('')}
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  // 끼니별 행 (재료 + 합계)
+  mealNumbers.forEach(mn => {
+    // 재료 행
+    html += `<tr class="meal-row">
+      <td class="row-label" rowspan="2">${mn}끼</td>
+      ${dayISOs.map(iso => {
+        const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
+        return `<td class="cell-ingredients">${renderIngredientsCell(meal)}</td>`;
+      }).join('')}
+    </tr>`;
+    // 합계 행
+    html += `<tr class="meal-row">
+      ${dayISOs.map(iso => {
+        const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
+        return `<td class="cell-total">${renderTotalCell(meal, iso, mn)}</td>`;
+      }).join('')}
+    </tr>`;
+  });
+
+  // 일별 합계 행
+  html += `<tr class="day-total-row">
+    <td class="row-label">일 총량</td>
+    ${dayISOs.map(iso => {
+      const planned = dayTotalPlanned(iso);
+      const eaten = dayTotalEaten(iso);
+      const has = dayMealsFor(iso).some(m => m.actual_eaten != null);
+      return `<td class="cell-total">
+        <div class="planned">${planned ? planned + 'g' : '-'}</div>
+        <div class="actual ${has?'':'empty'}">${has ? eaten + 'g' : '먹은량 -'}</div>
+        ${has && planned ? `<div class="pct">${pct(eaten, planned)}</div>` : ''}
+      </td>`;
+    }).join('')}
+  </tr>`;
+
+  html += `</tbody></table></div>`;
+
+  // 주간 총합
+  const weekPlanned = dayISOs.reduce((s, iso) => s + dayTotalPlanned(iso), 0);
+  const weekEaten = dayISOs.reduce((s, iso) => s + dayTotalEaten(iso), 0);
+  html += `
+    <div class="week-total-foot">
+      <div class="label">주간 총량</div>
+      <div>
+        <span class="value">먹은량 ${weekEaten}g / 계획 ${weekPlanned}g</span>
+        ${weekPlanned ? `<span class="pct">(${pct(weekEaten, weekPlanned)})</span>` : ''}
+      </div>
+    </div>
+  `;
+  return html;
+}
+
+function renderIngredientsCell(meal) {
+  if (!meal) return `<div class="empty">-</div>`;
+  const baseLines = (meal.base || []).map(x => {
+    const isNew = !state.allKnownIngredients.has(x.name);
+    return `<div class="line ${isNew?'new':''}"><span class="name">${escapeHtml(x.name)}</span><span class="amt">${x.planned}g</span></div>`;
+  }).join('');
+  const topLines = (meal.toppings || []).map(x => {
+    const isNew = !state.allKnownIngredients.has(x.name);
+    return `<div class="line ${isNew?'new':''}"><span class="name">${escapeHtml(x.name)}</span><span class="amt">${x.planned}g</span></div>`;
+  }).join('');
+  const hasBase = (meal.base || []).length > 0;
+  const hasTop = (meal.toppings || []).length > 0;
+  if (!hasBase && !hasTop) return `<div class="empty">계획 없음</div>`;
+  return `
+    ${hasBase ? `<div class="section-label">베이스</div>${baseLines}` : ''}
+    ${hasBase && hasTop ? `<hr/>` : ''}
+    ${hasTop ? `<div class="section-label">토핑</div>${topLines}` : ''}
+  `;
+}
+
+function renderTotalCell(meal, iso, mealNumber) {
+  const planned = meal ? mealTotalPlanned(meal) : 0;
+  const eaten = meal?.actual_eaten;
+  return `
+    <div class="planned">${planned ? planned + 'g' : '-'}</div>
+    <input type="number" class="cell-eat-input"
+      data-date="${iso}" data-meal="${mealNumber}"
+      placeholder="먹은 양"
+      value="${eaten ?? ''}" />
+    ${eaten != null && planned ? `<div class="pct">${pct(eaten, planned)}</div>` : ''}
+  `;
+}
+
+function bindWeekView() {
+  document.getElementById('week-prev').onclick = () => { state.currentDate = addDays(state.currentDate, -7); refresh(); };
+  document.getElementById('week-next').onclick = () => { state.currentDate = addDays(state.currentDate, 7); refresh(); };
+  document.getElementById('week-today').onclick = () => { state.currentDate = startOfDay(new Date()); refresh(); };
+
+  document.querySelectorAll('.cell-eat-input').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const date = e.target.dataset.date;
+      const mealNumber = Number(e.target.dataset.meal);
+      const v = e.target.value === '' ? null : Number(e.target.value);
+      let meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
+      try {
+        if (!meal) {
+          // 계획이 없는 칸에 먹은 양을 입력한 경우 → 빈 끼니로 만들고 저장
+          const created = await upsertMeal({
+            date, meal_number: mealNumber,
+            base: [], toppings: [], actual_eaten: v, memo: ''
+          });
+          state.meals.push(created);
+        } else {
+          const updated = await upsertMeal({ ...meal, actual_eaten: v });
+          Object.assign(meal, updated);
+        }
+        refresh();
+      } catch (err) { alert('저장 실패: ' + err.message); }
+    });
+  });
+}
+
+// ---------- Day View ----------
+function renderDayView() {
+  const dateISO = formatDateISO(state.currentDate);
+  const birth = parseDateISO(state.baby.birth_date);
+  const dPlus = daysSince(birth, state.currentDate);
+  const meals = dayMealsFor(dateISO).sort((a,b)=>a.meal_number-b.meal_number);
+
+  let html = `
+    <div class="nav-bar">
+      <button class="nav-btn" id="day-prev">‹</button>
+      <div>
+        <span class="nav-label">${formatMD(state.currentDate)}</span>
+        <span class="nav-sub">D+${dPlus}</span>
+      </div>
+      <div>
+        <button class="nav-btn today" id="day-today">오늘</button>
+        <button class="nav-btn" id="day-next">›</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="btn ${state.editMode?'primary':''}" id="toggle-edit">${state.editMode?'편집 완료':'재료 편집'}</button>
+      <div class="spacer"></div>
+    </div>
+    <div class="day-view">
+  `;
+
+  if (meals.length === 0) {
+    html += `<div class="empty-state">
+      <div class="icon">🍼</div>
+      <div>이날의 끼니가 아직 없어요</div>
+    </div>`;
+  } else {
+    meals.forEach(meal => { html += renderMealCard(meal); });
+  }
+
+  html += `
+      <button class="add-meal-btn" id="add-meal">+ 끼니 추가</button>
+    </div>
+  `;
+
+  // 일 총량
+  const planned = dayTotalPlanned(dateISO);
+  const eaten = dayTotalEaten(dateISO);
+  const has = meals.some(m => m.actual_eaten != null);
+  html += `
+    <div class="day-total-card" style="margin-top:12px;">
+      <div>일 총량</div>
+      <div>
+        <span class="value">${has ? `먹은량 ${eaten}g` : '먹은량 -'} / 계획 ${planned}g</span>
+        ${has && planned ? `<span class="pct">(${pct(eaten, planned)})</span>` : ''}
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
+function renderMealCard(meal) {
+  const planned = mealTotalPlanned(meal);
+  return `
+    <div class="meal-card" data-meal-id="${meal.id}">
+      <div class="meal-card-head">
+        <div>
+          <div class="title">${meal.meal_number}끼</div>
+        </div>
+        <div>
+          ${state.editMode ? `<button class="btn danger btn-del-meal" data-id="${meal.id}">끼니 삭제</button>` : ''}
+        </div>
+      </div>
+
+      <div class="ingredient-section">
+        <div class="label">베이스</div>
+        <div class="ingredient-list">
+          ${renderIngredientList(meal, 'base')}
+        </div>
+        ${state.editMode ? renderAddIngredient(meal.id, 'base') : ''}
+      </div>
+
+      <div class="ingredient-section">
+        <div class="label">토핑</div>
+        <div class="ingredient-list">
+          ${renderIngredientList(meal, 'toppings')}
+        </div>
+        ${state.editMode ? renderAddIngredient(meal.id, 'toppings') : ''}
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-item">
+          <div class="lbl">계획 총량</div>
+          <div class="val">${planned}<span class="unit">g</span></div>
+        </div>
+        <div class="summary-item">
+          <div class="lbl">먹은 양 (g)</div>
+          <input type="number" class="eaten-input" data-meal-id="${meal.id}"
+            placeholder="-" value="${meal.actual_eaten ?? ''}" />
+        </div>
+        <div class="summary-item">
+          <div class="lbl">달성률</div>
+          <div class="val">${meal.actual_eaten!=null && planned ? `<span>${pct(meal.actual_eaten, planned)}</span>` : '<span style="color:var(--text-mute);font-size:14px;">-</span>'}</div>
+        </div>
+      </div>
+
+      <textarea class="memo-input" data-meal-id="${meal.id}" placeholder="메모">${escapeHtml(meal.memo || '')}</textarea>
+    </div>
+  `;
+}
+
+function renderIngredientList(meal, key) {
+  const arr = meal[key] || [];
+  if (arr.length === 0) return `<div style="color:var(--text-mute);font-size:13px;padding:2px 0;">${state.editMode?'아래에서 추가하세요':'-'}</div>`;
+  return arr.map((x, idx) => {
+    const isNew = !state.allKnownIngredients.has(x.name);
+    return `
+      <div class="ingredient-row ${isNew?'new':''}">
+        <span class="name">${escapeHtml(x.name)}</span>
+        ${state.editMode
+          ? `<input type="number" class="amt-input" data-meal-id="${meal.id}" data-key="${key}" data-idx="${idx}" value="${x.planned}" /><span class="unit">g</span>
+             <button class="del-btn" data-meal-id="${meal.id}" data-key="${key}" data-idx="${idx}">✕</button>`
+          : `<span class="amt-static">${x.planned}g</span>`}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderAddIngredient(mealId, key) {
+  return `
+    <div class="add-ingredient-row" data-meal-id="${mealId}" data-key="${key}">
+      <input type="text" placeholder="${key==='base'?'재료 (예: 쌀)':'재료 (예: 소고기)'}" class="add-name" />
+      <input type="number" placeholder="g" class="add-amt" />
+      <button class="add-btn">+</button>
+    </div>
+  `;
+}
+
+function bindDayView() {
+  document.getElementById('day-prev').onclick = () => { state.currentDate = addDays(state.currentDate, -1); refresh(); };
+  document.getElementById('day-next').onclick = () => { state.currentDate = addDays(state.currentDate, 1); refresh(); };
+  document.getElementById('day-today').onclick = () => { state.currentDate = startOfDay(new Date()); refresh(); };
+  document.getElementById('toggle-edit').onclick = () => { state.editMode = !state.editMode; render(); /* don't reload data */ };
+
+  // Add meal
+  document.getElementById('add-meal').onclick = async () => {
+    const dateISO = formatDateISO(state.currentDate);
+    const existing = dayMealsFor(dateISO);
+    const nextMealNumber = (existing.reduce((m,x)=>Math.max(m,x.meal_number),0)) + 1;
+    try {
+      const created = await upsertMeal({
+        date: dateISO, meal_number: nextMealNumber,
+        base: [], toppings: [], actual_eaten: null, memo: ''
+      });
+      state.meals.push(created);
+      state.editMode = true;
+      render();
+    } catch (e) { alert('끼니 추가 실패: ' + e.message); }
+  };
+
+  // 끼니 삭제
+  document.querySelectorAll('.btn-del-meal').forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm('이 끼니를 삭제할까요?')) return;
+      const id = btn.dataset.id;
+      try {
+        await deleteMeal(id);
+        state.meals = state.meals.filter(m => m.id !== id);
+        render();
+      } catch (e) { alert('삭제 실패: ' + e.message); }
+    };
+  });
+
+  // 먹은 양 입력
+  document.querySelectorAll('.eaten-input').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.dataset.mealId;
+      const meal = state.meals.find(m => m.id === id);
+      if (!meal) return;
+      const v = e.target.value === '' ? null : Number(e.target.value);
+      try {
+        const updated = await upsertMeal({ ...meal, actual_eaten: v });
+        Object.assign(meal, updated);
+        render();
+      } catch (err) { alert('저장 실패: ' + err.message); }
+    });
+  });
+
+  // 메모
+  document.querySelectorAll('.memo-input').forEach(ta => {
+    ta.addEventListener('blur', async (e) => {
+      const id = e.target.dataset.mealId;
+      const meal = state.meals.find(m => m.id === id);
+      if (!meal) return;
+      const v = e.target.value;
+      if (v === (meal.memo || '')) return;
+      try {
+        const updated = await upsertMeal({ ...meal, memo: v });
+        Object.assign(meal, updated);
+      } catch (err) { alert('저장 실패: ' + err.message); }
+    });
+  });
+
+  // 재료 양 수정
+  document.querySelectorAll('.amt-input').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const id = e.target.dataset.mealId;
+      const key = e.target.dataset.key;
+      const idx = Number(e.target.dataset.idx);
+      const meal = state.meals.find(m => m.id === id);
+      if (!meal) return;
+      const arr = [...(meal[key] || [])];
+      arr[idx] = { ...arr[idx], planned: Number(e.target.value) || 0 };
+      try {
+        const updated = await upsertMeal({ ...meal, [key]: arr });
+        Object.assign(meal, updated);
+        render();
+      } catch (err) { alert('저장 실패: ' + err.message); }
+    });
+  });
+
+  // 재료 삭제
+  document.querySelectorAll('.del-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.mealId;
+      const key = btn.dataset.key;
+      const idx = Number(btn.dataset.idx);
+      const meal = state.meals.find(m => m.id === id);
+      if (!meal) return;
+      const arr = [...(meal[key] || [])];
+      arr.splice(idx, 1);
+      try {
+        const updated = await upsertMeal({ ...meal, [key]: arr });
+        Object.assign(meal, updated);
+        render();
+      } catch (err) { alert('삭제 실패: ' + err.message); }
+    };
+  });
+
+  // 재료 추가
+  document.querySelectorAll('.add-ingredient-row').forEach(row => {
+    const btn = row.querySelector('.add-btn');
+    const nameInput = row.querySelector('.add-name');
+    const amtInput = row.querySelector('.add-amt');
+    const add = async () => {
+      const id = row.dataset.mealId;
+      const key = row.dataset.key;
+      const name = nameInput.value.trim();
+      const amt = Number(amtInput.value);
+      if (!name) { nameInput.focus(); return; }
+      if (!amt || amt <= 0) { amtInput.focus(); return; }
+      const meal = state.meals.find(m => m.id === id);
+      if (!meal) return;
+      const arr = [...(meal[key] || []), { name, planned: amt }];
+      try {
+        const updated = await upsertMeal({ ...meal, [key]: arr });
+        Object.assign(meal, updated);
+        render();
+      } catch (err) { alert('추가 실패: ' + err.message); }
+    };
+    btn.onclick = add;
+    [nameInput, amtInput].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') add(); }));
+  });
+}
+
+// ====== Refresh (load data + render) ======
+async function refresh() {
+  // load 2-week window around currentDate for "all known ingredients" base + visible meals
+  const weekStart = state.viewMode === 'week' ? startOfWeek(state.currentDate) : addDays(state.currentDate, -3);
+  const weekEnd = state.viewMode === 'week' ? addDays(weekStart, 6) : addDays(state.currentDate, 3);
+  const startISO = formatDateISO(weekStart);
+  const endISO = formatDateISO(weekEnd);
+  await loadMealsRange(startISO, endISO);
+  await loadAllIngredientsUntil(startISO); // 보이는 범위 이전까지의 재료들이 known
+  render();
+}
+
+// ====== Init ======
+(async function init() {
+  try {
+    await loadBaby();
+    if (state.baby) await refresh();
+    else render();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('app').innerHTML = `<div class="empty-state">
+      <div class="icon">⚠️</div>
+      <div>초기화 실패: ${escapeHtml(e.message)}</div>
+      <div style="margin-top:8px;font-size:12px;">Supabase에서 SQL을 먼저 실행했는지 확인해주세요.</div>
+    </div>`;
+  }
+})();
