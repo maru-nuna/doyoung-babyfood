@@ -7,9 +7,23 @@ const state = {
   meals: [], // all loaded meals (around the visible range)
   allKnownIngredients: new Set(), // for "new ingredient" detection
   currentDate: startOfDay(new Date()),
-  viewMode: 'week', // 'week' | 'day'
+  viewMode: 'week', // 'month' | 'week' | 'day'
   editMode: false,
 };
+
+function getStartDate() {
+  return state.baby?.start_date ? parseDateISO(state.baby.start_date) : null;
+}
+function isBeforeStart(d) {
+  const sd = getStartDate();
+  return sd ? startOfDay(d) < startOfDay(sd) : false;
+}
+function isFuture(d) {
+  return startOfDay(d) > startOfDay(new Date());
+}
+function startOfMonth(d) { const x = startOfDay(d); x.setDate(1); return x; }
+function endOfMonth(d) { const x = startOfDay(d); x.setMonth(x.getMonth()+1, 0); return x; }
+function formatYM(d) { return `${d.getFullYear()}년 ${d.getMonth()+1}월`; }
 
 // ====== Date utilities ======
 function startOfDay(d) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
@@ -48,11 +62,12 @@ async function loadBaby() {
   state.baby = data && data[0] || null;
 }
 
-async function saveBaby(name, birth_date) {
+async function saveBaby(name, birth_date, start_date) {
+  const payload = { name, birth_date, start_date: start_date || null };
   if (state.baby) {
     const { data, error } = await supa
       .from('babyfood_babies')
-      .update({ name, birth_date })
+      .update(payload)
       .eq('id', state.baby.id)
       .select().single();
     if (error) throw error;
@@ -60,7 +75,7 @@ async function saveBaby(name, birth_date) {
   } else {
     const { data, error } = await supa
       .from('babyfood_babies')
-      .insert({ name, birth_date })
+      .insert(payload)
       .select().single();
     if (error) throw error;
     state.baby = data;
@@ -163,13 +178,18 @@ function render() {
     bindSetup();
     return;
   }
+  let body;
+  if (state.viewMode === 'month') body = renderMonthView();
+  else if (state.viewMode === 'week') body = renderWeekView();
+  else body = renderDayView();
   app.innerHTML = `
     ${renderHeader()}
     ${renderTabs()}
-    ${state.viewMode === 'week' ? renderWeekView() : renderDayView()}
+    ${body}
   `;
   bindGlobal();
-  if (state.viewMode === 'week') bindWeekView();
+  if (state.viewMode === 'month') bindMonthView();
+  else if (state.viewMode === 'week') bindWeekView();
   else bindDayView();
 }
 
@@ -188,6 +208,11 @@ function renderSetup() {
         <label>생년월일</label>
         <input type="date" id="setup-birth" value="${state.baby?.birth_date || ''}" max="${today}" />
       </div>
+      <div class="form-group">
+        <label>이유식 시작일</label>
+        <input type="date" id="setup-start" value="${state.baby?.start_date || ''}" />
+        <p class="desc" style="margin:4px 0 0;font-size:11px;">이 날짜 이전 주는 비활성화돼요</p>
+      </div>
       <button id="setup-save">저장</button>
       ${isEdit ? `<button class="btn ghost" id="setup-cancel" style="margin-top:8px;width:100%;">취소</button>` : ''}
     </div>
@@ -198,9 +223,15 @@ function bindSetup() {
   document.getElementById('setup-save').onclick = async () => {
     const name = document.getElementById('setup-name').value.trim();
     const birth = document.getElementById('setup-birth').value;
+    const start = document.getElementById('setup-start').value || null;
     if (!name || !birth) { alert('이름과 생년월일을 모두 입력해주세요.'); return; }
     try {
-      await saveBaby(name, birth);
+      await saveBaby(name, birth, start);
+      // 시작일이 있고 현재 날짜가 이전이면 시작일이 포함된 주로 이동
+      if (start) {
+        const sd = parseDateISO(start);
+        if (state.currentDate < sd) state.currentDate = sd;
+      }
       await refresh();
     } catch (e) {
       alert('저장 실패: ' + e.message);
@@ -227,6 +258,7 @@ function renderHeader() {
 function renderTabs() {
   return `
     <div class="tabs">
+      <button class="tab ${state.viewMode==='month'?'active':''}" data-view="month">월간</button>
       <button class="tab ${state.viewMode==='week'?'active':''}" data-view="week">주간</button>
       <button class="tab ${state.viewMode==='day'?'active':''}" data-view="day">하루</button>
     </div>
@@ -244,23 +276,37 @@ function bindGlobal() {
   };
 }
 
-// ---------- Week View ----------
+// ---------- Week View (spreadsheet style) ----------
+function renderIngredientLines(meal, key) {
+  if (!meal) return `<div class="empty">-</div>`;
+  const arr = meal[key] || [];
+  if (arr.length === 0) return `<div class="empty">-</div>`;
+  return arr.map(x => {
+    const isNew = !state.allKnownIngredients.has(x.name);
+    return `<div class="line ${isNew?'new':''}"><span class="name">${escapeHtml(x.name)}</span><span class="amt">${x.planned}g</span></div>`;
+  }).join('');
+}
+
 function renderWeekView() {
   const weekStart = startOfWeek(state.currentDate);
   const days = Array.from({length: 7}, (_,i) => addDays(weekStart, i));
   const dayISOs = days.map(formatDateISO);
   const birth = parseDateISO(state.baby.birth_date);
+  const sd = getStartDate();
+  const prevDisabled = sd ? weekStart <= startOfWeek(sd) : false;
 
-  // 끼니 번호 수집 (실제로 데이터에 존재하는 meal_numbers)
+  // 끼니 번호 수집
   const mealNumbersSet = new Set();
   days.forEach(d => dayMealsFor(formatDateISO(d)).forEach(m => mealNumbersSet.add(m.meal_number)));
-  if (mealNumbersSet.size === 0) mealNumbersSet.add(1); // 기본 1끼는 노출
+  if (mealNumbersSet.size === 0) mealNumbersSet.add(1);
   const mealNumbers = [...mealNumbersSet].sort((a,b)=>a-b);
+  const nextMealNumber = Math.max(...mealNumbers, 0) + 1;
 
-  // header
+  const validDaysInWeek = days.filter(d => !isBeforeStart(d)).length;
+
   let html = `
     <div class="nav-bar">
-      <button class="nav-btn" id="week-prev">‹ 이전 주</button>
+      <button class="nav-btn" id="week-prev" ${prevDisabled?'disabled':''}>‹ 이전 주</button>
       <div>
         <span class="nav-label">${formatMD(days[0])} ~ ${formatMD(days[6])}</span>
         <span class="nav-sub">D+${daysSince(birth, days[0])} ~ D+${daysSince(birth, days[6])}</span>
@@ -270,51 +316,100 @@ function renderWeekView() {
         <button class="nav-btn" id="week-next">다음 주 ›</button>
       </div>
     </div>
+    ${validDaysInWeek > 0 ? `
+    <div class="toolbar">
+      <button class="btn primary" id="week-add-meal">+ ${nextMealNumber}끼 추가 (이번 주 ${validDaysInWeek}일)</button>
+    </div>` : ''}
     <div class="week-wrap">
       <table class="week-table">
         <thead>
           <tr>
-            <th class="row-label"></th>
-            ${days.map(d => `
-              <th>
+            <th class="row-label corner" colspan="2">끼니 / 항목</th>
+            ${days.map(d => {
+              const cls = [];
+              if (isBeforeStart(d)) cls.push('col-past');
+              else if (isFuture(d)) cls.push('col-future');
+              return `<th class="${cls.join(' ')}">
                 <div>${formatMD(d)}</div>
                 <div class="day-sub">D+${daysSince(birth, d)}</div>
-              </th>
-            `).join('')}
+              </th>`;
+            }).join('')}
           </tr>
         </thead>
         <tbody>
   `;
 
-  // 끼니별 행 (재료 + 합계)
   mealNumbers.forEach(mn => {
-    // 재료 행
-    html += `<tr class="meal-row">
-      <td class="row-label" rowspan="2">${mn}끼</td>
-      ${dayISOs.map(iso => {
+    // 베이스
+    html += `<tr>
+      <td class="row-label meal-label" rowspan="4">${mn}끼</td>
+      <td class="row-label sub-label">베이스</td>
+      ${dayISOs.map((iso, i) => {
+        if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
-        return `<td class="cell-ingredients">${renderIngredientsCell(meal)}</td>`;
+        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        return `<td class="cell-ingredients${dim}">${renderIngredientLines(meal, 'base')}</td>`;
       }).join('')}
     </tr>`;
-    // 합계 행
-    html += `<tr class="meal-row">
-      ${dayISOs.map(iso => {
+    // 토핑
+    html += `<tr>
+      <td class="row-label sub-label">토핑</td>
+      ${dayISOs.map((iso, i) => {
+        if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
-        return `<td class="cell-total">${renderTotalCell(meal, iso, mn)}</td>`;
+        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        return `<td class="cell-ingredients${dim}">${renderIngredientLines(meal, 'toppings')}</td>`;
+      }).join('')}
+    </tr>`;
+    // 양
+    html += `<tr>
+      <td class="row-label sub-label">양</td>
+      ${dayISOs.map((iso, i) => {
+        if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
+        const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
+        const planned = meal ? mealTotalPlanned(meal) : 0;
+        const eaten = meal?.actual_eaten;
+        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        return `<td class="cell-total${dim}">
+          <div class="planned-line"><span class="lbl">총량</span><span class="v">${planned ? planned + 'g' : '-'}</span></div>
+          <div class="eaten-line">
+            <span class="lbl">먹은</span>
+            <input type="number" class="cell-eat-input" inputmode="numeric"
+              data-date="${iso}" data-meal="${mn}"
+              placeholder="-" value="${eaten ?? ''}" /><span class="unit-g">g</span>
+          </div>
+          ${eaten != null && planned ? `<div class="pct">${pct(eaten, planned)}</div>` : ''}
+        </td>`;
+      }).join('')}
+    </tr>`;
+    // 메모
+    html += `<tr>
+      <td class="row-label sub-label">메모</td>
+      ${dayISOs.map((iso, i) => {
+        if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
+        const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
+        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        return `<td class="cell-memo${dim}">
+          <input type="text" class="memo-cell-input"
+            data-date="${iso}" data-meal="${mn}"
+            placeholder="-" value="${escapeHtml(meal?.memo || '')}" />
+        </td>`;
       }).join('')}
     </tr>`;
   });
 
-  // 일별 합계 행
+  // 일 총량 행
   html += `<tr class="day-total-row">
-    <td class="row-label">일 총량</td>
-    ${dayISOs.map(iso => {
+    <td class="row-label" colspan="2">일 총량</td>
+    ${dayISOs.map((iso, i) => {
+      if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
       const planned = dayTotalPlanned(iso);
       const eaten = dayTotalEaten(iso);
       const has = dayMealsFor(iso).some(m => m.actual_eaten != null);
-      return `<td class="cell-total">
-        <div class="planned">${planned ? planned + 'g' : '-'}</div>
-        <div class="actual ${has?'':'empty'}">${has ? eaten + 'g' : '먹은량 -'}</div>
+      const dim = isFuture(days[i]) ? ' cell-dim' : '';
+      return `<td class="cell-total${dim}">
+        <div class="planned-line"><span class="lbl">계획</span><span class="v">${planned ? planned + 'g' : '-'}</span></div>
+        <div class="eaten-line"><span class="lbl">먹은</span><span class="v ${has?'':'empty'}">${has ? eaten + 'g' : '-'}</span></div>
         ${has && planned ? `<div class="pct">${pct(eaten, planned)}</div>` : ''}
       </td>`;
     }).join('')}
@@ -322,9 +417,10 @@ function renderWeekView() {
 
   html += `</tbody></table></div>`;
 
-  // 주간 총합
-  const weekPlanned = dayISOs.reduce((s, iso) => s + dayTotalPlanned(iso), 0);
-  const weekEaten = dayISOs.reduce((s, iso) => s + dayTotalEaten(iso), 0);
+  // 주간 합계
+  const validISOs = dayISOs.filter((_, i) => !isBeforeStart(days[i]));
+  const weekPlanned = validISOs.reduce((s, iso) => s + dayTotalPlanned(iso), 0);
+  const weekEaten = validISOs.reduce((s, iso) => s + dayTotalEaten(iso), 0);
   html += `
     <div class="week-total-foot">
       <div class="label">주간 총량</div>
@@ -337,43 +433,36 @@ function renderWeekView() {
   return html;
 }
 
-function renderIngredientsCell(meal) {
-  if (!meal) return `<div class="empty">-</div>`;
-  const baseLines = (meal.base || []).map(x => {
-    const isNew = !state.allKnownIngredients.has(x.name);
-    return `<div class="line ${isNew?'new':''}"><span class="name">${escapeHtml(x.name)}</span><span class="amt">${x.planned}g</span></div>`;
-  }).join('');
-  const topLines = (meal.toppings || []).map(x => {
-    const isNew = !state.allKnownIngredients.has(x.name);
-    return `<div class="line ${isNew?'new':''}"><span class="name">${escapeHtml(x.name)}</span><span class="amt">${x.planned}g</span></div>`;
-  }).join('');
-  const hasBase = (meal.base || []).length > 0;
-  const hasTop = (meal.toppings || []).length > 0;
-  if (!hasBase && !hasTop) return `<div class="empty">계획 없음</div>`;
-  return `
-    ${hasBase ? `<div class="section-label">베이스</div>${baseLines}` : ''}
-    ${hasBase && hasTop ? `<hr/>` : ''}
-    ${hasTop ? `<div class="section-label">토핑</div>${topLines}` : ''}
-  `;
-}
-
-function renderTotalCell(meal, iso, mealNumber) {
-  const planned = meal ? mealTotalPlanned(meal) : 0;
-  const eaten = meal?.actual_eaten;
-  return `
-    <div class="planned">${planned ? planned + 'g' : '-'}</div>
-    <input type="number" class="cell-eat-input"
-      data-date="${iso}" data-meal="${mealNumber}"
-      placeholder="먹은 양"
-      value="${eaten ?? ''}" />
-    ${eaten != null && planned ? `<div class="pct">${pct(eaten, planned)}</div>` : ''}
-  `;
-}
-
 function bindWeekView() {
-  document.getElementById('week-prev').onclick = () => { state.currentDate = addDays(state.currentDate, -7); refresh(); };
+  const prevBtn = document.getElementById('week-prev');
+  if (prevBtn && !prevBtn.disabled) prevBtn.onclick = () => { state.currentDate = addDays(state.currentDate, -7); refresh(); };
   document.getElementById('week-next').onclick = () => { state.currentDate = addDays(state.currentDate, 7); refresh(); };
   document.getElementById('week-today').onclick = () => { state.currentDate = startOfDay(new Date()); refresh(); };
+
+  const addBtn = document.getElementById('week-add-meal');
+  if (addBtn) addBtn.onclick = async () => {
+    const weekStart = startOfWeek(state.currentDate);
+    const days = Array.from({length: 7}, (_,i) => addDays(weekStart, i));
+    const validDays = days.filter(d => !isBeforeStart(d));
+    if (validDays.length === 0) { alert('이번 주는 시작일 이전입니다.'); return; }
+    const mealNumbersSet = new Set();
+    days.forEach(d => dayMealsFor(formatDateISO(d)).forEach(m => mealNumbersSet.add(m.meal_number)));
+    const next = Math.max(...mealNumbersSet, 0) + 1;
+    if (!confirm(`이번 주 ${validDays.length}일에 ${next}끼 슬롯을 추가할까요?\n(빈 끼니가 만들어집니다. 재료는 "하루" 탭에서 편집)`)) return;
+    try {
+      for (const d of validDays) {
+        const dateISO = formatDateISO(d);
+        const exists = dayMealsFor(dateISO).some(m => m.meal_number === next);
+        if (exists) continue;
+        const created = await upsertMeal({
+          date: dateISO, meal_number: next,
+          base: [], toppings: [], actual_eaten: null, memo: ''
+        });
+        state.meals.push(created);
+      }
+      refresh();
+    } catch (e) { alert('끼니 추가 실패: ' + e.message); }
+  };
 
   document.querySelectorAll('.cell-eat-input').forEach(input => {
     input.addEventListener('change', async (e) => {
@@ -383,10 +472,8 @@ function bindWeekView() {
       let meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
       try {
         if (!meal) {
-          // 계획이 없는 칸에 먹은 양을 입력한 경우 → 빈 끼니로 만들고 저장
           const created = await upsertMeal({
-            date, meal_number: mealNumber,
-            base: [], toppings: [], actual_eaten: v, memo: ''
+            date, meal_number: mealNumber, base: [], toppings: [], actual_eaten: v, memo: ''
           });
           state.meals.push(created);
         } else {
@@ -396,6 +483,137 @@ function bindWeekView() {
         refresh();
       } catch (err) { alert('저장 실패: ' + err.message); }
     });
+  });
+
+  document.querySelectorAll('.memo-cell-input').forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const date = e.target.dataset.date;
+      const mealNumber = Number(e.target.dataset.meal);
+      const v = e.target.value;
+      let meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
+      try {
+        if (!meal) {
+          if (!v) return;
+          const created = await upsertMeal({
+            date, meal_number: mealNumber, base: [], toppings: [], actual_eaten: null, memo: v
+          });
+          state.meals.push(created);
+        } else {
+          const updated = await upsertMeal({ ...meal, memo: v });
+          Object.assign(meal, updated);
+        }
+      } catch (err) { alert('저장 실패: ' + err.message); }
+    });
+  });
+}
+
+// ---------- Month View ----------
+function renderMonthView() {
+  const monthStart = startOfMonth(state.currentDate);
+  const monthEnd = endOfMonth(state.currentDate);
+  const gridStart = startOfWeek(monthStart);
+  const birth = parseDateISO(state.baby.birth_date);
+  const sd = getStartDate();
+  const prevDisabled = sd ? monthStart <= startOfMonth(sd) : false;
+
+  // 6주 그리드, 마지막 주가 다음 달이면 잘라냄
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(gridStart, i);
+    if (i >= 28 && d > monthEnd && d.getDay() === 1) break;
+    cells.push(d);
+  }
+
+  let html = `
+    <div class="nav-bar">
+      <button class="nav-btn" id="month-prev" ${prevDisabled?'disabled':''}>‹ 이전 달</button>
+      <div><span class="nav-label">${formatYM(monthStart)}</span></div>
+      <div>
+        <button class="nav-btn today" id="month-today">오늘</button>
+        <button class="nav-btn" id="month-next">다음 달 ›</button>
+      </div>
+    </div>
+    <div class="month-wrap">
+      <div class="month-grid-head">
+        <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div><div class="weekend">일</div>
+      </div>
+      <div class="month-grid">
+  `;
+
+  const todayISO = formatDateISO(new Date());
+  cells.forEach(d => {
+    const iso = formatDateISO(d);
+    const inMonth = d.getMonth() === monthStart.getMonth();
+    const before = isBeforeStart(d);
+    const fut = isFuture(d);
+    const today = iso === todayISO;
+    const planned = dayTotalPlanned(iso);
+    const eaten = dayTotalEaten(iso);
+    const has = dayMealsFor(iso).some(m => m.actual_eaten != null);
+    const ratio = planned ? Math.min(1.2, eaten / planned) : 0;
+    let bgStyle = '';
+    if (has) {
+      const alpha = Math.max(0.15, ratio * 0.6);
+      bgStyle = `background: rgba(74,144,226,${alpha});`;
+    }
+    const classes = ['month-cell'];
+    if (!inMonth) classes.push('out-month');
+    if (before) classes.push('past-start');
+    if (fut && !before) classes.push('future');
+    if (today) classes.push('today');
+    if (before) {
+      html += `<div class="${classes.join(' ')}"></div>`;
+      return;
+    }
+    html += `<div class="${classes.join(' ')}" style="${bgStyle}" data-date="${iso}">
+      <div class="date-num">${d.getDate()}</div>
+      <div class="d-plus">D+${daysSince(birth, d)}</div>
+      ${has ? `<div class="eaten-mini">${eaten}g</div>` : (planned ? `<div class="planned-mini">계획 ${planned}g</div>` : '<div class="empty-mini">-</div>')}
+      ${has && planned ? `<div class="pct-mini">${pct(eaten, planned)}</div>` : ''}
+    </div>`;
+  });
+
+  html += `</div></div>`;
+
+  // 월 합계
+  let monthPlanned = 0, monthEaten = 0;
+  for (let d = new Date(monthStart); d <= monthEnd; d = addDays(d, 1)) {
+    if (isBeforeStart(d)) continue;
+    const iso = formatDateISO(d);
+    monthPlanned += dayTotalPlanned(iso);
+    monthEaten += dayTotalEaten(iso);
+  }
+  html += `
+    <div class="week-total-foot">
+      <div class="label">${formatYM(monthStart)} 총량</div>
+      <div>
+        <span class="value">먹은량 ${monthEaten}g / 계획 ${monthPlanned}g</span>
+        ${monthPlanned ? `<span class="pct">(${pct(monthEaten, monthPlanned)})</span>` : ''}
+      </div>
+    </div>
+  `;
+  return html;
+}
+
+function bindMonthView() {
+  const prevBtn = document.getElementById('month-prev');
+  if (prevBtn && !prevBtn.disabled) prevBtn.onclick = () => {
+    state.currentDate = addDays(startOfMonth(state.currentDate), -1);
+    refresh();
+  };
+  document.getElementById('month-next').onclick = () => {
+    state.currentDate = addDays(endOfMonth(state.currentDate), 1);
+    refresh();
+  };
+  document.getElementById('month-today').onclick = () => {
+    state.currentDate = startOfDay(new Date()); refresh();
+  };
+  document.querySelectorAll('.month-cell[data-date]').forEach(cell => {
+    cell.onclick = () => {
+      state.currentDate = parseDateISO(cell.dataset.date);
+      state.viewMode = 'day';
+      refresh();
+    };
   });
 }
 
@@ -662,13 +880,24 @@ function bindDayView() {
 
 // ====== Refresh (load data + render) ======
 async function refresh() {
-  // load 2-week window around currentDate for "all known ingredients" base + visible meals
-  const weekStart = state.viewMode === 'week' ? startOfWeek(state.currentDate) : addDays(state.currentDate, -3);
-  const weekEnd = state.viewMode === 'week' ? addDays(weekStart, 6) : addDays(state.currentDate, 3);
-  const startISO = formatDateISO(weekStart);
-  const endISO = formatDateISO(weekEnd);
+  let rangeStart, rangeEnd;
+  if (state.viewMode === 'month') {
+    const monthStart = startOfMonth(state.currentDate);
+    const monthEnd = endOfMonth(state.currentDate);
+    rangeStart = startOfWeek(monthStart);
+    rangeEnd = addDays(rangeStart, 41);
+    if (rangeEnd < monthEnd) rangeEnd = addDays(monthEnd, 7);
+  } else if (state.viewMode === 'week') {
+    rangeStart = startOfWeek(state.currentDate);
+    rangeEnd = addDays(rangeStart, 6);
+  } else {
+    rangeStart = addDays(state.currentDate, -3);
+    rangeEnd = addDays(state.currentDate, 3);
+  }
+  const startISO = formatDateISO(rangeStart);
+  const endISO = formatDateISO(rangeEnd);
   await loadMealsRange(startISO, endISO);
-  await loadAllIngredientsUntil(startISO); // 보이는 범위 이전까지의 재료들이 known
+  await loadAllIngredientsUntil(startISO);
   render();
 }
 

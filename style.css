@@ -291,10 +291,142 @@ html, body {
 .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
 .modal-actions .btn { flex: 1; }
 
+/* Week view — spreadsheet-style row labels */
+.week-table .row-label.meal-label {
+  background: var(--header-bg);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+.week-table .row-label.sub-label {
+  background: var(--header-bg-soft);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  width: 48px; min-width: 48px;
+  color: #2d3748;
+}
+.week-table .row-label.corner { background: var(--header-bg); text-align: center; font-weight: 600; }
+
+/* Pre-start / future cells */
+.cell-blocked {
+  background: repeating-linear-gradient(
+    45deg, #f5f6f8, #f5f6f8 6px, #eceef2 6px, #eceef2 12px
+  ) !important;
+  pointer-events: none;
+}
+.cell-dim { opacity: 0.6; }
+.cell-dim input { opacity: 0.85; }
+.week-table th.col-past { background: var(--header-bg-soft); color: var(--text-mute); }
+.week-table th.col-future { opacity: 0.65; }
+
+/* Total cells (양 row, 일 총량) */
+.cell-total .planned-line,
+.cell-total .eaten-line {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 4px; font-size: 12px;
+  padding: 1px 0;
+}
+.cell-total .planned-line .lbl,
+.cell-total .eaten-line .lbl {
+  font-size: 10px; color: var(--text-mute);
+  letter-spacing: 0.3px;
+}
+.cell-total .planned-line .v { font-weight: 600; }
+.cell-total .eaten-line .v { color: var(--accent); font-weight: 700; }
+.cell-total .eaten-line .v.empty { color: var(--text-mute); font-weight: 400; }
+.cell-total .eaten-line .unit-g { color: var(--text-mute); font-size: 10px; }
+.cell-total .cell-eat-input {
+  width: 48px; padding: 2px 4px;
+  border: 1px solid var(--border); border-radius: 3px;
+  text-align: right; font-size: 13px; font-weight: 600;
+  background: var(--surface); color: var(--accent);
+}
+.cell-total .cell-eat-input:focus {
+  outline: 2px solid var(--accent-light);
+  border-color: var(--accent);
+}
+.cell-total .pct {
+  text-align: right; font-size: 10px; color: var(--text-sub);
+  margin-top: 2px;
+}
+
+/* Memo cell */
+.cell-memo .memo-cell-input {
+  width: 100%; padding: 3px 5px;
+  border: 1px solid var(--border); border-radius: 3px;
+  font-size: 12px; background: var(--surface);
+}
+.cell-memo .memo-cell-input:focus { outline: 2px solid var(--accent-light); border-color: var(--accent); }
+
+/* Month view */
+.month-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.month-grid-head {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  background: var(--header-bg);
+  font-size: 12px; font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.month-grid-head > div { padding: 8px 4px; }
+.month-grid-head .weekend { color: #c53030; }
+.month-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+.month-cell {
+  background: var(--surface);
+  min-height: 78px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex; flex-direction: column;
+  gap: 2px;
+  transition: background 0.15s;
+}
+.month-cell:hover { background: var(--accent-light); }
+.month-cell.out-month { background: #fafbfc; color: var(--text-mute); }
+.month-cell.out-month:hover { background: var(--accent-light); }
+.month-cell.past-start {
+  background: repeating-linear-gradient(
+    45deg, #f5f6f8, #f5f6f8 6px, #eceef2 6px, #eceef2 12px
+  );
+  cursor: default;
+  pointer-events: none;
+}
+.month-cell.future { opacity: 0.6; }
+.month-cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
+.month-cell .date-num { font-size: 14px; font-weight: 700; }
+.month-cell.out-month .date-num { color: var(--text-mute); font-weight: 500; }
+.month-cell .d-plus { font-size: 10px; color: var(--text-sub); }
+.month-cell .eaten-mini { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: auto; }
+.month-cell .planned-mini { font-size: 10px; color: var(--text-mute); margin-top: auto; }
+.month-cell .pct-mini { font-size: 10px; color: var(--text-sub); }
+.month-cell .empty-mini { font-size: 10px; color: var(--text-mute); margin-top: auto; }
+
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Mobile */
 @media (max-width: 720px) {
   #app { padding: 12px; }
   .app-title { font-size: 16px; }
   .week-table { font-size: 11px; }
   .week-table th, .week-table td { padding: 4px 5px; }
+  .week-table .row-label.sub-label { width: 38px; min-width: 38px; font-size: 11px; }
+  .cell-total .cell-eat-input { width: 38px; font-size: 12px; }
+  .month-cell { min-height: 64px; padding: 4px; }
+  .month-cell .date-num { font-size: 12px; }
+  .month-cell .d-plus { font-size: 9px; }
+  .month-cell .eaten-mini { font-size: 11px; }
+  .month-cell .planned-mini, .month-cell .pct-mini, .month-cell .empty-mini { font-size: 9px; }
+  .month-grid-head { font-size: 11px; }
+  .month-grid-head > div { padding: 6px 2px; }
 }
