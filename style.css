@@ -308,6 +308,47 @@ html, body {
 }
 .week-table .row-label.corner { background: var(--header-bg); text-align: center; font-weight: 600; }
 
+/* Editable ingredient lines + add pill */
+.cell-ingredients .ing-line {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.1s;
+}
+.cell-ingredients .ing-line:hover {
+  background: var(--accent-light);
+}
+.cell-ingredients .ing-line.new:hover {
+  background: #c7ddfa;
+}
+.add-pill {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-mute);
+  font-size: 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.add-pill:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.cell-blocked .add-pill, .col-past .add-pill { display: none; }
+
+/* Meal label clickable */
+.week-table .row-label.meal-label {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.week-table .row-label.meal-label:hover {
+  background: #b6d4e8;
+}
+
 /* Pre-start / future cells */
 .cell-blocked {
   background: repeating-linear-gradient(

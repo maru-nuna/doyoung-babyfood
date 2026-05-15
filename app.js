@@ -7,8 +7,8 @@ const state = {
   meals: [], // all loaded meals (around the visible range)
   allKnownIngredients: new Set(), // for "new ingredient" detection
   currentDate: startOfDay(new Date()),
-  viewMode: 'week', // 'month' | 'week' | 'day'
-  editMode: false,
+  viewMode: 'week', // 'month' | 'week'
+  modal: null, // {type:'ingredient', date, mealNumber, kind:'base'|'toppings', editIndex} | {type:'mealActions', date, mealNumber}
 };
 
 function getStartDate() {
@@ -178,19 +178,17 @@ function render() {
     bindSetup();
     return;
   }
-  let body;
-  if (state.viewMode === 'month') body = renderMonthView();
-  else if (state.viewMode === 'week') body = renderWeekView();
-  else body = renderDayView();
+  const body = state.viewMode === 'month' ? renderMonthView() : renderWeekView();
   app.innerHTML = `
     ${renderHeader()}
     ${renderTabs()}
     ${body}
+    ${renderModal()}
   `;
   bindGlobal();
   if (state.viewMode === 'month') bindMonthView();
-  else if (state.viewMode === 'week') bindWeekView();
-  else bindDayView();
+  else bindWeekView();
+  if (state.modal) bindModal();
 }
 
 function renderSetup() {
@@ -260,7 +258,6 @@ function renderTabs() {
     <div class="tabs">
       <button class="tab ${state.viewMode==='month'?'active':''}" data-view="month">월간</button>
       <button class="tab ${state.viewMode==='week'?'active':''}" data-view="week">주간</button>
-      <button class="tab ${state.viewMode==='day'?'active':''}" data-view="day">하루</button>
     </div>
   `;
 }
@@ -277,14 +274,17 @@ function bindGlobal() {
 }
 
 // ---------- Week View (spreadsheet style) ----------
-function renderIngredientLines(meal, key) {
-  if (!meal) return `<div class="empty">-</div>`;
-  const arr = meal[key] || [];
-  if (arr.length === 0) return `<div class="empty">-</div>`;
-  return arr.map(x => {
+function renderIngredientCell(meal, kind, dateISO, mealNumber) {
+  const arr = (meal && meal[kind]) || [];
+  const lines = arr.map((x, idx) => {
     const isNew = !state.allKnownIngredients.has(x.name);
-    return `<div class="line ${isNew?'new':''}"><span class="name">${escapeHtml(x.name)}</span><span class="amt">${x.planned}g</span></div>`;
+    return `<div class="line ${isNew?'new':''} ing-line"
+      data-date="${dateISO}" data-meal="${mealNumber}" data-kind="${kind}" data-idx="${idx}"
+      title="클릭하여 수정/삭제">
+      <span class="name">${escapeHtml(x.name)}</span><span class="amt">${x.planned}g</span>
+    </div>`;
   }).join('');
+  return `${lines}<button class="add-pill" data-date="${dateISO}" data-meal="${mealNumber}" data-kind="${kind}">+ 추가</button>`;
 }
 
 function renderWeekView() {
@@ -342,13 +342,13 @@ function renderWeekView() {
   mealNumbers.forEach(mn => {
     // 베이스
     html += `<tr>
-      <td class="row-label meal-label" rowspan="4">${mn}끼</td>
+      <td class="row-label meal-label" rowspan="4" data-meal="${mn}" title="클릭하여 끼니 관리">${mn}끼</td>
       <td class="row-label sub-label">베이스</td>
       ${dayISOs.map((iso, i) => {
         if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
         const dim = isFuture(days[i]) ? ' cell-dim' : '';
-        return `<td class="cell-ingredients${dim}">${renderIngredientLines(meal, 'base')}</td>`;
+        return `<td class="cell-ingredients${dim}">${renderIngredientCell(meal, 'base', iso, mn)}</td>`;
       }).join('')}
     </tr>`;
     // 토핑
@@ -358,7 +358,7 @@ function renderWeekView() {
         if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
         const dim = isFuture(days[i]) ? ' cell-dim' : '';
-        return `<td class="cell-ingredients${dim}">${renderIngredientLines(meal, 'toppings')}</td>`;
+        return `<td class="cell-ingredients${dim}">${renderIngredientCell(meal, 'toppings', iso, mn)}</td>`;
       }).join('')}
     </tr>`;
     // 양
@@ -505,6 +505,46 @@ function bindWeekView() {
       } catch (err) { alert('저장 실패: ' + err.message); }
     });
   });
+
+  // 재료 라인 클릭 → 수정/삭제 모달
+  document.querySelectorAll('.ing-line').forEach(line => {
+    line.onclick = () => {
+      state.modal = {
+        type: 'ingredient',
+        date: line.dataset.date,
+        mealNumber: Number(line.dataset.meal),
+        kind: line.dataset.kind,
+        editIndex: Number(line.dataset.idx),
+      };
+      render();
+    };
+  });
+
+  // + 추가 버튼 → 신규 추가 모달
+  document.querySelectorAll('.add-pill').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      state.modal = {
+        type: 'ingredient',
+        date: btn.dataset.date,
+        mealNumber: Number(btn.dataset.meal),
+        kind: btn.dataset.kind,
+        editIndex: null,
+      };
+      render();
+    };
+  });
+
+  // 끼니 라벨 클릭 → 끼니 삭제 옵션
+  document.querySelectorAll('.meal-label[data-meal]').forEach(label => {
+    label.onclick = () => {
+      state.modal = {
+        type: 'mealActions',
+        mealNumber: Number(label.dataset.meal),
+      };
+      render();
+    };
+  });
 }
 
 // ---------- Month View ----------
@@ -611,271 +651,177 @@ function bindMonthView() {
   document.querySelectorAll('.month-cell[data-date]').forEach(cell => {
     cell.onclick = () => {
       state.currentDate = parseDateISO(cell.dataset.date);
-      state.viewMode = 'day';
+      state.viewMode = 'week';
       refresh();
     };
   });
 }
 
-// ---------- Day View ----------
-function renderDayView() {
-  const dateISO = formatDateISO(state.currentDate);
-  const birth = parseDateISO(state.baby.birth_date);
-  const dPlus = daysSince(birth, state.currentDate);
-  const meals = dayMealsFor(dateISO).sort((a,b)=>a.meal_number-b.meal_number);
 
-  let html = `
-    <div class="nav-bar">
-      <button class="nav-btn" id="day-prev">‹</button>
-      <div>
-        <span class="nav-label">${formatMD(state.currentDate)}</span>
-        <span class="nav-sub">D+${dPlus}</span>
-      </div>
-      <div>
-        <button class="nav-btn today" id="day-today">오늘</button>
-        <button class="nav-btn" id="day-next">›</button>
-      </div>
-    </div>
-    <div class="toolbar">
-      <button class="btn ${state.editMode?'primary':''}" id="toggle-edit">${state.editMode?'편집 완료':'재료 편집'}</button>
-      <div class="spacer"></div>
-    </div>
-    <div class="day-view">
-  `;
+// ====== Modal ======
+function closeModal() { state.modal = null; render(); }
 
-  if (meals.length === 0) {
-    html += `<div class="empty-state">
-      <div class="icon">🍼</div>
-      <div>이날의 끼니가 아직 없어요</div>
-    </div>`;
-  } else {
-    meals.forEach(meal => { html += renderMealCard(meal); });
-  }
-
-  html += `
-      <button class="add-meal-btn" id="add-meal">+ 끼니 추가</button>
-    </div>
-  `;
-
-  // 일 총량
-  const planned = dayTotalPlanned(dateISO);
-  const eaten = dayTotalEaten(dateISO);
-  const has = meals.some(m => m.actual_eaten != null);
-  html += `
-    <div class="day-total-card" style="margin-top:12px;">
-      <div>일 총량</div>
-      <div>
-        <span class="value">${has ? `먹은량 ${eaten}g` : '먹은량 -'} / 계획 ${planned}g</span>
-        ${has && planned ? `<span class="pct">(${pct(eaten, planned)})</span>` : ''}
-      </div>
-    </div>
-  `;
-
-  return html;
+function renderModal() {
+  if (!state.modal) return '';
+  if (state.modal.type === 'ingredient') return renderIngredientModal();
+  if (state.modal.type === 'mealActions') return renderMealActionsModal();
+  return '';
 }
 
-function renderMealCard(meal) {
-  const planned = mealTotalPlanned(meal);
+function renderIngredientModal() {
+  const { date, mealNumber, kind, editIndex } = state.modal;
+  const meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
+  const editing = editIndex != null && meal;
+  const cur = editing ? (meal[kind] || [])[editIndex] : null;
+  const kindLabel = kind === 'base' ? '베이스' : '토핑';
+  const d = parseDateISO(date);
   return `
-    <div class="meal-card" data-meal-id="${meal.id}">
-      <div class="meal-card-head">
-        <div>
-          <div class="title">${meal.meal_number}끼</div>
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>${formatMD(d)} · ${mealNumber}끼 · ${kindLabel} ${editing ? '수정' : '추가'}</h3>
+        <div class="form-group">
+          <label>재료명</label>
+          <input id="modal-ing-name" type="text" value="${escapeHtml(cur?.name || '')}" placeholder="${kind==='base'?'예: 쌀, 오트밀':'예: 소고기, 애호박'}" />
         </div>
-        <div>
-          ${state.editMode ? `<button class="btn danger btn-del-meal" data-id="${meal.id}">끼니 삭제</button>` : ''}
+        <div class="form-group">
+          <label>양 (g)</label>
+          <input id="modal-ing-amt" type="number" inputmode="numeric" value="${cur?.planned ?? ''}" placeholder="예: 30" />
         </div>
-      </div>
-
-      <div class="ingredient-section">
-        <div class="label">베이스</div>
-        <div class="ingredient-list">
-          ${renderIngredientList(meal, 'base')}
-        </div>
-        ${state.editMode ? renderAddIngredient(meal.id, 'base') : ''}
-      </div>
-
-      <div class="ingredient-section">
-        <div class="label">토핑</div>
-        <div class="ingredient-list">
-          ${renderIngredientList(meal, 'toppings')}
-        </div>
-        ${state.editMode ? renderAddIngredient(meal.id, 'toppings') : ''}
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-item">
-          <div class="lbl">계획 총량</div>
-          <div class="val">${planned}<span class="unit">g</span></div>
-        </div>
-        <div class="summary-item">
-          <div class="lbl">먹은 양 (g)</div>
-          <input type="number" class="eaten-input" data-meal-id="${meal.id}"
-            placeholder="-" value="${meal.actual_eaten ?? ''}" />
-        </div>
-        <div class="summary-item">
-          <div class="lbl">달성률</div>
-          <div class="val">${meal.actual_eaten!=null && planned ? `<span>${pct(meal.actual_eaten, planned)}</span>` : '<span style="color:var(--text-mute);font-size:14px;">-</span>'}</div>
+        <div class="modal-actions">
+          ${editing ? `<button class="btn danger" id="modal-ing-delete">삭제</button>` : ''}
+          <button class="btn ghost" id="modal-close">취소</button>
+          <button class="btn primary" id="modal-ing-save">${editing ? '저장' : '추가'}</button>
         </div>
       </div>
-
-      <textarea class="memo-input" data-meal-id="${meal.id}" placeholder="메모">${escapeHtml(meal.memo || '')}</textarea>
     </div>
   `;
 }
 
-function renderIngredientList(meal, key) {
-  const arr = meal[key] || [];
-  if (arr.length === 0) return `<div style="color:var(--text-mute);font-size:13px;padding:2px 0;">${state.editMode?'아래에서 추가하세요':'-'}</div>`;
-  return arr.map((x, idx) => {
-    const isNew = !state.allKnownIngredients.has(x.name);
-    return `
-      <div class="ingredient-row ${isNew?'new':''}">
-        <span class="name">${escapeHtml(x.name)}</span>
-        ${state.editMode
-          ? `<input type="number" class="amt-input" data-meal-id="${meal.id}" data-key="${key}" data-idx="${idx}" value="${x.planned}" /><span class="unit">g</span>
-             <button class="del-btn" data-meal-id="${meal.id}" data-key="${key}" data-idx="${idx}">✕</button>`
-          : `<span class="amt-static">${x.planned}g</span>`}
-      </div>
-    `;
-  }).join('');
-}
-
-function renderAddIngredient(mealId, key) {
+function renderMealActionsModal() {
+  const { mealNumber } = state.modal;
   return `
-    <div class="add-ingredient-row" data-meal-id="${mealId}" data-key="${key}">
-      <input type="text" placeholder="${key==='base'?'재료 (예: 쌀)':'재료 (예: 소고기)'}" class="add-name" />
-      <input type="number" placeholder="g" class="add-amt" />
-      <button class="add-btn">+</button>
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>${mealNumber}끼 관리</h3>
+        <p style="color:var(--text-sub);font-size:13px;margin-bottom:12px;">
+          이번 주 모든 날의 <b>${mealNumber}끼</b>를 한 번에 삭제합니다.<br>
+          (입력된 재료·먹은량·메모 모두 사라져요)
+        </p>
+        <div class="modal-actions">
+          <button class="btn ghost" id="modal-close">취소</button>
+          <button class="btn danger" id="modal-meal-delete">이번 주 ${mealNumber}끼 전체 삭제</button>
+        </div>
+      </div>
     </div>
   `;
 }
 
-function bindDayView() {
-  document.getElementById('day-prev').onclick = () => { state.currentDate = addDays(state.currentDate, -1); refresh(); };
-  document.getElementById('day-next').onclick = () => { state.currentDate = addDays(state.currentDate, 1); refresh(); };
-  document.getElementById('day-today').onclick = () => { state.currentDate = startOfDay(new Date()); refresh(); };
-  document.getElementById('toggle-edit').onclick = () => { state.editMode = !state.editMode; render(); /* don't reload data */ };
+function bindModal() {
+  const backdrop = document.getElementById('modal-backdrop');
+  if (!backdrop) return;
+  backdrop.onclick = closeModal;
+  const closeBtn = document.getElementById('modal-close');
+  if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); closeModal(); };
 
-  // Add meal
-  document.getElementById('add-meal').onclick = async () => {
-    const dateISO = formatDateISO(state.currentDate);
-    const existing = dayMealsFor(dateISO);
-    const nextMealNumber = (existing.reduce((m,x)=>Math.max(m,x.meal_number),0)) + 1;
-    try {
-      const created = await upsertMeal({
-        date: dateISO, meal_number: nextMealNumber,
-        base: [], toppings: [], actual_eaten: null, memo: ''
-      });
-      state.meals.push(created);
-      state.editMode = true;
-      render();
-    } catch (e) { alert('끼니 추가 실패: ' + e.message); }
+  if (state.modal.type === 'ingredient') bindIngredientModal();
+  else if (state.modal.type === 'mealActions') bindMealActionsModal();
+
+  const esc = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', esc);
+    }
+  };
+  document.addEventListener('keydown', esc);
+}
+
+function bindIngredientModal() {
+  const nameEl = document.getElementById('modal-ing-name');
+  const amtEl = document.getElementById('modal-ing-amt');
+  nameEl.focus();
+  if (nameEl.value) nameEl.select();
+
+  const save = async () => {
+    const name = nameEl.value.trim();
+    const amt = Number(amtEl.value);
+    if (!name) { nameEl.focus(); return; }
+    if (!amt || amt <= 0) { amtEl.focus(); return; }
+    try { await saveIngredientFromModal(name, amt); }
+    catch (e) { alert('저장 실패: ' + e.message); }
   };
 
-  // 끼니 삭제
-  document.querySelectorAll('.btn-del-meal').forEach(btn => {
-    btn.onclick = async () => {
-      if (!confirm('이 끼니를 삭제할까요?')) return;
-      const id = btn.dataset.id;
-      try {
-        await deleteMeal(id);
-        state.meals = state.meals.filter(m => m.id !== id);
-        render();
-      } catch (e) { alert('삭제 실패: ' + e.message); }
+  document.getElementById('modal-ing-save').onclick = (e) => { e.stopPropagation(); save(); };
+  [nameEl, amtEl].forEach(i => i.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.stopPropagation(); save(); }
+  }));
+
+  const delBtn = document.getElementById('modal-ing-delete');
+  if (delBtn) delBtn.onclick = async (e) => {
+    e.stopPropagation();
+    if (!confirm('이 재료를 삭제할까요?')) return;
+    try { await deleteIngredientFromModal(); }
+    catch (err) { alert('삭제 실패: ' + err.message); }
+  };
+}
+
+async function saveIngredientFromModal(name, amount) {
+  const { date, mealNumber, kind, editIndex } = state.modal;
+  let meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
+  if (meal) {
+    const arr = [...(meal[kind] || [])];
+    if (editIndex != null) arr[editIndex] = { name, planned: amount };
+    else arr.push({ name, planned: amount });
+    const updated = await upsertMeal({ ...meal, [kind]: arr });
+    Object.assign(meal, updated);
+  } else {
+    const newMeal = {
+      date, meal_number: mealNumber,
+      base: kind === 'base' ? [{ name, planned: amount }] : [],
+      toppings: kind === 'toppings' ? [{ name, planned: amount }] : [],
+      actual_eaten: null, memo: ''
     };
-  });
+    const created = await upsertMeal(newMeal);
+    state.meals.push(created);
+  }
+  state.modal = null;
+  await refresh();
+}
 
-  // 먹은 양 입력
-  document.querySelectorAll('.eaten-input').forEach(input => {
-    input.addEventListener('change', async (e) => {
-      const id = e.target.dataset.mealId;
-      const meal = state.meals.find(m => m.id === id);
-      if (!meal) return;
-      const v = e.target.value === '' ? null : Number(e.target.value);
-      try {
-        const updated = await upsertMeal({ ...meal, actual_eaten: v });
-        Object.assign(meal, updated);
-        render();
-      } catch (err) { alert('저장 실패: ' + err.message); }
+async function deleteIngredientFromModal() {
+  const { date, mealNumber, kind, editIndex } = state.modal;
+  const meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
+  if (!meal) { state.modal = null; render(); return; }
+  const arr = [...(meal[kind] || [])];
+  arr.splice(editIndex, 1);
+  const updated = await upsertMeal({ ...meal, [kind]: arr });
+  Object.assign(meal, updated);
+  state.modal = null;
+  await refresh();
+}
+
+function bindMealActionsModal() {
+  document.getElementById('modal-meal-delete').onclick = async (e) => {
+    e.stopPropagation();
+    const { mealNumber } = state.modal;
+    const weekStart = startOfWeek(state.currentDate);
+    const days = Array.from({length:7}, (_,i) => addDays(weekStart, i));
+    const targets = [];
+    days.forEach(d => {
+      const iso = formatDateISO(d);
+      const m = dayMealsFor(iso).find(m => m.meal_number === mealNumber);
+      if (m) targets.push(m);
     });
-  });
-
-  // 메모
-  document.querySelectorAll('.memo-input').forEach(ta => {
-    ta.addEventListener('blur', async (e) => {
-      const id = e.target.dataset.mealId;
-      const meal = state.meals.find(m => m.id === id);
-      if (!meal) return;
-      const v = e.target.value;
-      if (v === (meal.memo || '')) return;
-      try {
-        const updated = await upsertMeal({ ...meal, memo: v });
-        Object.assign(meal, updated);
-      } catch (err) { alert('저장 실패: ' + err.message); }
-    });
-  });
-
-  // 재료 양 수정
-  document.querySelectorAll('.amt-input').forEach(input => {
-    input.addEventListener('change', async (e) => {
-      const id = e.target.dataset.mealId;
-      const key = e.target.dataset.key;
-      const idx = Number(e.target.dataset.idx);
-      const meal = state.meals.find(m => m.id === id);
-      if (!meal) return;
-      const arr = [...(meal[key] || [])];
-      arr[idx] = { ...arr[idx], planned: Number(e.target.value) || 0 };
-      try {
-        const updated = await upsertMeal({ ...meal, [key]: arr });
-        Object.assign(meal, updated);
-        render();
-      } catch (err) { alert('저장 실패: ' + err.message); }
-    });
-  });
-
-  // 재료 삭제
-  document.querySelectorAll('.del-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const id = btn.dataset.mealId;
-      const key = btn.dataset.key;
-      const idx = Number(btn.dataset.idx);
-      const meal = state.meals.find(m => m.id === id);
-      if (!meal) return;
-      const arr = [...(meal[key] || [])];
-      arr.splice(idx, 1);
-      try {
-        const updated = await upsertMeal({ ...meal, [key]: arr });
-        Object.assign(meal, updated);
-        render();
-      } catch (err) { alert('삭제 실패: ' + err.message); }
-    };
-  });
-
-  // 재료 추가
-  document.querySelectorAll('.add-ingredient-row').forEach(row => {
-    const btn = row.querySelector('.add-btn');
-    const nameInput = row.querySelector('.add-name');
-    const amtInput = row.querySelector('.add-amt');
-    const add = async () => {
-      const id = row.dataset.mealId;
-      const key = row.dataset.key;
-      const name = nameInput.value.trim();
-      const amt = Number(amtInput.value);
-      if (!name) { nameInput.focus(); return; }
-      if (!amt || amt <= 0) { amtInput.focus(); return; }
-      const meal = state.meals.find(m => m.id === id);
-      if (!meal) return;
-      const arr = [...(meal[key] || []), { name, planned: amt }];
-      try {
-        const updated = await upsertMeal({ ...meal, [key]: arr });
-        Object.assign(meal, updated);
-        render();
-      } catch (err) { alert('추가 실패: ' + err.message); }
-    };
-    btn.onclick = add;
-    [nameInput, amtInput].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') add(); }));
-  });
+    if (targets.length === 0) { state.modal = null; render(); return; }
+    if (!confirm(`정말 이번 주의 ${mealNumber}끼 ${targets.length}개를 모두 삭제할까요?`)) return;
+    try {
+      for (const m of targets) {
+        await deleteMeal(m.id);
+        state.meals = state.meals.filter(x => x.id !== m.id);
+      }
+      state.modal = null;
+      refresh();
+    } catch (err) { alert('삭제 실패: ' + err.message); }
+  };
 }
 
 // ====== Refresh (load data + render) ======
