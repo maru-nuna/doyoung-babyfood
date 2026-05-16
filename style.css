@@ -392,13 +392,30 @@ html, body {
   margin-top: 2px;
 }
 
-/* Memo cell */
-.cell-memo .memo-cell-input {
-  width: 100%; padding: 3px 5px;
-  border: 1px solid var(--border); border-radius: 3px;
-  font-size: 12px; background: var(--surface);
+/* Memo cell (view + edit modes) */
+.cell-memo.viewing {
+  cursor: pointer;
+  padding: 6px 8px !important;
 }
-.cell-memo .memo-cell-input:focus { outline: 2px solid var(--accent-light); border-color: var(--accent); }
+.cell-memo.viewing:hover {
+  background: var(--accent-light);
+}
+.cell-memo .memo-text {
+  font-size: 12px;
+  color: var(--text);
+  word-break: break-word;
+}
+.cell-memo .memo-empty {
+  font-size: 11px;
+  color: var(--text-mute);
+  font-style: italic;
+}
+.cell-memo.editing .memo-cell-input {
+  width: 100%; padding: 4px 6px;
+  border: 1px solid var(--accent); border-radius: 3px;
+  font-size: 12px; background: var(--surface);
+  outline: 2px solid var(--accent-light);
+}
 
 /* Month view */
 .month-wrap {

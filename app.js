@@ -8,7 +8,8 @@ const state = {
   allKnownIngredients: new Set(), // for "new ingredient" detection
   currentDate: startOfDay(new Date()),
   viewMode: 'week', // 'month' | 'week'
-  modal: null, // {type:'ingredient', date, mealNumber, kind:'base'|'toppings', editIndex} | {type:'mealActions', date, mealNumber}
+  modal: null, // {type:'ingredient', ...} | {type:'mealActions', ...}
+  editingMemo: null, // {date, mealNumber} | null — view/edit 모드 토글
 };
 
 function getStartDate() {
@@ -382,17 +383,28 @@ function renderWeekView() {
         </td>`;
       }).join('')}
     </tr>`;
-    // 메모
+    // 메모 (view/edit 모드 분리)
     html += `<tr>
       <td class="row-label sub-label">메모</td>
       ${dayISOs.map((iso, i) => {
         if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
         const dim = isFuture(days[i]) ? ' cell-dim' : '';
-        return `<td class="cell-memo${dim}">
-          <input type="text" class="memo-cell-input"
-            data-date="${iso}" data-meal="${mn}"
-            placeholder="-" value="${escapeHtml(meal?.memo || '')}" />
+        const memoText = meal?.memo || '';
+        const isEditing = state.editingMemo &&
+          state.editingMemo.date === iso &&
+          state.editingMemo.mealNumber === mn;
+        if (isEditing) {
+          return `<td class="cell-memo${dim} editing">
+            <input type="text" class="memo-cell-input"
+              data-date="${iso}" data-meal="${mn}"
+              placeholder="메모 입력" value="${escapeHtml(memoText)}" />
+          </td>`;
+        }
+        return `<td class="cell-memo${dim} viewing" data-date="${iso}" data-meal="${mn}" title="클릭하여 메모 입력">
+          ${memoText
+            ? `<span class="memo-text">${escapeHtml(memoText)}</span>`
+            : `<span class="memo-empty">+ 메모</span>`}
         </td>`;
       }).join('')}
     </tr>`;
@@ -487,24 +499,60 @@ function bindWeekView() {
     });
   });
 
-  document.querySelectorAll('.memo-cell-input').forEach(input => {
-    input.addEventListener('change', async (e) => {
-      const date = e.target.dataset.date;
-      const mealNumber = Number(e.target.dataset.meal);
-      const v = e.target.value;
-      let meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
-      try {
-        if (!meal) {
-          if (!v) return;
-          const created = await upsertMeal({
-            date, meal_number: mealNumber, base: [], toppings: [], actual_eaten: null, memo: v
-          });
-          state.meals.push(created);
-        } else {
-          const updated = await upsertMeal({ ...meal, memo: v });
-          Object.assign(meal, updated);
-        }
-      } catch (err) { alert('저장 실패: ' + err.message); }
+  // 메모 셀 — view → edit 진입
+  document.querySelectorAll('.cell-memo.viewing').forEach(cell => {
+    cell.onclick = () => {
+      state.editingMemo = {
+        date: cell.dataset.date,
+        mealNumber: Number(cell.dataset.meal),
+      };
+      render();
+      // 새로 렌더된 input에 포커스
+      const input = document.querySelector('.cell-memo.editing .memo-cell-input');
+      if (input) { input.focus(); input.select(); }
+    };
+  });
+
+  // 메모 edit 모드 — blur 또는 Enter 시 저장 + view 모드로 복귀
+  document.querySelectorAll('.cell-memo.editing .memo-cell-input').forEach(input => {
+    let exited = false;
+    const exitToView = () => {
+      if (exited) return;
+      exited = true;
+      const date = input.dataset.date;
+      const mealNumber = Number(input.dataset.meal);
+      const v = input.value.trim();
+      const meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
+      const prev = meal?.memo || '';
+      // 즉시 view 모드로 전환 (응답성)
+      state.editingMemo = null;
+      // 변경 없으면 DB 호출 생략, 있으면 비동기 저장
+      if (v === prev) { render(); return; }
+      queueMicrotask(async () => {
+        try {
+          if (!meal) {
+            if (!v) { render(); return; }
+            const created = await upsertMeal({
+              date, meal_number: mealNumber, base: [], toppings: [], actual_eaten: null, memo: v
+            });
+            state.meals.push(created);
+          } else {
+            const updated = await upsertMeal({ ...meal, memo: v });
+            Object.assign(meal, updated);
+          }
+          render();
+        } catch (err) { alert('저장 실패: ' + err.message); render(); }
+      });
+      render();
+    };
+    input.addEventListener('blur', exitToView);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.stopPropagation(); input.blur(); }
+      if (e.key === 'Escape') {
+        exited = true;
+        state.editingMemo = null;
+        render();
+      }
     });
   });
 
