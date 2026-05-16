@@ -440,28 +440,30 @@ function bindWeekView() {
   document.getElementById('week-today').onclick = () => { state.currentDate = startOfDay(new Date()); refresh(); };
 
   const addBtn = document.getElementById('week-add-meal');
-  if (addBtn) addBtn.onclick = async () => {
-    const weekStart = startOfWeek(state.currentDate);
-    const days = Array.from({length: 7}, (_,i) => addDays(weekStart, i));
-    const validDays = days.filter(d => !isBeforeStart(d));
-    if (validDays.length === 0) { alert('이번 주는 시작일 이전입니다.'); return; }
-    const mealNumbersSet = new Set();
-    days.forEach(d => dayMealsFor(formatDateISO(d)).forEach(m => mealNumbersSet.add(m.meal_number)));
-    const next = Math.max(...mealNumbersSet, 0) + 1;
-    if (!confirm(`이번 주 ${validDays.length}일에 ${next}끼 슬롯을 추가할까요?\n(빈 끼니가 만들어집니다. 재료는 "하루" 탭에서 편집)`)) return;
-    try {
-      for (const d of validDays) {
-        const dateISO = formatDateISO(d);
-        const exists = dayMealsFor(dateISO).some(m => m.meal_number === next);
-        if (exists) continue;
-        const created = await upsertMeal({
-          date: dateISO, meal_number: next,
-          base: [], toppings: [], actual_eaten: null, memo: ''
-        });
-        state.meals.push(created);
-      }
-      refresh();
-    } catch (e) { alert('끼니 추가 실패: ' + e.message); }
+  if (addBtn) addBtn.onclick = (e) => {
+    e.stopPropagation();
+    queueMicrotask(async () => {
+      const weekStart = startOfWeek(state.currentDate);
+      const days = Array.from({length: 7}, (_,i) => addDays(weekStart, i));
+      const validDays = days.filter(d => !isBeforeStart(d));
+      if (validDays.length === 0) return;
+      const mealNumbersSet = new Set();
+      days.forEach(d => dayMealsFor(formatDateISO(d)).forEach(m => mealNumbersSet.add(m.meal_number)));
+      const next = Math.max(...mealNumbersSet, 0) + 1;
+      try {
+        for (const d of validDays) {
+          const dateISO = formatDateISO(d);
+          const exists = dayMealsFor(dateISO).some(m => m.meal_number === next);
+          if (exists) continue;
+          const created = await upsertMeal({
+            date: dateISO, meal_number: next,
+            base: [], toppings: [], actual_eaten: null, memo: ''
+          });
+          state.meals.push(created);
+        }
+        refresh();
+      } catch (err) { alert('끼니 추가 실패: ' + err.message); }
+    });
   };
 
   document.querySelectorAll('.cell-eat-input').forEach(input => {
@@ -669,12 +671,17 @@ function renderModal() {
 }
 
 function renderIngredientModal() {
-  const { date, mealNumber, kind, editIndex } = state.modal;
+  const { date, mealNumber, kind, editIndex, confirmingDelete } = state.modal;
   const meal = dayMealsFor(date).find(m => m.meal_number === mealNumber);
   const editing = editIndex != null && meal;
   const cur = editing ? (meal[kind] || [])[editIndex] : null;
   const kindLabel = kind === 'base' ? '베이스' : '토핑';
   const d = parseDateISO(date);
+  const deleteBtn = editing
+    ? (confirmingDelete
+        ? `<button class="btn danger" id="modal-ing-delete-confirm">정말 삭제하시겠어요?</button>`
+        : `<button class="btn danger" id="modal-ing-delete">삭제</button>`)
+    : '';
   return `
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal" onclick="event.stopPropagation()">
@@ -688,7 +695,7 @@ function renderIngredientModal() {
           <input id="modal-ing-amt" type="number" inputmode="numeric" value="${cur?.planned ?? ''}" placeholder="예: 30" />
         </div>
         <div class="modal-actions">
-          ${editing ? `<button class="btn danger" id="modal-ing-delete">삭제</button>` : ''}
+          ${deleteBtn}
           <button class="btn ghost" id="modal-close">취소</button>
           <button class="btn primary" id="modal-ing-save">${editing ? '저장' : '추가'}</button>
         </div>
@@ -698,7 +705,7 @@ function renderIngredientModal() {
 }
 
 function renderMealActionsModal() {
-  const { mealNumber } = state.modal;
+  const { mealNumber, confirmingDelete } = state.modal;
   return `
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal" onclick="event.stopPropagation()">
@@ -709,7 +716,9 @@ function renderMealActionsModal() {
         </p>
         <div class="modal-actions">
           <button class="btn ghost" id="modal-close">취소</button>
-          <button class="btn danger" id="modal-meal-delete">이번 주 ${mealNumber}끼 전체 삭제</button>
+          ${confirmingDelete
+            ? `<button class="btn danger" id="modal-meal-delete-confirm">정말 삭제하시겠어요?</button>`
+            : `<button class="btn danger" id="modal-meal-delete">이번 주 ${mealNumber}끼 전체 삭제</button>`}
         </div>
       </div>
     </div>
@@ -741,13 +750,15 @@ function bindIngredientModal() {
   nameEl.focus();
   if (nameEl.value) nameEl.select();
 
-  const save = async () => {
+  const save = () => {
     const name = nameEl.value.trim();
     const amt = Number(amtEl.value);
     if (!name) { nameEl.focus(); return; }
     if (!amt || amt <= 0) { amtEl.focus(); return; }
-    try { await saveIngredientFromModal(name, amt); }
-    catch (e) { alert('저장 실패: ' + e.message); }
+    queueMicrotask(async () => {
+      try { await saveIngredientFromModal(name, amt); }
+      catch (e) { alert('저장 실패: ' + e.message); }
+    });
   };
 
   document.getElementById('modal-ing-save').onclick = (e) => { e.stopPropagation(); save(); };
@@ -756,11 +767,19 @@ function bindIngredientModal() {
   }));
 
   const delBtn = document.getElementById('modal-ing-delete');
-  if (delBtn) delBtn.onclick = async (e) => {
+  if (delBtn) delBtn.onclick = (e) => {
     e.stopPropagation();
-    if (!confirm('이 재료를 삭제할까요?')) return;
-    try { await deleteIngredientFromModal(); }
-    catch (err) { alert('삭제 실패: ' + err.message); }
+    state.modal.confirmingDelete = true;
+    render();
+  };
+  const delConfirmBtn = document.getElementById('modal-ing-delete-confirm');
+  if (delConfirmBtn) delConfirmBtn.onclick = (e) => {
+    e.stopPropagation();
+    // 비동기 작업을 다음 틱으로 넘겨 핸들러를 즉시 종료 → INP 개선
+    queueMicrotask(async () => {
+      try { await deleteIngredientFromModal(); }
+      catch (err) { alert('삭제 실패: ' + err.message); }
+    });
   };
 }
 
@@ -800,27 +819,35 @@ async function deleteIngredientFromModal() {
 }
 
 function bindMealActionsModal() {
-  document.getElementById('modal-meal-delete').onclick = async (e) => {
+  const delBtn = document.getElementById('modal-meal-delete');
+  if (delBtn) delBtn.onclick = (e) => {
     e.stopPropagation();
-    const { mealNumber } = state.modal;
-    const weekStart = startOfWeek(state.currentDate);
-    const days = Array.from({length:7}, (_,i) => addDays(weekStart, i));
-    const targets = [];
-    days.forEach(d => {
-      const iso = formatDateISO(d);
-      const m = dayMealsFor(iso).find(m => m.meal_number === mealNumber);
-      if (m) targets.push(m);
+    state.modal.confirmingDelete = true;
+    render();
+  };
+  const confirmBtn = document.getElementById('modal-meal-delete-confirm');
+  if (confirmBtn) confirmBtn.onclick = (e) => {
+    e.stopPropagation();
+    queueMicrotask(async () => {
+      const { mealNumber } = state.modal;
+      const weekStart = startOfWeek(state.currentDate);
+      const days = Array.from({length:7}, (_,i) => addDays(weekStart, i));
+      const targets = [];
+      days.forEach(d => {
+        const iso = formatDateISO(d);
+        const m = dayMealsFor(iso).find(m => m.meal_number === mealNumber);
+        if (m) targets.push(m);
+      });
+      if (targets.length === 0) { state.modal = null; render(); return; }
+      try {
+        for (const m of targets) {
+          await deleteMeal(m.id);
+          state.meals = state.meals.filter(x => x.id !== m.id);
+        }
+        state.modal = null;
+        refresh();
+      } catch (err) { alert('삭제 실패: ' + err.message); }
     });
-    if (targets.length === 0) { state.modal = null; render(); return; }
-    if (!confirm(`정말 이번 주의 ${mealNumber}끼 ${targets.length}개를 모두 삭제할까요?`)) return;
-    try {
-      for (const m of targets) {
-        await deleteMeal(m.id);
-        state.meals = state.meals.filter(x => x.id !== m.id);
-      }
-      state.modal = null;
-      refresh();
-    } catch (err) { alert('삭제 실패: ' + err.message); }
   };
 }
 
