@@ -364,19 +364,15 @@ html, body {
 .week-table th.col-today {
   background: var(--accent);
   color: #fff;
-  border-top: 2px solid var(--accent);
-  border-left: 2px solid var(--accent);
-  border-right: 2px solid var(--accent);
+  border: 2px solid var(--accent);
 }
 .week-table th.col-today .day-sub { color: rgba(255,255,255,0.85); }
-.week-table td.cell-today,
-.week-table .day-total-row td.cell-today {
-  border-left: 2px solid var(--accent);
-  border-right: 2px solid var(--accent);
+.week-table td.cell-today {
+  border: 2px solid var(--accent);
   background: var(--accent-light);
 }
 .week-table .day-total-row td.cell-today {
-  border-bottom: 2px solid var(--accent);
+  border: 2px solid var(--accent);
   background: #d6e7f7;
 }
 
