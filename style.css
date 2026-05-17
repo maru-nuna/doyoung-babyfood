@@ -364,16 +364,22 @@ html, body {
 .week-table th.col-today {
   background: var(--accent);
   color: #fff;
-  border: 2px solid var(--accent);
+  border-top: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+  border-bottom: none;
 }
 .week-table th.col-today .day-sub { color: rgba(255,255,255,0.85); }
 .week-table td.cell-today {
-  border: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+  border-top: none;
+  border-bottom: none;
   background: var(--accent-light);
 }
 .week-table .day-total-row td.cell-today {
-  border: 2px solid var(--accent);
-  background: #d6e7f7;
+  border-bottom: 2px solid var(--accent);
+  background: var(--accent-light);
 }
 
 /* Total cells (양 row, 일 총량) */
