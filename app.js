@@ -22,6 +22,12 @@ function isBeforeStart(d) {
 function isFuture(d) {
   return startOfDay(d) > startOfDay(new Date());
 }
+function isToday(d) {
+  return startOfDay(d).getTime() === startOfDay(new Date()).getTime();
+}
+function isPastNotToday(d) {
+  return startOfDay(d) < startOfDay(new Date()) && !isBeforeStart(d);
+}
 function startOfMonth(d) { const x = startOfDay(d); x.setDate(1); return x; }
 function endOfMonth(d) { const x = startOfDay(d); x.setMonth(x.getMonth()+1, 0); return x; }
 function formatYM(d) { return `${d.getFullYear()}년 ${d.getMonth()+1}월`; }
@@ -329,7 +335,8 @@ function renderWeekView() {
             ${days.map(d => {
               const cls = [];
               if (isBeforeStart(d)) cls.push('col-past');
-              else if (isFuture(d)) cls.push('col-future');
+              else if (isPastNotToday(d)) cls.push('col-dim');
+              if (isToday(d)) cls.push('col-today');
               return `<th class="${cls.join(' ')}">
                 <div>${formatMD(d)}</div>
                 <div class="day-sub">D+${daysSince(birth, d)}</div>
@@ -348,7 +355,7 @@ function renderWeekView() {
       ${dayISOs.map((iso, i) => {
         if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
-        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        const dim = (isPastNotToday(days[i]) ? ' cell-dim' : '') + (isToday(days[i]) ? ' cell-today' : '');
         return `<td class="cell-ingredients${dim}">${renderIngredientCell(meal, 'base', iso, mn)}</td>`;
       }).join('')}
     </tr>`;
@@ -358,7 +365,7 @@ function renderWeekView() {
       ${dayISOs.map((iso, i) => {
         if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
-        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        const dim = (isPastNotToday(days[i]) ? ' cell-dim' : '') + (isToday(days[i]) ? ' cell-today' : '');
         return `<td class="cell-ingredients${dim}">${renderIngredientCell(meal, 'toppings', iso, mn)}</td>`;
       }).join('')}
     </tr>`;
@@ -370,7 +377,7 @@ function renderWeekView() {
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
         const planned = meal ? mealTotalPlanned(meal) : 0;
         const eaten = meal?.actual_eaten;
-        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        const dim = (isPastNotToday(days[i]) ? ' cell-dim' : '') + (isToday(days[i]) ? ' cell-today' : '');
         return `<td class="cell-total${dim}">
           <div class="planned-line"><span class="lbl">총량</span><span class="v">${planned ? planned + 'g' : '-'}</span></div>
           <div class="eaten-line">
@@ -389,7 +396,7 @@ function renderWeekView() {
       ${dayISOs.map((iso, i) => {
         if (isBeforeStart(days[i])) return `<td class="cell-blocked"></td>`;
         const meal = dayMealsFor(iso).find(m => m.meal_number === mn);
-        const dim = isFuture(days[i]) ? ' cell-dim' : '';
+        const dim = (isPastNotToday(days[i]) ? ' cell-dim' : '') + (isToday(days[i]) ? ' cell-today' : '');
         const memoText = meal?.memo || '';
         const isEditing = state.editingMemo &&
           state.editingMemo.date === iso &&
@@ -418,7 +425,7 @@ function renderWeekView() {
       const planned = dayTotalPlanned(iso);
       const eaten = dayTotalEaten(iso);
       const has = dayMealsFor(iso).some(m => m.actual_eaten != null);
-      const dim = isFuture(days[i]) ? ' cell-dim' : '';
+      const dim = isPastNotToday(days[i]) ? ' cell-dim' : '';
       return `<td class="cell-total${dim}">
         <div class="planned-line"><span class="lbl">계획</span><span class="v">${planned ? planned + 'g' : '-'}</span></div>
         <div class="eaten-line"><span class="lbl">먹은</span><span class="v ${has?'':'empty'}">${has ? eaten + 'g' : '-'}</span></div>

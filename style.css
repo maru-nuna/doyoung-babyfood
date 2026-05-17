@@ -357,10 +357,26 @@ html, body {
   ) !important;
   pointer-events: none;
 }
-.cell-dim { opacity: 0.6; }
+.cell-dim { opacity: 0.55; }
 .cell-dim input { opacity: 0.85; }
 .week-table th.col-past { background: var(--header-bg-soft); color: var(--text-mute); }
-.week-table th.col-future { opacity: 0.65; }
+.week-table th.col-dim { opacity: 0.55; }
+.week-table th.col-today {
+  background: var(--accent);
+  color: #fff;
+  border-top: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+}
+.week-table th.col-today .day-sub { color: rgba(255,255,255,0.85); }
+.week-table td.cell-today {
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+  background: var(--accent-light);
+}
+.week-table tr:last-child td.cell-today {
+  border-bottom: 2px solid var(--accent);
+}
 
 /* Total cells (양 row, 일 총량) */
 .cell-total .planned-line,
