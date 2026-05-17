@@ -109,15 +109,16 @@ html, body {
   vertical-align: middle;
 }
 .week-table .meal-row .row-label { background: var(--header-bg); }
-.cell-ingredients { min-width: 110px; }
+.cell-ingredients { min-width: 120px; }
 .cell-ingredients .line {
-  display: flex; justify-content: space-between;
+  display: flex; justify-content: space-between; align-items: baseline;
+  flex-wrap: nowrap; gap: 4px;
   font-size: 12px;
   padding: 1px 0;
 }
 .cell-ingredients .line.new { background: var(--new-bg); padding: 1px 4px; border-radius: 3px; }
-.cell-ingredients .name { color: var(--text); }
-.cell-ingredients .amt { color: var(--text-sub); margin-left: 6px; }
+.cell-ingredients .name { color: var(--text); word-break: keep-all; min-width: 0; }
+.cell-ingredients .amt { color: var(--text-sub); margin-left: 6px; flex-shrink: 0; white-space: nowrap; }
 .cell-ingredients .empty { color: var(--text-mute); font-size: 11px; }
 .cell-ingredients .section-label {
   font-size: 10px; color: var(--text-mute);
@@ -440,13 +441,38 @@ html, body {
 }
 .month-cell {
   background: var(--surface);
-  min-height: 78px;
+  min-height: 110px;
   padding: 6px;
   cursor: pointer;
   display: flex; flex-direction: column;
   gap: 2px;
   transition: background 0.15s;
+  overflow: hidden;
 }
+.month-cell .menu-mini {
+  display: flex; flex-direction: column; gap: 1px;
+  margin-top: 2px;
+  font-size: 10px; line-height: 1.3;
+  color: var(--text-sub);
+}
+.month-cell .menu-line {
+  display: flex; align-items: flex-start; gap: 3px;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.month-cell .menu-line .tag {
+  flex-shrink: 0;
+  font-size: 9px; font-weight: 700;
+  padding: 0 3px; border-radius: 2px;
+  color: var(--surface);
+  line-height: 1.4;
+}
+.month-cell .menu-line.base .tag { background: #4a90e2; }
+.month-cell .menu-line.top .tag { background: #f5a623; }
 .month-cell:hover { background: var(--accent-light); }
 .month-cell.out-month { background: #fafbfc; color: var(--text-mute); }
 .month-cell.out-month:hover { background: var(--accent-light); }
@@ -480,7 +506,9 @@ html, body {
   .week-table th, .week-table td { padding: 4px 5px; }
   .week-table .row-label.sub-label { width: 38px; min-width: 38px; font-size: 11px; }
   .cell-total .cell-eat-input { width: 38px; font-size: 12px; }
-  .month-cell { min-height: 64px; padding: 4px; }
+  .month-cell { min-height: 92px; padding: 4px; }
+  .month-cell .menu-mini { font-size: 9px; }
+  .month-cell .menu-line .tag { font-size: 8px; }
   .month-cell .date-num { font-size: 12px; }
   .month-cell .d-plus { font-size: 9px; }
   .month-cell .eaten-mini { font-size: 11px; }

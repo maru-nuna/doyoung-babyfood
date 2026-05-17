@@ -655,9 +655,23 @@ function renderMonthView() {
       html += `<div class="${classes.join(' ')}"></div>`;
       return;
     }
+    // 베이스/토핑 이름 모으기 (중복 제거)
+    const dayMeals = dayMealsFor(iso);
+    const baseNames = [];
+    const topNames = [];
+    dayMeals.forEach(m => {
+      (m.base || []).forEach(x => { if (!baseNames.includes(x.name)) baseNames.push(x.name); });
+      (m.toppings || []).forEach(x => { if (!topNames.includes(x.name)) topNames.push(x.name); });
+    });
+    const menuHtml = (baseNames.length || topNames.length) ? `
+      <div class="menu-mini">
+        ${baseNames.length ? `<div class="menu-line base"><span class="tag">베</span>${escapeHtml(baseNames.join(', '))}</div>` : ''}
+        ${topNames.length ? `<div class="menu-line top"><span class="tag">토</span>${escapeHtml(topNames.join(', '))}</div>` : ''}
+      </div>` : '';
     html += `<div class="${classes.join(' ')}" style="${bgStyle}" data-date="${iso}">
       <div class="date-num">${d.getDate()}</div>
       <div class="d-plus">D+${daysSince(birth, d)}</div>
+      ${menuHtml}
       ${has ? `<div class="eaten-mini">${eaten}g</div>` : (planned ? `<div class="planned-mini">계획 ${planned}g</div>` : '<div class="empty-mini">-</div>')}
       ${has && planned ? `<div class="pct-mini">${pct(eaten, planned)}</div>` : ''}
     </div>`;
