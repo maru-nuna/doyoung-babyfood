@@ -85,8 +85,8 @@
   .mealcell:hover,.snackcell:hover{background:#fbf7ee;}
   .mealcell:active,.snackcell:active{background:#fff8e8;}
   .mealcell.log:empty::before,.snackcell:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
-  td.cell-changed{background:var(--changed-soft) !important;color:var(--changed);}
-  td.cell-changed .item,td.cell-changed .g{color:var(--changed);}
+  .changed-item{background:var(--changed-soft);color:var(--changed);padding:2px 7px;border-radius:7px;border:1px solid #c5d6ea;font-weight:700;}
+  .changed-item .g{color:var(--changed);}
   td.cell-changed::after{content:"✎ 변경";display:block;font-size:9.5px;color:#8fb0d6;white-space:nowrap;margin-top:2px;}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
@@ -430,10 +430,35 @@ function cellList(items){
     return `<span class="${cls}">${esc(it[0])} <span class="g">${it[1]}g</span></span>`;
   }).join('')+'</div>';
 }
-function cellListFromText(text){
-  const parts=String(text||'').split(/\s*·\s*/).map(s=>s.trim()).filter(Boolean);
+function cellListFromText(text, planItems){
+  const parts=parseItemsLocal(text);
   if(!parts.length) return '<span class="empty">·</span>';
-  return '<div class="cell-list">'+parts.map(s=>`<span class="item">${esc(s)}</span>`).join('')+'</div>';
+  const planMap=new Map((planItems||[]).map(it=>[it[0], it[1]]));
+  return '<div class="cell-list">'+parts.map(p=>{
+    const planG=planMap.get(p.name);
+    const isChanged = planG===undefined || planG!==p.g;
+    const cls = isChanged ? 'item changed-item' : 'item';
+    return `<span class="${cls}">${esc(p.name)} <span class="g">${p.g}g</span></span>`;
+  }).join('')+'</div>';
+}
+function parseItemsLocal(text){
+  if(!text) return [];
+  return String(text).split(/\s*·\s*/).map(s=>s.trim()).filter(Boolean).map(s=>{
+    const m=s.match(/^(.+?)\s*(\d+)\s*g?\s*$/);
+    return m ? {name:m[1].trim(), g:parseInt(m[2],10)} : {name:s, g:0};
+  });
+}
+function computedTotal(day, mi){
+  const meal=getMeals(day)[mi]; if(!meal) return 0;
+  const ovBase=State.overrides[`${day.date}|${mi}|base`];
+  const ovTop =State.overrides[`${day.date}|${mi}|top`];
+  const baseSum = ovBase!=null
+    ? parseItemsLocal(ovBase).reduce((a,it)=>a+(it.g||0),0)
+    : meal.base.reduce((a,it)=>a+it[1],0);
+  const topSum = ovTop!=null
+    ? parseItemsLocal(ovTop).reduce((a,it)=>a+(it.g||0),0)
+    : meal.top.reduce((a,it)=>a+it[1],0);
+  return baseSum + topSum;
 }
 function getMeals(day){ return day.meals?day.meals:[{base:day.base,top:day.top,total:day.total}]; }
 
@@ -442,7 +467,7 @@ function makeCell(items,date,mi,field,mealName){
   const ov=State.overrides[key];
   const changed = ov!=null && ov!==planTxt;
   const eatenOn = !!State.logs[dm+'|eaten'];
-  const inner = changed ? cellListFromText(ov) : cellList(items);
+  const inner = changed ? cellListFromText(ov, items) : cellList(items);
   const cls=['mealcell',field,changed?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
 }
@@ -454,7 +479,7 @@ function mealRows(d,mi,mealName){
   let h='';
   h+='<tr class="row-base"><td class="rowlabel">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   h+='<tr class="row-top"><td class="rowlabel">토핑</td>'+d.map(x=>makeCell(getMeals(x)[mi].top,x.date,mi,'top',mealName)).join('')+'</tr>';
-  h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=getMeals(x)[mi].total;return `<td class="total">${t!=null?t:'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
+  h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);return `<td class="total">${t||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
   h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName)).join('')+'</tr>';
   h+='<tr><td class="rowlabel">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
   return h;
@@ -471,7 +496,7 @@ function dayRatio(day){
   const meals=getMeals(day);
   let plan=0, actual=0;
   meals.forEach((m,mi)=>{
-    plan+=m.total||0;
+    plan+=computedTotal(day,mi);
     const e=parseInt(State.logs[`${day.date}|${mi}|eaten`],10);
     if(!isNaN(e)) actual+=e;
   });
@@ -685,6 +710,7 @@ mOverlay.addEventListener('click',e=>{ if(e.target===mOverlay) closeMealEdit(); 
 const categories=[
   ["곡류/베이스",["현미","기장","수수","차조","오트밀","찹쌀","귀리","보리","옥수수","퀴노아"]],
   ["채소",["애호박","양배추","브로콜리","오이","단호박","콜리플라워","감자","고구마","청경채","양파","배추","무","새송이","연근","파프리카","가지","우엉","팽이버섯","토마토","아스파라거스","늙은호박","아욱","숙주","마늘쫑","느타리버섯","파","비타민(채)","당근","시금치","비트"]],
+  ["고기",["소고기","돼지고기","닭고기"]],
   ["콩/두부류",["완두콩","강낭콩","두부","밤"]],
   ["해조류",["미역","다시마"]],
   ["과일",["배","사과","메론","바나나","복숭아","아보카도","자두","파인애플","망고","감","오렌지","딸기","키위","귤"]],
