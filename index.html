@@ -122,6 +122,138 @@
   .toy-review-input textarea{font-family:inherit;font-size:13.5px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;resize:vertical;outline:none;min-height:54px;}
   .toy-review-input textarea:focus{border-color:var(--sage);}
   .toy-reviews-empty{color:var(--muted);font-size:12px;padding:8px 4px;font-style:italic;}
+
+  /* ========= 모바일 최적화 (≤ 600px) ========= */
+  @media (max-width:600px){
+    .wrap{padding:24px 14px 60px;}
+    .topbar{gap:8px;}
+    .title{font-size:30px;}
+    .sub{font-size:12px;}
+    .actions{flex-direction:row;align-items:center;}
+    .sync{font-size:11px;}
+    .legend{gap:5px;margin-top:12px;}
+    .chip{font-size:10.5px;padding:3px 8px;}
+    .check-btn{padding:9px 16px;font-size:13px;margin-top:12px;box-shadow:0 3px 10px rgba(122,148,113,.3);}
+
+    .main-tabs{padding:4px;gap:4px;margin:16px 0 18px;}
+    .main-tab{padding:10px 8px;font-size:13.5px;border-radius:8px;}
+
+    .tabs{gap:4px;margin:18px 0 14px;}
+    .tab{padding:9px 14px;font-size:13px;}
+
+    .new-foods{font-size:12.5px;padding:10px 12px;margin-bottom:12px;border-radius:12px;}
+    .nf-chip{font-size:11.5px;padding:2px 8px;}
+
+    .overall-progress{padding:11px 14px;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+    .op-label{font-size:12px;}
+    .op-bar{height:8px;flex:1 1 100%;order:3;}
+    .op-pct{font-size:14px;min-width:36px;}
+    .op-hint{font-size:10px;}
+
+    .week{padding:4px;margin-bottom:14px;border-radius:12px;}
+    .week-head{font-size:11.5px;padding:8px 10px 4px;}
+    table{min-width:520px;}
+    th,td{padding:6px 4px;font-size:11.5px;}
+    td.rowlabel{font-size:11px;width:50px;}
+    thead .date{font-size:11.5px;}
+    thead .dday{font-size:10px;}
+    .item{font-size:11px;}
+    .item .g{font-size:10px;}
+    .new-item,.changed-item{padding:1px 5px;font-size:11px;}
+    .log-text{font-size:11.5px;line-height:1.3;}
+    .log-text:empty::before{font-size:10px;}
+    .eaten-pct{font-size:9px;margin-top:2px;}
+    .meal-band td,.snack-band td{font-size:11px;padding:5px 10px;}
+
+    .foot{font-size:11px;margin-top:22px;}
+
+    .overlay{padding:10px;}
+    .modal{border-radius:16px;max-height:92vh;}
+    .modal-head{padding:14px 16px 10px;}
+    .modal-title{font-size:21px;}
+    .modal-sub{font-size:12px;}
+    .form-note{font-size:12px;padding:8px 16px;}
+    .modal-body{padding:6px 14px 10px;}
+    .detail-body{padding:14px 16px 8px;gap:12px;}
+    .modal-foot{padding:10px 16px;}
+
+    .modal-group{padding:10px 12px;gap:10px;border-radius:10px;}
+    .modal-group-head{font-size:12px;padding-bottom:6px;}
+
+    .field input,.field textarea{font-size:14px;padding:9px 10px;}
+    .flabel{font-size:12.5px;}
+    .hint{font-size:10.5px;}
+
+    .item-row{flex-wrap:wrap;gap:4px;}
+    .item-row .item-name{flex:1 1 100%;min-width:0;}
+    .item-row .item-g{flex:1 1 0;min-width:0;width:auto;}
+    .item-row .item-unit{flex:0 0 58px;width:58px;}
+    .item-del{flex:0 0 32px;}
+    .add-item-btn{padding:7px 10px;font-size:12px;}
+    .item-empty{font-size:11.5px;}
+
+    .cat{padding:10px 12px;margin:10px 0;}
+    .cat-name{font-size:12px;}
+    .items{grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px;}
+    .ing{padding:6px 4px;font-size:12px;min-height:34px;gap:3px;}
+    .ing .d{font-size:9px;padding:0 3px;}
+
+    .add-ing-row{gap:5px;}
+    .add-ing-row input{font-size:12.5px;padding:8px 10px;}
+    .add-ing-row select{font-size:12.5px;padding:8px 28px 8px 10px;}
+    .add-ing-row .add-btn{padding:8px 12px;font-size:12.5px;}
+    .reset-btn{font-size:12px;padding:7px 12px;}
+
+    .toy-head{margin-bottom:10px;gap:8px;}
+    .toy-sub{font-size:12px;}
+    .toy-table-wrap{border-radius:14px;}
+    table.toy-table{min-width:520px;}
+    table.toy-table th{padding:9px 7px;font-size:11px;}
+    table.toy-table td{padding:9px 7px;font-size:12.5px;}
+    table.toy-table .th-photo{width:64px;}
+    .toy-photo-thumb{width:48px;height:48px;}
+    .toy-photo-thumb.placeholder{font-size:9px;}
+    .month-chip{font-size:10px;padding:2px 7px;}
+    .toy-rating-stars .star{font-size:14px;width:14px;}
+    .toy-rating-num{font-size:10px;margin-left:4px;}
+    .toy-review-item .rv-text{font-size:12px;line-height:1.45;}
+
+    .toy-modal{max-width:none;}
+    .toy-photo-preview{width:80px;height:80px;}
+    .toy-photo-pick{font-size:12.5px;padding:8px 12px;}
+    .toy-month-pick .month-pick-chip{padding:6px 11px;font-size:12px;}
+    .toy-rating-edit .star{font-size:22px;width:22px;}
+    .toy-rating-edit .rating-num{font-size:14px;}
+    .toy-review-input{padding:9px;}
+    .toy-review-input textarea{font-size:13px;}
+
+    .progress-modal{max-width:none;}
+    .pg-summary{font-size:12px;padding:10px 12px;gap:4px;flex-direction:column;align-items:flex-start;}
+    .pg-summary b{font-size:16px;}
+    .pg-list{gap:7px;}
+    .pg-row{grid-template-columns:72px 1fr 86px;gap:6px;font-size:12px;}
+    .pg-row .name{font-size:12px;}
+    .pg-row .meta{font-size:10px;}
+
+    /* 터치에서 hover transform/그림자 어색 → 무효화 */
+    .ing:hover,.mealcell:hover,.snackcell:hover,
+    .overall-progress:hover,.tab:hover,.main-tab:hover,
+    .check-btn:hover,table.toy-table tr.toy-row:hover td,
+    .add-item-btn:hover,.month-pick-chip:hover{
+      transform:none;
+      box-shadow:none;
+    }
+  }
+
+  /* 한층 더 좁은 화면 (≤ 380px) */
+  @media (max-width:380px){
+    .title{font-size:26px;}
+    .check-btn{padding:8px 14px;font-size:12.5px;}
+    .main-tab{font-size:12.5px;padding:9px 6px;}
+    .tab{padding:8px 12px;font-size:12.5px;}
+    .items{grid-template-columns:repeat(auto-fill,minmax(60px,1fr));}
+    .ing{font-size:11.5px;}
+  }
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   .new-foods{background:var(--sage-soft);border:1px dashed #cdd9c6;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:14px;}
