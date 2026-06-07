@@ -218,7 +218,7 @@
   .add-ing-row{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;}
   .add-ing-row input{flex:1 1 120px;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fdfbf7;outline:none;}
   .add-ing-row input:focus{border-color:var(--sage);background:#fff;}
-  .add-ing-row select{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 8px;background:#fff;color:var(--ink);}
+  .add-ing-row select{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 28px 8px 10px;background:#fff;color:var(--ink);}
   .add-ing-row .add-btn{font-family:inherit;font-size:13px;cursor:pointer;background:var(--sage);color:#fff;border:none;padding:8px 14px;border-radius:8px;flex-shrink:0;}
   .add-ing-row .add-btn:hover{background:#6b8362;}
   #checklist-foot .reset-btn{align-self:flex-end;}
@@ -334,7 +334,7 @@
     <div class="modal-head">
       <div><div class="modal-title">재료 테스트 체크리스트</div><div class="modal-sub" id="progress">0개 완료</div></div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <button id="edit-ing-toggle" class="reset-btn" style="padding:6px 12px;font-size:12px;">✏️ 편집</button>
+        <button id="edit-ing-toggle" class="reset-btn" style="padding:6px 12px;font-size:12px;">편집</button>
         <button id="close-checklist" class="close-x">✕</button>
       </div>
     </div>
@@ -1089,7 +1089,7 @@ let selectedForDelete=new Set();
 function setChecklistEditMode(on){
   isChecklistEditMode=on;
   if(!on) selectedForDelete.clear();
-  document.getElementById('edit-ing-toggle').textContent = on ? '편집 중…' : '✏️ 편집';
+  document.getElementById('edit-ing-toggle').textContent = on ? '편집 중…' : '편집';
   document.getElementById('checklist-note').style.display = on ? 'none' : '';
   document.getElementById('checklist-edit-note').style.display = on ? '' : 'none';
   document.getElementById('add-ing-row').style.display = on ? 'none' : '';
