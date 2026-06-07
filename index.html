@@ -159,6 +159,8 @@
   .ratio-text.full{color:var(--sage);font-weight:700;}
   .log-text{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;max-width:100%;line-height:1.35;}
   .log-text:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
+  .eaten-pct{font-size:10px;color:var(--muted);margin-top:3px;line-height:1;letter-spacing:.02em;}
+  .eaten-pct.full{color:var(--sage);font-weight:700;}
   thead .date{font-weight:700;color:var(--ink);background:#faf6ee;}
   thead .dday{color:var(--muted);font-size:11px;background:#fdfbf6;}
   td.rowlabel{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;width:64px;white-space:nowrap;position:sticky;left:0;}
@@ -229,13 +231,23 @@
   .item-list{display:flex;flex-direction:column;gap:6px;}
   .item-row{display:flex;gap:6px;align-items:center;}
   .item-row .item-name{flex:1;min-width:0;}
-  .item-row .item-g{width:72px;flex-shrink:0;text-align:right;}
+  .item-row .item-g{width:62px;flex-shrink:0;text-align:right;}
+  .item-row .item-unit{width:62px;flex-shrink:0;font-family:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 6px;background:#fdfbf7;outline:none;cursor:pointer;}
+  .item-row .item-unit:focus{border-color:var(--sage);background:#fff;}
   .item-row .g-suffix{color:var(--muted);font-size:13px;}
   .item-del{background:transparent;border:1px solid var(--line);cursor:pointer;width:32px;height:36px;border-radius:8px;color:var(--muted);font-size:13px;flex-shrink:0;}
   .item-del:hover{border-color:var(--peach);color:var(--peach);background:var(--peach-soft);}
   .add-item-btn{margin-top:2px;font-family:inherit;font-size:13px;background:transparent;border:1px dashed #cdd9c6;color:var(--sage);padding:8px 12px;border-radius:10px;cursor:pointer;width:100%;transition:.15s;}
   .add-item-btn:hover{border-color:var(--sage);background:var(--sage-soft);}
   .item-empty{color:var(--muted);font-size:12px;padding:6px 4px;text-align:center;font-style:italic;}
+  .modal-group{background:#faf6ee;border:1px solid #ece5d8;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:14px;}
+  .modal-group.plan-group{background:linear-gradient(180deg,#fbfdfa,#f7f9f3);border-color:#dee5d6;}
+  .modal-group.actual-group{background:linear-gradient(180deg,#fdf7f0,#faf2e6);border-color:#e8dac9;}
+  .modal-group-head{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;padding-bottom:8px;border-bottom:1px dashed var(--line);margin-bottom:-2px;}
+  .modal-group.plan-group .modal-group-head{color:var(--sage);}
+  .modal-group.actual-group .modal-group-head{color:var(--peach);}
+  .mg-icon{font-size:14px;}
+  .mg-hint{font-weight:400;color:var(--muted);font-size:11px;margin-left:auto;}
 </style>
 </head>
 <body>
@@ -433,28 +445,33 @@
       <button id="meal-close" class="close-x">✕</button>
     </div>
     <div class="detail-body">
-      <div class="field" id="meal-base-field">
-        <span class="flabel">베이스 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
-        <div class="item-list" id="meal-base-list"></div>
-        <button type="button" class="add-item-btn" data-target="base">+ 베이스 재료 추가</button>
-        <span class="hint">재료별로 추가/삭제. 모두 비우면 계획으로 돌아갑니다.</span>
-      </div>
-      <div class="field" id="meal-top-field">
-        <span class="flabel">토핑 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
-        <div class="item-list" id="meal-top-list"></div>
-        <button type="button" class="add-item-btn" data-target="top">+ 토핑 재료 추가</button>
-        <span class="hint">재료별로 추가/삭제. 모두 비우면 계획으로 돌아갑니다.</span>
+      <div class="modal-group plan-group" id="plan-group">
+        <div class="modal-group-head"><span class="mg-icon">📋</span> 계획 <span class="mg-hint">실제와 다르게 먹였으면 여기서 수정</span></div>
+        <div class="field" id="meal-base-field">
+          <span class="flabel">베이스 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
+          <div class="item-list" id="meal-base-list"></div>
+          <button type="button" class="add-item-btn" data-target="base">+ 베이스 재료 추가</button>
+        </div>
+        <div class="field" id="meal-top-field">
+          <span class="flabel">토핑 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
+          <div class="item-list" id="meal-top-list"></div>
+          <button type="button" class="add-item-btn" data-target="top">+ 토핑 재료 추가</button>
+        </div>
+        <span class="hint">단위는 g 또는 ml. 모두 비우면 원래 계획으로 돌아갑니다.</span>
       </div>
       <datalist id="ingredient-list"></datalist>
-      <label class="field" id="meal-eaten-field">
-        <span class="flabel">먹은 양 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 숫자 (g)</span></span>
-        <input type="number" id="meal-eaten" inputmode="numeric" min="0" step="1" placeholder="80">
-        <span class="hint">실제 먹은 양을 숫자로만 입력 (단위는 자동으로 g)</span>
-      </label>
-      <label class="field" id="meal-memo-field">
-        <span class="flabel" id="meal-memo-label">메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span></span>
-        <textarea id="meal-memo" rows="3" placeholder="입력하기 (반응, 선호도 등)"></textarea>
-      </label>
+      <div class="modal-group actual-group" id="actual-group">
+        <div class="modal-group-head"><span class="mg-icon">🥄</span> 실제 먹은 결과 <span class="mg-hint">이 끼니에 정말로 먹은 양과 반응</span></div>
+        <label class="field" id="meal-eaten-field">
+          <span class="flabel">먹은 양 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 끼니 전체 합계</span></span>
+          <input type="number" id="meal-eaten" inputmode="numeric" min="0" step="1" placeholder="80">
+          <span class="hint">실제 먹은 양을 숫자로만 입력 (단위는 위 계획 단위 기준)</span>
+        </label>
+        <label class="field" id="meal-memo-field">
+          <span class="flabel" id="meal-memo-label">메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span></span>
+          <textarea id="meal-memo" rows="3" placeholder="입력하기 (반응, 선호도 등)"></textarea>
+        </label>
+      </div>
     </div>
     <div class="modal-foot detail-foot">
       <button id="meal-cancel" class="reset-btn">취소</button>
@@ -549,14 +566,24 @@ const weeks2 = [
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
   const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29;
+  /* 이미 등장한 재료 누적 — tab1 + tab2 둘 다 포함해서 '진짜 첫 등장'에만 new 마킹 */
+  const introduced=new Set();
+  tab1.forEach(wk=>wk.days.forEach(day=>{
+    [...day.base, ...day.top].forEach(it=>introduced.add(it[0]));
+  }));
   weeks2.forEach(w=>{
     const days=[]; let s,e;
     w.days.forEach((row,i)=>{
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===6)e=ds;
       const base=[["쌀",w.rice],["오트밀",w.oat]];
-      const amTop=row.am.map(it=>[it[0],it[1],it[0]===row.nw]);
+      const amTop=row.am.map(it=>{
+        const isFirstAppear = it[0]===row.nw && !introduced.has(it[0]);
+        return [it[0], it[1], isFirstAppear];
+      });
       const pmTop=row.pm.map(it=>[it[0],it[1]]);
+      /* 이 row 끝나면 등장 기록 누적 — am/pm 양쪽 다 */
+      [...row.am, ...row.pm].forEach(it=>introduced.add(it[0]));
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
         {base:base.map(b=>b.slice()),top:amTop,total:sumg(base,amTop)},
         {base:base.map(b=>b.slice()),top:pmTop,total:sumg(base,pmTop)},
@@ -628,33 +655,48 @@ function cellList(items){
 function cellListFromText(text, planItems){
   const parts=parseItemsLocal(text);
   if(!parts.length) return '<span class="empty">·</span>';
-  const planMap=new Map((planItems||[]).map(it=>[it[0], it[1]]));
+  /* 계획은 모두 g 단위 */
+  const planMap=new Map((planItems||[]).map(it=>[it[0], {g:it[1], unit:'g'}]));
   return '<div class="cell-list">'+parts.map(p=>{
-    const planG=planMap.get(p.name);
-    const isChanged = planG===undefined || planG!==p.g;
+    const plan=planMap.get(p.name);
+    const isChanged = !plan || plan.g!==p.g || (plan.unit||'g')!==(p.unit||'g');
     const cls = isChanged ? 'item changed-item' : 'item';
-    return `<span class="${cls}">${esc(p.name)} <span class="g">${p.g}g</span></span>`;
+    return `<span class="${cls}">${esc(p.name)} <span class="g">${p.g}${p.unit||'g'}</span></span>`;
   }).join('')+'</div>';
 }
 function parseItemsLocal(text){
   if(!text) return [];
   return String(text).split(/\s*·\s*/).map(s=>s.trim()).filter(Boolean).map(s=>{
-    const m=s.match(/^(.+?)\s*(\d+)\s*g?\s*$/);
-    return m ? {name:m[1].trim(), g:parseInt(m[2],10)} : {name:s, g:0};
+    const m=s.match(/^(.+?)\s*(\d+)\s*(g|ml)?\s*$/i);
+    if(m) return {name:m[1].trim(), g:parseInt(m[2],10), unit:(m[3]||'g').toLowerCase()};
+    return {name:s, g:0, unit:'g'};
   });
 }
+/* 단위별 분리 합산 결과: {g, ml} */
 function computedTotal(day, mi){
-  const meal=getMeals(day)[mi]; if(!meal) return 0;
+  const meal=getMeals(day)[mi]; if(!meal) return {g:0, ml:0};
+  const sums={g:0, ml:0};
+  function addItems(items){
+    items.forEach(it=>{
+      const u = it.unit || 'g';
+      sums[u] = (sums[u]||0) + (it.g||0);
+    });
+  }
   const ovBase=State.overrides[`${day.date}|${mi}|base`];
   const ovTop =State.overrides[`${day.date}|${mi}|top`];
-  const baseSum = ovBase!=null
-    ? parseItemsLocal(ovBase).reduce((a,it)=>a+(it.g||0),0)
-    : meal.base.reduce((a,it)=>a+it[1],0);
-  const topSum = ovTop!=null
-    ? parseItemsLocal(ovTop).reduce((a,it)=>a+(it.g||0),0)
-    : meal.top.reduce((a,it)=>a+it[1],0);
-  return baseSum + topSum;
+  if(ovBase!=null) addItems(parseItemsLocal(ovBase));
+  else addItems(meal.base.map(it=>({name:it[0],g:it[1],unit:'g'})));
+  if(ovTop!=null) addItems(parseItemsLocal(ovTop));
+  else addItems(meal.top.map(it=>({name:it[0],g:it[1],unit:'g'})));
+  return sums;
 }
+function totalText(t){
+  const parts=[];
+  if(t.g>0) parts.push(t.g+'g');
+  if(t.ml>0) parts.push(t.ml+'ml');
+  return parts.join(' · ');
+}
+function totalSum(t){ return (t.g||0)+(t.ml||0); }
 function getMeals(day){ return day.meals?day.meals:[{base:day.base,top:day.top,total:day.total}]; }
 
 function makeCell(items,date,mi,field,mealName){
@@ -666,16 +708,29 @@ function makeCell(items,date,mi,field,mealName){
   const cls=['mealcell',field,changed?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
 }
-function makeLog(date,mi,field,mealName){
+function makeLog(date,mi,field,mealName,extraHtml){
   const key=`${date}|${mi}|${field}`;
-  return `<td class="mealcell log ${field}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><div class="log-text">${esc(State.logs[key]||'')}</div></td>`;
+  const val=State.logs[key]||'';
+  return `<td class="mealcell log ${field}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><div class="log-text">${esc(val)}</div>${extraHtml||''}</td>`;
+}
+function eatenPctHtml(day, mi){
+  const val=State.logs[`${day.date}|${mi}|eaten`];
+  if(!val) return '';
+  const eaten=parseInt(val,10);
+  if(isNaN(eaten)) return '';
+  const t=computedTotal(day,mi);
+  const plan=totalSum(t);
+  if(!plan) return '';
+  const pct=Math.round(Math.min(1, eaten/plan)*100);
+  const full=pct>=100;
+  return `<div class="eaten-pct${full?' full':''}">${pct}%</div>`;
 }
 function mealRows(d,mi,mealName){
   let h='';
   h+='<tr class="row-base"><td class="rowlabel">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   h+='<tr class="row-top"><td class="rowlabel">토핑</td>'+d.map(x=>makeCell(getMeals(x)[mi].top,x.date,mi,'top',mealName)).join('')+'</tr>';
-  h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);return `<td class="total">${t||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
-  h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName)).join('')+'</tr>';
+  h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
+  h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName,eatenPctHtml(x,mi))).join('')+'</tr>';
   h+='<tr><td class="rowlabel">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
   return h;
 }
@@ -691,7 +746,7 @@ function dayRatio(day){
   const meals=getMeals(day);
   let plan=0, actual=0;
   meals.forEach((m,mi)=>{
-    plan+=computedTotal(day,mi);
+    plan+=totalSum(computedTotal(day,mi));
     const e=parseInt(State.logs[`${day.date}|${mi}|eaten`],10);
     if(!isNaN(e)) actual+=e;
   });
@@ -828,27 +883,33 @@ function setFieldVisible(id,vis){ document.getElementById(id).style.display=vis?
 function parseItems(text){
   if(!text) return [];
   return String(text).split(/\s*·\s*/).map(s=>s.trim()).filter(Boolean).map(s=>{
-    const m=s.match(/^(.+?)\s*(\d+)\s*g?\s*$/);
-    return m ? {name:m[1].trim(), g:parseInt(m[2],10)} : {name:s, g:0};
+    const m=s.match(/^(.+?)\s*(\d+)\s*(g|ml)?\s*$/i);
+    if(m) return {name:m[1].trim(), g:parseInt(m[2],10), unit:(m[3]||'g').toLowerCase()};
+    return {name:s, g:0, unit:'g'};
   });
 }
 function itemsToText(items){
-  return items.filter(it=>it.name && it.name.trim()).map(it=>`${it.name.trim()} ${it.g||0}g`).join(' · ');
+  return items.filter(it=>it.name && it.name.trim()).map(it=>`${it.name.trim()} ${it.g||0}${it.unit||'g'}`).join(' · ');
 }
 function renderItemList(containerId, items){
   const c=document.getElementById(containerId);
   if(!items.length){ c.innerHTML='<div class="item-empty">아직 없음 — 아래 "추가" 버튼을 눌러주세요</div>'; return; }
-  c.innerHTML=items.map((it,i)=>`
-    <div class="item-row" data-i="${i}">
-      <input type="text" class="item-name" list="ingredient-list" placeholder="재료명" value="${esc(it.name||'')}">
-      <input type="number" class="item-g" inputmode="numeric" min="0" step="1" placeholder="0" value="${it.g||it.g===0?it.g:''}">
-      <span class="g-suffix">g</span>
-      <button type="button" class="item-del" aria-label="삭제">✕</button>
-    </div>
-  `).join('');
+  c.innerHTML=items.map((it,i)=>{
+    const unit=it.unit||'g';
+    return `
+      <div class="item-row" data-i="${i}">
+        <input type="text" class="item-name" list="ingredient-list" placeholder="재료명" value="${esc(it.name||'')}">
+        <input type="number" class="item-g" inputmode="numeric" min="0" step="1" placeholder="0" value="${it.g||it.g===0?it.g:''}">
+        <select class="item-unit" aria-label="단위">
+          <option value="g" ${unit==='g'?'selected':''}>g</option>
+          <option value="ml" ${unit==='ml'?'selected':''}>ml</option>
+        </select>
+        <button type="button" class="item-del" aria-label="삭제">✕</button>
+      </div>
+    `;
+  }).join('');
   c.querySelectorAll('.item-del').forEach(btn=>{
     btn.onclick=()=>{
-      const target=containerId==='meal-base-list'?'base':'top';
       const arr=readItemList(containerId);
       const idx=parseInt(btn.closest('.item-row').dataset.i,10);
       arr.splice(idx,1);
@@ -859,13 +920,14 @@ function renderItemList(containerId, items){
 function readItemList(containerId){
   return Array.from(document.getElementById(containerId).querySelectorAll('.item-row')).map(row=>({
     name: row.querySelector('.item-name').value,
-    g: parseInt(row.querySelector('.item-g').value,10)||0
+    g: parseInt(row.querySelector('.item-g').value,10)||0,
+    unit: (row.querySelector('.item-unit')?row.querySelector('.item-unit').value:'g')||'g'
   }));
 }
 function addItemToList(target){
   const containerId='meal-'+target+'-list';
   const arr=readItemList(containerId);
-  arr.push({name:'',g:''});
+  arr.push({name:'',g:'',unit:'g'});
   renderItemList(containerId,arr);
   setTimeout(()=>{
     const rows=document.querySelectorAll('#'+containerId+' .item-row');
@@ -887,8 +949,8 @@ function openMealEdit(date,mi,mealName,focusField){
   document.getElementById('meal-sub').textContent=planLine;
   const ovBase=State.overrides[`${date}|${mi}|base`];
   const ovTop=State.overrides[`${date}|${mi}|top`];
-  const baseItems = ovBase!=null ? parseItems(ovBase) : meal.base.map(it=>({name:it[0],g:it[1]}));
-  const topItems  = ovTop !=null ? parseItems(ovTop ) : meal.top .map(it=>({name:it[0],g:it[1]}));
+  const baseItems = ovBase!=null ? parseItems(ovBase) : meal.base.map(it=>({name:it[0],g:it[1],unit:'g'}));
+  const topItems  = ovTop !=null ? parseItems(ovTop ) : meal.top .map(it=>({name:it[0],g:it[1],unit:'g'}));
   renderItemList('meal-base-list', baseItems);
   renderItemList('meal-top-list',  topItems);
   document.getElementById('meal-eaten').value=State.logs[`${date}|${mi}|eaten`]||'';
@@ -897,6 +959,8 @@ function openMealEdit(date,mi,mealName,focusField){
   document.getElementById('meal-memo').rows=3;
   document.getElementById('meal-memo').placeholder='입력하기 (반응, 선호도 등)';
   ['meal-base-field','meal-top-field','meal-eaten-field','meal-memo-field'].forEach(id=>setFieldVisible(id,true));
+  setFieldVisible('plan-group',true);
+  setFieldVisible('actual-group',true);
   mOverlay.classList.add('open');
   setTimeout(()=>{
     if(focusField==='base' || focusField==='top'){
@@ -914,7 +978,9 @@ function openSnackEdit(date){
   currentMeal={date,mi:'s',mealName:'간식',snack:true};
   document.getElementById('meal-title').textContent=`${date} · 간식`;
   document.getElementById('meal-sub').textContent='간식 내용을 자유롭게 적어주세요';
+  setFieldVisible('plan-group',false);
   ['meal-base-field','meal-top-field','meal-eaten-field'].forEach(id=>setFieldVisible(id,false));
+  setFieldVisible('actual-group',true);
   setFieldVisible('meal-memo-field',true);
   document.getElementById('meal-memo-label').innerHTML='간식 내용 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
   document.getElementById('meal-memo').rows=2;
