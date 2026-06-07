@@ -338,7 +338,6 @@
         <button id="close-checklist" class="close-x">✕</button>
       </div>
     </div>
-    <div class="form-note" id="checklist-note">형태 진행 : 미음 → 무른 죽 → 무른 밥 / 잘게 썬 것</div>
     <div class="form-note edit-note" id="checklist-edit-note" style="display:none;background:#fdebea;color:#cf6b5a;">삭제할 재료를 눌러 선택하세요. <b>완료 기록이 있으면 함께 삭제됩니다.</b></div>
     <div class="modal-body" id="checklist-body"></div>
     <div class="modal-foot" id="checklist-foot">
@@ -1090,7 +1089,6 @@ function setChecklistEditMode(on){
   isChecklistEditMode=on;
   if(!on) selectedForDelete.clear();
   document.getElementById('edit-ing-toggle').textContent = on ? '편집 중…' : '편집';
-  document.getElementById('checklist-note').style.display = on ? 'none' : '';
   document.getElementById('checklist-edit-note').style.display = on ? '' : 'none';
   document.getElementById('add-ing-row').style.display = on ? 'none' : '';
   document.getElementById('reset-checklist').style.display = on ? 'none' : '';
