@@ -1,18 +1,774 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>도영이 이유식</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>도영이 이유식</title>
+<meta name="theme-color" content="#7a9471">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="도영이 이유식">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Gaegu:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#fbf7f0;--paper:#ffffff;--ink:#3d3a34;--muted:#9a948a;--line:#ece5d8;
+    --sage:#7a9471;--sage-soft:#eef3ea;--peach:#e8a87c;--peach-soft:#fdf0e6;
+    --base-tag:#eaf1f6;--base-ink:#5a7d96;--top-tag:#fcefe6;--top-ink:#c47a4e;
+    --snack-tag:#f3edf8;--snack-ink:#8a6ba8;--changed:#3a6ea5;--changed-soft:#eef4fb;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Gowun Dodum',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5;padding-bottom:env(safe-area-inset-bottom);}
+  .wrap{max-width:1100px;margin:0 auto;padding:40px 20px 80px;}
+  header{margin-bottom:20px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .title{font-family:'Gaegu',cursive;font-size:42px;color:var(--sage);margin:0;letter-spacing:-1px;}
+  .sub{color:var(--muted);font-size:14px;margin-top:4px;}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+  .chip{font-size:12px;padding:4px 10px;border-radius:999px;}
+  .chip.base{background:var(--base-tag);color:var(--base-ink);}
+  .chip.top{background:var(--top-tag);color:var(--top-ink);}
+  .chip.snack{background:var(--snack-tag);color:var(--snack-ink);}
+  .chip.newc{background:#fff3cd;color:#9a6b00;}
+  .chip.chgc{background:var(--changed-soft);color:var(--changed);}
+  .actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:#cbc6bb;}
+  .dot.ok{background:#7a9471;} .dot.busy{background:#e8a87c;} .dot.err{background:#cf6b5a;}
+  .check-btn{margin-top:16px;font-family:inherit;font-size:14px;cursor:pointer;background:var(--sage);
+    color:#fff;border:none;padding:11px 20px;border-radius:12px;box-shadow:0 4px 14px rgba(122,148,113,.35);transition:.2s;}
+  .check-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(122,148,113,.45);}
+
+  .tabs{display:flex;gap:6px;margin:22px 0 18px;}
+  .tab{border:none;cursor:pointer;font-family:inherit;font-size:15px;padding:10px 22px;
+    border-radius:14px 14px 0 0;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:.2s;}
+  .tab:hover{color:var(--ink);}
+  .tab.active{background:var(--paper);color:var(--sage);font-weight:700;box-shadow:0 -2px 8px rgba(0,0,0,.03);border-bottom:2px solid var(--sage);}
+  .panel{display:none;} .panel.active{display:block;animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .new-foods{background:var(--sage-soft);border:1px dashed #cdd9c6;border-radius:14px;padding:12px 16px;margin-bottom:22px;font-size:14px;}
+  .new-foods b{color:var(--sage);}
+  .nf-chip{display:inline-block;background:#fff3cd;color:#9a6b00;border:1px solid #ffe08a;border-radius:8px;padding:2px 9px;margin:3px 3px 0 0;font-size:13px;}
+  .nf-empty{color:var(--muted);font-size:13px;}
+
+  .week{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:6px;margin-bottom:22px;overflow-x:auto;box-shadow:0 4px 20px rgba(120,110,90,.04);}
+  .week-head{font-size:13px;color:var(--muted);padding:10px 14px 6px;}
+  table{border-collapse:collapse;width:100%;min-width:760px;}
+  th,td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13px;vertical-align:middle;}
+  thead .date{font-weight:700;color:var(--ink);background:#faf6ee;}
+  thead .dday{color:var(--muted);font-size:11px;background:#fdfbf6;}
+  td.rowlabel{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;width:64px;white-space:nowrap;position:sticky;left:0;}
+  .cell-list{display:flex;flex-direction:column;gap:3px;align-items:center;}
+  .item{font-size:12.5px;word-break:keep-all;overflow-wrap:anywhere;max-width:100%;} .item .g{color:var(--muted);font-size:11px;}
+  .new-item{font-weight:700;color:inherit;}
+  .eaten-on .new-item{background:#fff3cd;color:#9a6b00;padding:2px 7px;border-radius:7px;border:1px solid #ffe08a;}
+  .row-base td:not(.rowlabel){background:#fbfdfa;}
+  .row-top td:not(.rowlabel){background:#fffcf9;}
+  .row-snack td:not(.rowlabel){background:#fcfaff;}
+  .row-base .rowlabel{color:var(--base-ink);} .row-top .rowlabel{color:var(--top-ink);} .row-snack .rowlabel{color:var(--snack-ink);}
+  .total{font-weight:700;color:var(--ink);}
+  .mealcell,.snackcell{cursor:pointer;min-width:54px;color:var(--ink);font-size:12px;transition:background .15s;-webkit-tap-highlight-color:rgba(122,148,113,.18);}
+  .mealcell:hover,.snackcell:hover{background:#fbf7ee;}
+  .mealcell:active,.snackcell:active{background:#fff8e8;}
+  .mealcell.log:empty::before,.snackcell:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
+  td.cell-changed{background:var(--changed-soft) !important;color:var(--changed);}
+  td.cell-changed .item,td.cell-changed .g{color:var(--changed);}
+  td.cell-changed::after{content:"✎ 변경";display:block;font-size:9.5px;color:#8fb0d6;white-space:nowrap;margin-top:2px;}
+  .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
+  .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
+  .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
+
+  .overlay{display:none;position:fixed;inset:0;background:rgba(61,58,52,.45);backdrop-filter:blur(3px);z-index:50;align-items:center;justify-content:center;padding:20px;}
+  .overlay.open{display:flex;animation:fade .2s ease;}
+  .detail-overlay{z-index:60;}
+  .modal{background:var(--paper);width:100%;max-width:680px;max-height:86vh;border-radius:20px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .detail-modal{max-width:440px;}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 22px 14px;border-bottom:1px solid var(--line);}
+  .modal-title{font-family:'Gaegu',cursive;font-size:26px;color:var(--sage);}
+  .modal-sub{color:var(--muted);font-size:13px;margin-top:2px;}
+  .close-x{border:none;background:#f3eee4;color:var(--muted);cursor:pointer;width:32px;height:32px;border-radius:50%;font-size:14px;}
+  .close-x:hover{background:#e9e2d4;color:var(--ink);}
+  .form-note{background:var(--sage-soft);color:var(--sage);font-size:12.5px;padding:9px 22px;border-bottom:1px solid var(--line);}
+  .modal-body{overflow-y:auto;padding:8px 22px 12px;}
+  .cat{margin:14px 0;background:#faf6ee;border:1px solid var(--line);border-radius:14px;padding:13px 15px;}
+  .cat-name{font-size:13px;font-weight:700;color:var(--peach);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .cat-name .count{margin-left:auto;color:var(--muted);font-weight:400;font-size:12px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:1px 8px;}
+  .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;}
+  .ing{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:8px 6px;font-size:13px;background:#fff;transition:.15s;user-select:none;font-family:inherit;color:var(--ink);text-align:center;min-width:0;overflow:hidden;min-height:38px;box-sizing:border-box;}
+  .ing:hover{border-color:var(--sage);transform:translateY(-1px);box-shadow:0 2px 8px rgba(122,148,113,.15);}
+  .ing.done{background:var(--sage-soft);border-color:#cdd9c6;order:1;flex-wrap:nowrap;}
+  .ing .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .ing.done .nm{text-decoration:line-through;color:var(--muted);}
+  .ing .d{font-size:9.5px;line-height:1.5;color:var(--sage);background:#fff;border:1px solid #dde6d7;border-radius:6px;padding:0 4px;flex-shrink:0;}
+  .ing.custom{padding-right:18px;}
+  .ing.custom::before{content:"내";position:absolute;left:4px;top:3px;font-size:8.5px;color:var(--peach);background:var(--peach-soft);border-radius:4px;padding:0 3px;line-height:1.4;}
+  .ing-del{position:absolute;top:3px;right:4px;font-size:10px;color:var(--muted);cursor:pointer;padding:2px 4px;line-height:1;border-radius:4px;}
+  .ing-del:hover{color:var(--peach);background:#fff;}
+  .modal-foot{padding:12px 22px;border-top:1px solid var(--line);text-align:right;}
+  #checklist-foot{display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:left;}
+  .add-ing-row{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;}
+  .add-ing-row input{flex:1 1 120px;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fdfbf7;outline:none;}
+  .add-ing-row input:focus{border-color:var(--sage);background:#fff;}
+  .add-ing-row select{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 8px;background:#fff;color:var(--ink);}
+  .add-ing-row .add-btn{font-family:inherit;font-size:13px;cursor:pointer;background:var(--sage);color:#fff;border:none;padding:8px 14px;border-radius:8px;flex-shrink:0;}
+  .add-ing-row .add-btn:hover{background:#6b8362;}
+  #checklist-foot .reset-btn{align-self:flex-end;}
+  .reset-btn{font-family:inherit;font-size:13px;cursor:pointer;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:10px;}
+  .reset-btn:hover{border-color:var(--peach);color:var(--peach);}
+  .detail-body{padding:18px 22px 8px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .flabel{font-size:13px;font-weight:700;color:var(--ink);}
+  .field input,.field textarea{font-family:inherit;font-size:14px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fdfbf7;resize:vertical;outline:none;}
+  .field input:focus,.field textarea:focus{border-color:var(--sage);background:#fff;}
+  .field .hint{font-size:11px;color:var(--muted);}
+  .detail-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .done-btn{margin:0;}
+  .item-list{display:flex;flex-direction:column;gap:6px;}
+  .item-row{display:flex;gap:6px;align-items:center;}
+  .item-row .item-name{flex:1;min-width:0;}
+  .item-row .item-g{width:72px;flex-shrink:0;text-align:right;}
+  .item-row .g-suffix{color:var(--muted);font-size:13px;}
+  .item-del{background:transparent;border:1px solid var(--line);cursor:pointer;width:32px;height:36px;border-radius:8px;color:var(--muted);font-size:13px;flex-shrink:0;}
+  .item-del:hover{border-color:var(--peach);color:var(--peach);background:var(--peach-soft);}
+  .add-item-btn{margin-top:2px;font-family:inherit;font-size:13px;background:transparent;border:1px dashed #cdd9c6;color:var(--sage);padding:8px 12px;border-radius:10px;cursor:pointer;width:100%;transition:.15s;}
+  .add-item-btn:hover{border-color:var(--sage);background:var(--sage-soft);}
+  .item-empty{color:var(--muted);font-size:12px;padding:6px 4px;text-align:center;font-style:italic;}
+</style>
 </head>
 <body>
-  <div id="app">
-    <div class="loading">불러오는 중...</div>
+<div class="wrap">
+  <header>
+    <div class="topbar">
+      <div>
+        <h1 class="title">도영이 이유식 🥣</h1>
+        <div class="sub">단위 : g · 베이스 / 토핑 / 간식 단계별 기록</div>
+      </div>
+      <div class="actions">
+        <div class="sync"><span id="sync-dot" class="dot"></span><span id="sync-text">로컬 저장</span></div>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="chip base">베이스</span>
+      <span class="chip top">토핑</span>
+      <span class="chip snack">간식</span>
+      <span class="chip newc">🆕 새로 먹은 재료 (먹은 양 입력 시)</span>
+      <span class="chip chgc">✎ 계획과 다름</span>
+    </div>
+    <button id="open-checklist" class="check-btn">📋 재료 테스트 체크리스트</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="t1">1~28일</button>
+    <button class="tab" data-tab="t2">29~56일</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <section id="t1" class="panel active">
+    <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t1-new"></span></div>
+    <div id="t1-weeks"></div>
+  </section>
+  <section id="t2" class="panel">
+    <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t2-new"></span></div>
+    <div id="t2-weeks"></div>
+  </section>
+
+  <div class="foot">
+    베이스·토핑 칸을 눌러 실제 먹은 메뉴로 수정할 수 있어요. 계획과 달라지면 <span style="background:var(--changed-soft);color:var(--changed);padding:1px 6px;border-radius:5px;">파란색</span>으로 표시됩니다.<br>
+    새 재료는 그 끼니의 <b>먹은 양</b>을 입력하면 <span style="background:#fff3cd;color:#9a6b00;padding:1px 6px;border-radius:5px;">노란색</span>으로 강조되고 위 목록에 추가돼요.
+  </div>
+</div>
+
+<!-- 체크리스트 -->
+<div id="overlay" class="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="modal-title">재료 테스트 체크리스트</div><div class="modal-sub" id="progress">0개 완료</div></div>
+      <button id="close-checklist" class="close-x">✕</button>
+    </div>
+    <div class="form-note">형태 진행 : 미음 → 무른 죽 → 무른 밥 / 잘게 썬 것</div>
+    <div class="modal-body" id="checklist-body"></div>
+    <div class="modal-foot" id="checklist-foot">
+      <div class="add-ing-row">
+        <input id="new-ing-name" type="text" placeholder="새 재료 이름">
+        <select id="new-ing-cat" aria-label="카테고리"></select>
+        <button id="add-ing-btn" class="add-btn">+ 추가</button>
+      </div>
+      <button id="reset-checklist" class="reset-btn">전체 초기화</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상세 입력 -->
+<div id="detail-overlay" class="overlay detail-overlay">
+  <div class="modal detail-modal">
+    <div class="modal-head">
+      <div class="modal-title detail-title" id="detail-name"></div>
+      <button id="detail-close" class="close-x">✕</button>
+    </div>
+    <div class="detail-body">
+      <label class="field"><span class="flabel">먹은 날짜</span><input type="date" id="detail-date"></label>
+      <label class="field"><span class="flabel">특이사항</span><textarea id="detail-note" rows="3" placeholder="입력하기 (알레르기 반응, 선호도 등)"></textarea></label>
+    </div>
+    <div class="modal-foot detail-foot">
+      <button id="detail-undo" class="reset-btn">완료 취소</button>
+      <button id="detail-done" class="check-btn done-btn">확인 완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- 끼니 편집 -->
+<div id="meal-overlay" class="overlay detail-overlay">
+  <div class="modal detail-modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="meal-title"></div>
+        <div class="modal-sub" id="meal-sub"></div>
+      </div>
+      <button id="meal-close" class="close-x">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="field" id="meal-base-field">
+        <span class="flabel">베이스 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
+        <div class="item-list" id="meal-base-list"></div>
+        <button type="button" class="add-item-btn" data-target="base">+ 베이스 재료 추가</button>
+        <span class="hint">재료별로 추가/삭제. 모두 비우면 계획으로 돌아갑니다.</span>
+      </div>
+      <div class="field" id="meal-top-field">
+        <span class="flabel">토핑 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
+        <div class="item-list" id="meal-top-list"></div>
+        <button type="button" class="add-item-btn" data-target="top">+ 토핑 재료 추가</button>
+        <span class="hint">재료별로 추가/삭제. 모두 비우면 계획으로 돌아갑니다.</span>
+      </div>
+      <datalist id="ingredient-list"></datalist>
+      <label class="field" id="meal-eaten-field">
+        <span class="flabel">먹은 양 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 숫자 (g)</span></span>
+        <input type="number" id="meal-eaten" inputmode="numeric" min="0" step="1" placeholder="80">
+        <span class="hint">실제 먹은 양을 숫자로만 입력 (단위는 자동으로 g)</span>
+      </label>
+      <label class="field" id="meal-memo-field">
+        <span class="flabel" id="meal-memo-label">메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span></span>
+        <textarea id="meal-memo" rows="3" placeholder="입력하기 (반응, 선호도 등)"></textarea>
+      </label>
+    </div>
+    <div class="modal-foot detail-foot">
+      <button id="meal-cancel" class="reset-btn">취소</button>
+      <button id="meal-save" class="check-btn done-btn">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ Supabase 설정 (하드코딩) ============ */
+const SUPABASE_URL = 'https://junlsoooxfsqvuejdldu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1bmxzb29veGZzcXZ1ZWpkbGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxOTU0ODMsImV4cCI6MjA5Mzc3MTQ4M30.3baapEr8SvVwMXdMGkNKxI-Njdj2I32Oy1aeKcSEl_4';
+
+/* ============ 데이터 ============ */
+const tab1 = [
+  { range:"5/15 ~ 5/21", days:[
+    {date:"5/15",dday:"D+185",n:"1일차",base:[["쌀",30,true]],top:[],total:30},
+    {date:"5/16",dday:"D+186",n:"2일차",base:[["쌀",30]],top:[],total:30},
+    {date:"5/17",dday:"D+187",n:"3일차",base:[["쌀",30]],top:[],total:30},
+    {date:"5/18",dday:"D+188",n:"4일차",base:[["쌀",30],["오트밀",15,true]],top:[],total:45},
+    {date:"5/19",dday:"D+189",n:"5일차",base:[["쌀",30],["오트밀",15]],top:[],total:45},
+    {date:"5/20",dday:"D+190",n:"6일차",base:[["쌀",30],["오트밀",15]],top:[],total:45},
+    {date:"5/21",dday:"D+191",n:"7일차",base:[["쌀",30],["오트밀",15]],top:[],total:45},
+  ]},
+  { range:"5/22 ~ 5/28", days:[
+    {date:"5/22",dday:"D+192",n:"8일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10,true]],total:55},
+    {date:"5/23",dday:"D+193",n:"9일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10]],total:55},
+    {date:"5/24",dday:"D+194",n:"10일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10]],total:55},
+    {date:"5/25",dday:"D+195",n:"11일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15,true]],total:70},
+    {date:"5/26",dday:"D+196",n:"12일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15]],total:70},
+    {date:"5/27",dday:"D+197",n:"13일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15]],total:70},
+    {date:"5/28",dday:"D+198",n:"14일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15,true]],total:85},
+  ]},
+  { range:"5/29 ~ 6/4", days:[
+    {date:"5/29",dday:"D+199",n:"15일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15]],total:85},
+    {date:"5/30",dday:"D+200",n:"16일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15]],total:85},
+    {date:"5/31",dday:"D+201",n:"17일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["브로콜리",15,true]],total:100},
+    {date:"6/1",dday:"D+202",n:"18일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["브로콜리",15]],total:100},
+    {date:"6/2",dday:"D+203",n:"19일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["브로콜리",15]],total:100},
+    {date:"6/3",dday:"D+204",n:"20일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["단호박",15,true]],total:100},
+    {date:"6/4",dday:"D+205",n:"21일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["단호박",15]],total:100},
+  ]},
+  { range:"6/5 ~ 6/11", days:[
+    {date:"6/5",dday:"D+206",n:"22일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["단호박",15]],total:100},
+    {date:"6/6",dday:"D+207",n:"23일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15,true]],total:100},
+    {date:"6/7",dday:"D+208",n:"24일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
+    {date:"6/8",dday:"D+209",n:"25일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
+    {date:"6/9",dday:"D+210",n:"26일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15,true]],total:100},
+    {date:"6/10",dday:"D+211",n:"27일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
+    {date:"6/11",dday:"D+212",n:"28일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
+  ]},
+];
+
+const weeks2 = [
+  {rice:30,oat:15,porridge:"8배죽",days:[
+    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15]],nw:"닭고기"},
+    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15]],nw:"닭고기"},
+    {am:[["닭고기",15],["애호박",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15]],nw:"닭고기"},
+    {am:[["소고기",15],["양파",15]],pm:[["닭고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
+    {am:[["소고기",15],["양파",15]],pm:[["닭고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
+    {am:[["닭고기",15],["양파",15]],pm:[["소고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
+    {am:[["소고기",15],["비타민채",15]],pm:[["닭고기",15],["감자",15],["양파",15]],nw:null},
+  ]},
+  {rice:35,oat:15,porridge:"7배죽",days:[
+    {am:[["두부",20]],pm:[["소고기",15],["애호박",15],["감자",15],["양파",15]],nw:"두부"},
+    {am:[["두부",20]],pm:[["소고기",15],["애호박",15],["감자",15],["양파",15]],nw:"두부"},
+    {am:[["두부",20],["애호박",15]],pm:[["소고기",15],["애호박",15],["감자",15],["양파",15]],nw:"두부"},
+    {am:[["소고기",15],["당근",15]],pm:[["두부",20],["브로콜리",15],["닭고기",15]],nw:"당근"},
+    {am:[["닭고기",15],["당근",15]],pm:[["소고기",15],["브로콜리",15],["두부",20]],nw:"당근"},
+    {am:[["소고기",15],["당근",15]],pm:[["두부",20],["브로콜리",15],["닭고기",15]],nw:"당근"},
+    {am:[["닭고기",15],["비타민채",15]],pm:[["소고기",15],["고구마",15],["당근",15]],nw:null},
+  ]},
+  {rice:40,oat:20,porridge:"6배죽",days:[
+    {am:[["소고기",15],["청경채",15]],pm:[["닭고기",15],["당근",15],["감자",15]],nw:"청경채"},
+    {am:[["소고기",15],["청경채",15]],pm:[["닭고기",15],["당근",15],["감자",15]],nw:"청경채"},
+    {am:[["닭고기",15],["청경채",15]],pm:[["소고기",15],["당근",15],["감자",15]],nw:"청경채"},
+    {am:[["소고기",15],["시금치",15]],pm:[["닭고기",15],["양파",15],["두부",20]],nw:"시금치"},
+    {am:[["두부",20],["시금치",15]],pm:[["소고기",15],["양파",15],["닭고기",15]],nw:"시금치"},
+    {am:[["소고기",15],["시금치",15]],pm:[["닭고기",15],["양파",15],["두부",20]],nw:"시금치"},
+    {am:[["두부",20],["애호박",15]],pm:[["소고기",15],["청경채",15],["시금치",15]],nw:null},
+  ]},
+  {rice:45,oat:20,porridge:"6배죽",days:[
+    {am:[["대구",15]],pm:[["소고기",15],["단호박",15],["감자",15]],nw:"대구"},
+    {am:[["대구",15],["청경채",15]],pm:[["소고기",15],["단호박",15],["감자",15]],nw:"대구"},
+    {am:[["대구",15],["단호박",15]],pm:[["소고기",15],["청경채",15],["감자",15]],nw:"대구"},
+    {am:[["소고기",15],["새송이",15]],pm:[["대구",15],["당근",15],["닭고기",15]],nw:"새송이"},
+    {am:[["닭고기",15],["새송이",15]],pm:[["소고기",15],["당근",15],["대구",15]],nw:"새송이"},
+    {am:[["소고기",15],["새송이",15]],pm:[["닭고기",15],["당근",15],["대구",15]],nw:"새송이"},
+    {am:[["닭고기",15],["배추",15]],pm:[["소고기",15],["당근",15],["감자",15]],nw:"배추"},
+  ]},
+];
+function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
+function buildTab2(){
+  const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29;
+  weeks2.forEach(w=>{
+    const days=[]; let s,e;
+    w.days.forEach((row,i)=>{
+      const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
+      if(i===0)s=ds; if(i===6)e=ds;
+      const base=[["쌀",w.rice],["오트밀",w.oat]];
+      const amTop=row.am.map(it=>[it[0],it[1],it[0]===row.nw]);
+      const pmTop=row.pm.map(it=>[it[0],it[1]]);
+      days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
+        {base:base.map(b=>b.slice()),top:amTop,total:sumg(base,amTop)},
+        {base:base.map(b=>b.slice()),top:pmTop,total:sumg(base,pmTop)},
+      ]});
+      d.setDate(d.getDate()+1); dday++; n++;
+    });
+    weeks.push({range:s+" ~ "+e+" · "+w.porridge,days});
+  });
+  return weeks;
+}
+const tab2 = buildTab2();
+
+/* ============ 저장소 (로컬 + Supabase) ============ */
+let sb=null;
+if(window.supabase){
+  try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){ sb=null; }
+}
+const LS_KEY="doyoung_bbf_state";
+let State={tested:{},logs:{},overrides:{},customIngredients:[]};
+(function loadLocal(){
+  try{ Object.assign(State, JSON.parse(localStorage.getItem(LS_KEY))||{}); }catch(e){}
+  State.tested=State.tested||{}; State.logs=State.logs||{}; State.overrides=State.overrides||{}; State.customIngredients=State.customIngredients||[];
+  try{ const t=JSON.parse(localStorage.getItem('doyoung_tested_ingredients')); if(t&&!Object.keys(State.tested).length) Object.keys(t).forEach(k=>State.tested[k]=t[k]===true?{done:true}:t[k]); }catch(e){}
+  try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
+})();
+let saveTimer=null;
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(State)); }catch(e){}
+  if(sb){ setSync('busy'); clearTimeout(saveTimer); saveTimer=setTimeout(syncUp,600); }
+}
+async function syncUp(){
+  try{
+    const {error}=await sb.from('bbf_state').upsert({id:'doyoung',data:State,updated_at:new Date().toISOString()});
+    setSync(error?'err':'ok');
+  }catch(e){ setSync('err'); }
+}
+async function syncDown(){
+  if(!sb) return;
+  setSync('busy');
+  try{
+    const {data,error}=await sb.from('bbf_state').select('data').eq('id','doyoung').maybeSingle();
+    if(error){ setSync('err'); return; }
+    if(data&&data.data){
+      State=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[]},data.data);
+      State.customIngredients=State.customIngredients||[];
+      try{ localStorage.setItem(LS_KEY,JSON.stringify(State)); }catch(e){}
+      renderTables(); renderChecklist(); setSync('ok');
+    }else{ await syncUp(); }
+  }catch(e){ setSync('err'); }
+}
+function setSync(s){
+  const dot=document.getElementById('sync-dot'), txt=document.getElementById('sync-text');
+  dot.className='dot'+(s==='ok'?' ok':s==='busy'?' busy':s==='err'?' err':'');
+  txt.textContent = !sb ? '로컬 저장' : s==='ok'?'동기화됨':s==='busy'?'저장 중…':s==='err'?'동기화 오류':'연결됨';
+}
+
+/* ============ 렌더 ============ */
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function plainText(items){ return (!items||!items.length)?'':items.map(it=>`${it[0]} ${it[1]}g`).join(' · '); }
+function cellList(items){
+  if(!items||!items.length) return '<span class="empty">·</span>';
+  return '<div class="cell-list">'+items.map(it=>{
+    const cls=it[2]?'item new-item':'item';
+    return `<span class="${cls}">${esc(it[0])} <span class="g">${it[1]}g</span></span>`;
+  }).join('')+'</div>';
+}
+function cellListFromText(text){
+  const parts=String(text||'').split(/\s*·\s*/).map(s=>s.trim()).filter(Boolean);
+  if(!parts.length) return '<span class="empty">·</span>';
+  return '<div class="cell-list">'+parts.map(s=>`<span class="item">${esc(s)}</span>`).join('')+'</div>';
+}
+function getMeals(day){ return day.meals?day.meals:[{base:day.base,top:day.top,total:day.total}]; }
+
+function makeCell(items,date,mi,field,mealName){
+  const key=`${date}|${mi}|${field}`, dm=`${date}|${mi}`, planTxt=plainText(items);
+  const ov=State.overrides[key];
+  const changed = ov!=null && ov!==planTxt;
+  const eatenOn = !!State.logs[dm+'|eaten'];
+  const inner = changed ? cellListFromText(ov) : cellList(items);
+  const cls=['mealcell',field,changed?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
+  return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
+}
+function makeLog(date,mi,field,mealName){
+  const key=`${date}|${mi}|${field}`;
+  return `<td class="mealcell log ${field}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${esc(State.logs[key]||'')}</td>`;
+}
+function mealRows(d,mi,mealName){
+  let h='';
+  h+='<tr class="row-base"><td class="rowlabel">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
+  h+='<tr class="row-top"><td class="rowlabel">토핑</td>'+d.map(x=>makeCell(getMeals(x)[mi].top,x.date,mi,'top',mealName)).join('')+'</tr>';
+  h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=getMeals(x)[mi].total;return `<td class="total">${t!=null?t:'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
+  h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName)).join('')+'</tr>';
+  h+='<tr><td class="rowlabel">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
+  return h;
+}
+function snackRow(d){
+  let h='<tr class="snack-band"><td colspan="'+(d.length+1)+'">간식</td></tr>';
+  h+='<tr class="row-snack"><td class="rowlabel">간식</td>'+d.map(x=>{
+    const key=`${x.date}|s|snack`;
+    return `<td class="snackcell" data-date="${esc(x.date)}">${esc(State.logs[key]||'')}</td>`;
+  }).join('')+'</tr>';
+  return h;
+}
+function renderWeeks(weeks,withSnack,labels){
+  labels=labels||["1끼"];
+  return weeks.map(wk=>{
+    const d=wk.days, span=d.length+1;
+    let html=`<div class="week"><div class="week-head"><span>${wk.range}</span></div><table>`;
+    html+='<thead><tr><th class="rowlabel">날짜</th>'+d.map(x=>`<th class="date">${x.date}</th>`).join('')+'</tr>';
+    html+='<tr><th class="rowlabel"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr></thead><tbody>';
+    labels.forEach((lab,i)=>{
+      if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
+      html+=mealRows(d,i,lab);
+    });
+    if(withSnack) html+=snackRow(d);
+    html+='</tbody></table></div>';
+    return html;
+  }).join('');
+}
+
+const newIndex={t1:[],t2:[]};
+tab1.forEach(wk=>wk.days.forEach(day=>{[...day.base,...day.top].forEach(it=>{if(it[2])newIndex.t1.push({name:it[0],dm:`${day.date}|0`});});}));
+tab2.forEach(wk=>wk.days.forEach(day=>{day.meals[0].top.forEach(it=>{if(it[2])newIndex.t2.push({name:it[0],dm:`${day.date}|0`});});}));
+function renderNewFoods(){
+  [['t1','t1-new'],['t2','t2-new']].forEach(([k,id])=>{
+    const seen=new Set(), out=[];
+    newIndex[k].forEach(x=>{ if(State.logs[x.dm+'|eaten'] && !seen.has(x.name)){ seen.add(x.name); out.push(x.name); }});
+    const el=document.getElementById(id);
+    el.innerHTML = out.length ? out.map(n=>`<span class="nf-chip">${esc(n)}</span>`).join('')
+                              : '<span class="nf-empty">· 아직 없음 — 먹은 양을 입력하면 추가돼요</span>';
+  });
+}
+
+function attachCellClick(){
+  document.querySelectorAll('#t1-weeks .mealcell, #t2-weeks .mealcell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      openMealEdit(td.dataset.date, parseInt(td.dataset.mi,10), td.dataset.mealName, td.classList.contains('eaten')?'eaten':td.classList.contains('memo')?'memo':td.classList.contains('top')?'top':'base');
+    });
+  });
+  document.querySelectorAll('#t2-weeks .snackcell').forEach(td=>{
+    td.addEventListener('click', ()=>openSnackEdit(td.dataset.date));
+  });
+}
+function renderTables(){
+  document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
+  document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
+  attachCellClick(); renderNewFoods();
+}
+
+/* ============ 끼니 편집 모달 ============ */
+const mOverlay=document.getElementById('meal-overlay');
+let currentMeal=null;
+function findDay(date){
+  for(const wk of tab1) for(const d of wk.days) if(d.date===date) return d;
+  for(const wk of tab2) for(const d of wk.days) if(d.date===date) return d;
+  return null;
+}
+function setFieldVisible(id,vis){ document.getElementById(id).style.display=vis?'':'none'; }
+
+/* 항목 배열 ↔ 텍스트 변환 (저장 형식은 기존과 동일: "쌀 30g · 오트밀 15g") */
+function parseItems(text){
+  if(!text) return [];
+  return String(text).split(/\s*·\s*/).map(s=>s.trim()).filter(Boolean).map(s=>{
+    const m=s.match(/^(.+?)\s*(\d+)\s*g?\s*$/);
+    return m ? {name:m[1].trim(), g:parseInt(m[2],10)} : {name:s, g:0};
+  });
+}
+function itemsToText(items){
+  return items.filter(it=>it.name && it.name.trim()).map(it=>`${it.name.trim()} ${it.g||0}g`).join(' · ');
+}
+function renderItemList(containerId, items){
+  const c=document.getElementById(containerId);
+  if(!items.length){ c.innerHTML='<div class="item-empty">아직 없음 — 아래 "추가" 버튼을 눌러주세요</div>'; return; }
+  c.innerHTML=items.map((it,i)=>`
+    <div class="item-row" data-i="${i}">
+      <input type="text" class="item-name" list="ingredient-list" placeholder="재료명" value="${esc(it.name||'')}">
+      <input type="number" class="item-g" inputmode="numeric" min="0" step="1" placeholder="0" value="${it.g||it.g===0?it.g:''}">
+      <span class="g-suffix">g</span>
+      <button type="button" class="item-del" aria-label="삭제">✕</button>
+    </div>
+  `).join('');
+  c.querySelectorAll('.item-del').forEach(btn=>{
+    btn.onclick=()=>{
+      const target=containerId==='meal-base-list'?'base':'top';
+      const arr=readItemList(containerId);
+      const idx=parseInt(btn.closest('.item-row').dataset.i,10);
+      arr.splice(idx,1);
+      renderItemList(containerId,arr);
+    };
+  });
+}
+function readItemList(containerId){
+  return Array.from(document.getElementById(containerId).querySelectorAll('.item-row')).map(row=>({
+    name: row.querySelector('.item-name').value,
+    g: parseInt(row.querySelector('.item-g').value,10)||0
+  }));
+}
+function addItemToList(target){
+  const containerId='meal-'+target+'-list';
+  const arr=readItemList(containerId);
+  arr.push({name:'',g:''});
+  renderItemList(containerId,arr);
+  setTimeout(()=>{
+    const rows=document.querySelectorAll('#'+containerId+' .item-row');
+    const last=rows[rows.length-1];
+    last && last.querySelector('.item-name').focus();
+  },30);
+}
+document.querySelectorAll('.add-item-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>addItemToList(btn.dataset.target));
+});
+
+function openMealEdit(date,mi,mealName,focusField){
+  const day=findDay(date); if(!day) return;
+  const meal=getMeals(day)[mi]; if(!meal) return;
+  const planBaseText=plainText(meal.base), planTopText=plainText(meal.top);
+  currentMeal={date,mi,mealName,snack:false,planBaseText,planTopText};
+  document.getElementById('meal-title').textContent=`${date} · ${mealName||'끼니'}`;
+  const planLine=`계획 : ${planBaseText||'-'}${planTopText?' / 토핑 '+planTopText:''}`;
+  document.getElementById('meal-sub').textContent=planLine;
+  const ovBase=State.overrides[`${date}|${mi}|base`];
+  const ovTop=State.overrides[`${date}|${mi}|top`];
+  const baseItems = ovBase!=null ? parseItems(ovBase) : meal.base.map(it=>({name:it[0],g:it[1]}));
+  const topItems  = ovTop !=null ? parseItems(ovTop ) : meal.top .map(it=>({name:it[0],g:it[1]}));
+  renderItemList('meal-base-list', baseItems);
+  renderItemList('meal-top-list',  topItems);
+  document.getElementById('meal-eaten').value=State.logs[`${date}|${mi}|eaten`]||'';
+  document.getElementById('meal-memo').value=State.logs[`${date}|${mi}|memo`]||'';
+  document.getElementById('meal-memo-label').innerHTML='메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
+  document.getElementById('meal-memo').rows=3;
+  document.getElementById('meal-memo').placeholder='입력하기 (반응, 선호도 등)';
+  ['meal-base-field','meal-top-field','meal-eaten-field','meal-memo-field'].forEach(id=>setFieldVisible(id,true));
+  mOverlay.classList.add('open');
+  setTimeout(()=>{
+    if(focusField==='base' || focusField==='top'){
+      const rows=document.querySelectorAll('#meal-'+focusField+'-list .item-row');
+      const first=rows[0];
+      if(first) first.querySelector('.item-name').focus();
+    } else {
+      const map={eaten:'meal-eaten',memo:'meal-memo'};
+      const el=document.getElementById(map[focusField]||'meal-eaten');
+      el && el.focus();
+    }
+  },80);
+}
+function openSnackEdit(date){
+  currentMeal={date,mi:'s',mealName:'간식',snack:true};
+  document.getElementById('meal-title').textContent=`${date} · 간식`;
+  document.getElementById('meal-sub').textContent='간식 내용을 자유롭게 적어주세요';
+  ['meal-base-field','meal-top-field','meal-eaten-field'].forEach(id=>setFieldVisible(id,false));
+  setFieldVisible('meal-memo-field',true);
+  document.getElementById('meal-memo-label').innerHTML='간식 내용 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
+  document.getElementById('meal-memo').rows=2;
+  document.getElementById('meal-memo').placeholder='예: 배 한 조각';
+  document.getElementById('meal-memo').value=State.logs[`${date}|s|snack`]||'';
+  mOverlay.classList.add('open');
+  setTimeout(()=>document.getElementById('meal-memo').focus(),80);
+}
+function closeMealEdit(){ mOverlay.classList.remove('open'); currentMeal=null; }
+function saveMealEdit(){
+  if(!currentMeal) return;
+  const {date,mi,snack}=currentMeal;
+  if(snack){
+    const v=document.getElementById('meal-memo').value.trim();
+    if(v) State.logs[`${date}|s|snack`]=v; else delete State.logs[`${date}|s|snack`];
+  }else{
+    const baseV=itemsToText(readItemList('meal-base-list'));
+    if(!baseV || baseV===currentMeal.planBaseText) delete State.overrides[`${date}|${mi}|base`];
+    else State.overrides[`${date}|${mi}|base`]=baseV;
+    const topV=itemsToText(readItemList('meal-top-list'));
+    if(!topV || topV===currentMeal.planTopText) delete State.overrides[`${date}|${mi}|top`];
+    else State.overrides[`${date}|${mi}|top`]=topV;
+    const eatenV=document.getElementById('meal-eaten').value.trim();
+    if(eatenV) State.logs[`${date}|${mi}|eaten`]=eatenV;
+    else delete State.logs[`${date}|${mi}|eaten`];
+    const memoV=document.getElementById('meal-memo').value.trim();
+    if(memoV) State.logs[`${date}|${mi}|memo`]=memoV;
+    else delete State.logs[`${date}|${mi}|memo`];
+  }
+  save(); closeMealEdit(); renderTables();
+}
+
+/* datalist 채우기 — 체크리스트 + 사용자 추가 재료 + 식단표 등장 재료
+   ※ categories 가 아래에서 const 로 선언되므로, 호출은 체크리스트 섹션 이후에 한다 */
+function fillIngredientList(){
+  const dl=document.getElementById('ingredient-list');
+  const all=new Set();
+  categories.forEach(([,items])=>items.forEach(n=>all.add(n)));
+  tab1.forEach(wk=>wk.days.forEach(d=>{ d.base.concat(d.top).forEach(it=>all.add(it[0])); }));
+  tab2.forEach(wk=>wk.days.forEach(d=>{ d.meals.forEach(m=>{ m.base.concat(m.top).forEach(it=>all.add(it[0])); }); }));
+  (State.customIngredients||[]).forEach(c=>all.add(c.name));
+  dl.innerHTML=Array.from(all).sort().map(n=>`<option value="${esc(n)}">`).join('');
+}
+document.getElementById('meal-close').onclick=closeMealEdit;
+document.getElementById('meal-cancel').onclick=closeMealEdit;
+document.getElementById('meal-save').onclick=saveMealEdit;
+mOverlay.addEventListener('click',e=>{ if(e.target===mOverlay) closeMealEdit(); });
+
+/* ============ 체크리스트 ============ */
+const categories=[
+  ["곡류/베이스",["현미","기장","수수","차조","오트밀","찹쌀","귀리","보리","옥수수","퀴노아"]],
+  ["채소",["애호박","양배추","브로콜리","오이","단호박","콜리플라워","감자","고구마","청경채","양파","배추","무","새송이","연근","파프리카","가지","우엉","팽이버섯","토마토","아스파라거스","늙은호박","아욱","숙주","마늘쫑","느타리버섯","파","비타민(채)","당근","시금치","비트"]],
+  ["콩/두부류",["완두콩","강낭콩","두부","밤"]],
+  ["해조류",["미역","다시마"]],
+  ["과일",["배","사과","메론","바나나","복숭아","아보카도","자두","파인애플","망고","감","오렌지","딸기","키위","귤"]],
+  ["씨앗/견과",["흑임자","들깨가루","참깨","호두","잣"]],
+  ["알레르기 항원",["밀가루","땅콩","계란"]],
+];
+function getTotalCount(){
+  return categories.reduce((a,[,its])=>a+its.length,0) + (State.customIngredients?State.customIngredients.length:0);
+}
+function updateProgress(){
+  const done=Object.keys(State.tested).filter(k=>State.tested[k]).length;
+  document.getElementById('progress').textContent=`${done} / ${getTotalCount()}개 완료`;
+}
+function renderChecklist(){
+  const body=document.getElementById('checklist-body');
+  body.innerHTML=categories.map(([cat,items])=>{
+    const customs=(State.customIngredients||[]).filter(c=>c.cat===cat).map(c=>c.name);
+    const all=[...items, ...customs];
+    const chips=all.map(name=>{
+      const isCustom=customs.includes(name);
+      const rec=State.tested[name];
+      const done=rec?' done':'';
+      const custom=isCustom?' custom':'';
+      const meta=rec&&rec.date?`<span class="d">${rec.date.slice(5).replace('-','/')}</span>`:'';
+      const delBtn=isCustom?`<span class="ing-del" data-del-name="${esc(name)}" title="삭제">✕</span>`:'';
+      return `<button class="ing${done}${custom}" data-name="${esc(name)}"><span class="nm">${esc(name)}</span>${meta}${delBtn}</button>`;
+    }).join('');
+    const doneN=all.filter(n=>State.tested[n]).length;
+    return `<div class="cat"><div class="cat-name">${cat}<span class="count">${doneN}/${all.length}</span></div><div class="items">${chips}</div></div>`;
+  }).join('');
+  body.querySelectorAll('.ing').forEach(el=>el.addEventListener('click',e=>{
+    if(e.target.closest('.ing-del')) return;
+    openDetail(el.dataset.name);
+  }));
+  body.querySelectorAll('.ing-del').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    deleteCustomIngredient(el.dataset.delName);
+  }));
+  updateProgress();
+}
+function addCustomIngredient(){
+  const nameEl=document.getElementById('new-ing-name'), catEl=document.getElementById('new-ing-cat');
+  const name=nameEl.value.trim(), cat=catEl.value;
+  if(!name) return;
+  const exists=[...categories.flatMap(([,its])=>its),...(State.customIngredients||[]).map(c=>c.name)].includes(name);
+  if(exists){ alert('"'+name+'"은(는) 이미 있어요'); nameEl.focus(); nameEl.select(); return; }
+  State.customIngredients=State.customIngredients||[];
+  State.customIngredients.push({cat,name});
+  nameEl.value='';
+  save(); renderChecklist(); fillIngredientList();
+  nameEl.focus();
+}
+function deleteCustomIngredient(name){
+  if(!confirm('"'+name+'" 재료를 삭제할까요?\n테스트 기록이 있다면 함께 사라집니다.')) return;
+  State.customIngredients=(State.customIngredients||[]).filter(c=>c.name!==name);
+  if(State.tested[name]) delete State.tested[name];
+  save(); renderChecklist(); fillIngredientList();
+}
+
+/* 체크리스트 모달 하단의 카테고리 select 채우기 + 추가 이벤트 부착 (categories 정의 후) */
+(function setupAddIngredient(){
+  const sel=document.getElementById('new-ing-cat');
+  sel.innerHTML=categories.map(([cat])=>`<option value="${esc(cat)}">${esc(cat)}</option>`).join('');
+  document.getElementById('add-ing-btn').onclick=addCustomIngredient;
+  document.getElementById('new-ing-name').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); addCustomIngredient(); }
+  });
+})();
+fillIngredientList();
+const overlay=document.getElementById('overlay');
+const dOverlay=document.getElementById('detail-overlay');
+let currentName=null;
+function openDetail(name){
+  currentName=name; const rec=State.tested[name]||{};
+  document.getElementById('detail-name').textContent=name;
+  document.getElementById('detail-date').value=rec.date||new Date().toISOString().slice(0,10);
+  document.getElementById('detail-note').value=rec.note||'';
+  document.getElementById('detail-undo').style.display=State.tested[name]?'inline-block':'none';
+  document.getElementById('detail-done').textContent=State.tested[name]?'저장':'확인 완료';
+  dOverlay.classList.add('open');
+}
+function closeDetail(){ dOverlay.classList.remove('open'); currentName=null; }
+document.getElementById('detail-done').onclick=()=>{ if(!currentName)return;
+  State.tested[currentName]={done:true,date:document.getElementById('detail-date').value,note:document.getElementById('detail-note').value.trim()};
+  save(); closeDetail(); renderChecklist(); };
+document.getElementById('detail-undo').onclick=()=>{ if(!currentName)return; delete State.tested[currentName]; save(); closeDetail(); renderChecklist(); };
+document.getElementById('detail-close').onclick=closeDetail;
+dOverlay.addEventListener('click',e=>{ if(e.target===dOverlay) closeDetail(); });
+document.getElementById('open-checklist').onclick=()=>overlay.classList.add('open');
+document.getElementById('close-checklist').onclick=()=>overlay.classList.remove('open');
+overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+document.getElementById('reset-checklist').onclick=()=>{ if(confirm('전체 체크 기록을 지울까요?')){ Object.keys(State.tested).forEach(k=>delete State.tested[k]); save(); renderChecklist(); } };
+
+/* ============ 탭 ============ */
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active');
+  };
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
+  if(mOverlay.classList.contains('open'))closeMealEdit();
+  else if(dOverlay.classList.contains('open'))closeDetail();
+  else overlay.classList.remove('open');
+}});
+
+/* ============ 시작 ============ */
+renderTables(); renderChecklist(); setSync(sb?'ok':'local');
+if(sb) syncDown();
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
+</script>
 </body>
 </html>

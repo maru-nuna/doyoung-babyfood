@@ -1,38 +1,34 @@
-# 도영이 이유식 트래커
+# 도영이 이유식 PWA
 
-날짜별 이유식 계획과 실제 먹은 양을 기록하는 웹앱.
+아기 이유식 식단표(1~56일) + 재료 테스트 체크리스트. 단일 페이지 PWA, Supabase 동기화.
 
-## 첫 실행 전 1번만 할 일
+## 파일
+- `index.html` — 앱 본체 (데이터·로직·스타일 전부 포함, Supabase 키 하드코딩)
+- `manifest.webmanifest` — PWA 설치 정보
+- `sw.js` — 서비스워커(오프라인 캐시)
+- `icon-192.png`, `icon-512.png` — 앱 아이콘
+- `schema.sql` — Supabase 테이블 생성 SQL (1회 실행)
 
-### 1. Supabase에 테이블 만들기
-1. https://supabase.com/dashboard 에서 프로젝트(`junlsoooxfsqvuejdldu`) 선택
-2. 왼쪽 메뉴 **SQL Editor** 클릭 → **New query**
-3. `schema.sql` 파일 내용을 전부 복사해서 붙여넣기
-4. 우측 하단 **Run** 클릭 → "Success" 뜨면 끝
-
-### 2. 로컬에서 열기 (테스트)
-브라우저로 `index.html`을 직접 열거나, 가벼운 서버로 띄우기:
-```bash
-cd 도영이이유식
-python3 -m http.server 5500
-# http://localhost:5500 접속
-```
-
-## 사용 방법
-- **첫 실행**: 아기 이름 + 생년월일 입력 → 저장
-- **주간 탭**: 7일치 한눈에 보기. 칸의 "먹은 양"에 숫자만 입력하면 자동 저장
-- **하루 탭**: 끼니별 카드. "재료 편집" 버튼으로 베이스/토핑 추가·삭제·끼니 추가
-- **새 재료**: 이전에 없었던 재료는 파란색으로 강조
-- **D+ 일수**: 헤더에 자동 표시
-- **합계**: 일별·주간 먹은 양과 계획 대비 달성률 자동 계산
-
-## 파일 구조
-- `index.html`: 페이지 골격
-- `style.css`: 스타일
-- `app.js`: 모든 로직 (Supabase 연동 + 렌더링)
-- `config.js`: Supabase URL/Key
-- `schema.sql`: DB 테이블 생성 SQL (1번만 실행)
+## 첫 설정 (Supabase 테이블 만들기)
+1. https://supabase.com/dashboard 에서 프로젝트 `junlsoooxfsqvuejdldu` 선택
+2. 좌측 **SQL Editor** → New query
+3. `schema.sql` 내용 전체 붙여넣기 → **Run**
+   - 옛 `babyfood_babies`/`babyfood_meals` 테이블이 삭제되고 새 `bbf_state` 테이블이 생성됩니다.
 
 ## 배포 (Vercel)
-1. `vercel` CLI 또는 https://vercel.com 에 폴더 업로드
-2. 빌드 설정 없이 그대로 배포 (정적 파일)
+빌드 설정 없는 정적 파일. 폴더를 Vercel에 그대로 올리면 끝.
+
+## 데이터 구조
+`bbf_state` 테이블의 `id='doyoung'` 한 행에 전체 상태를 JSON으로 저장.
+```json
+{
+  "tested":    { "닭고기": { "done": true, "date": "2025-06-12", "note": "..." } },
+  "logs":      { "6/12|0|eaten": "80", "6/12|0|memo": "...", "6/12|s|snack": "배" },
+  "overrides": { "6/12|0|top": "닭고기 15g · 브로콜리 15g" }
+}
+```
+
+## PWA 설치
+- iOS Safari: 공유 → "홈 화면에 추가"
+- Android Chrome: 메뉴 → "앱 설치"
+- 데스크탑 Chrome/Edge: 주소창 우측 설치 아이콘
