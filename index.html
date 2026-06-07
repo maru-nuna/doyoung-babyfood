@@ -59,8 +59,16 @@
 
   .week{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:6px;margin-bottom:22px;overflow-x:auto;box-shadow:0 4px 20px rgba(120,110,90,.04);}
   .week-head{font-size:13px;color:var(--muted);padding:10px 14px 6px;}
-  table{border-collapse:collapse;width:100%;min-width:760px;}
+  table{border-collapse:collapse;width:100%;min-width:760px;table-layout:fixed;}
   th,td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13px;vertical-align:middle;}
+  th.rowlabel{width:64px;}
+  .ratio-row th{padding:6px 4px;background:#fdfbf6;}
+  .ratio-bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin:0 8px;}
+  .ratio-bar .fill{height:100%;background:linear-gradient(90deg,var(--sage),#8fb088);transition:width .3s ease;}
+  .ratio-text{font-size:9.5px;color:var(--muted);margin-top:3px;line-height:1.2;white-space:nowrap;}
+  .ratio-text.full{color:var(--sage);font-weight:700;}
+  .log-text{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;max-width:100%;line-height:1.35;}
+  .log-text:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
   thead .date{font-weight:700;color:var(--ink);background:#faf6ee;}
   thead .dday{color:var(--muted);font-size:11px;background:#fdfbf6;}
   td.rowlabel{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;width:64px;white-space:nowrap;position:sticky;left:0;}
@@ -440,7 +448,7 @@ function makeCell(items,date,mi,field,mealName){
 }
 function makeLog(date,mi,field,mealName){
   const key=`${date}|${mi}|${field}`;
-  return `<td class="mealcell log ${field}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${esc(State.logs[key]||'')}</td>`;
+  return `<td class="mealcell log ${field}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><div class="log-text">${esc(State.logs[key]||'')}</div></td>`;
 }
 function mealRows(d,mi,mealName){
   let h='';
@@ -455,9 +463,26 @@ function snackRow(d){
   let h='<tr class="snack-band"><td colspan="'+(d.length+1)+'">간식</td></tr>';
   h+='<tr class="row-snack"><td class="rowlabel">간식</td>'+d.map(x=>{
     const key=`${x.date}|s|snack`;
-    return `<td class="snackcell" data-date="${esc(x.date)}">${esc(State.logs[key]||'')}</td>`;
+    return `<td class="snackcell" data-date="${esc(x.date)}"><div class="log-text">${esc(State.logs[key]||'')}</div></td>`;
   }).join('')+'</tr>';
   return h;
+}
+function dayRatio(day){
+  const meals=getMeals(day);
+  let plan=0, actual=0;
+  meals.forEach((m,mi)=>{
+    plan+=m.total||0;
+    const e=parseInt(State.logs[`${day.date}|${mi}|eaten`],10);
+    if(!isNaN(e)) actual+=e;
+  });
+  return {plan,actual,ratio:plan?Math.min(1,actual/plan):0};
+}
+function ratioCell(day){
+  const r=dayRatio(day);
+  if(!r.plan) return '<th></th>';
+  const pct=Math.round(r.ratio*100);
+  const full=pct>=100;
+  return `<th><div class="ratio-bar"><div class="fill" style="width:${Math.min(100,pct)}%"></div></div><div class="ratio-text${full?' full':''}">${r.actual}/${r.plan}g · ${pct}%</div></th>`;
 }
 function renderWeeks(weeks,withSnack,labels){
   labels=labels||["1끼"];
@@ -465,7 +490,9 @@ function renderWeeks(weeks,withSnack,labels){
     const d=wk.days, span=d.length+1;
     let html=`<div class="week"><div class="week-head"><span>${wk.range}</span></div><table>`;
     html+='<thead><tr><th class="rowlabel">날짜</th>'+d.map(x=>`<th class="date">${x.date}</th>`).join('')+'</tr>';
-    html+='<tr><th class="rowlabel"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr></thead><tbody>';
+    html+='<tr><th class="rowlabel"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
+    html+='<tr class="ratio-row"><th class="rowlabel">달성</th>'+d.map(ratioCell).join('')+'</tr>';
+    html+='</thead><tbody>';
     labels.forEach((lab,i)=>{
       if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
       html+=mealRows(d,i,lab);
