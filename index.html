@@ -205,9 +205,14 @@
   .ing .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
   .ing.done .nm{text-decoration:line-through;color:var(--muted);}
   .ing .d{font-size:9.5px;line-height:1.5;color:var(--sage);background:#fff;border:1px solid #dde6d7;border-radius:6px;padding:0 4px;flex-shrink:0;}
-  .ing.custom{padding-right:18px;}
-  .ing-del{position:absolute;top:3px;right:4px;font-size:10px;color:var(--muted);cursor:pointer;padding:2px 4px;line-height:1;border-radius:4px;}
-  .ing-del:hover{color:var(--peach);background:#fff;}
+  .ing.editing{padding-right:6px;}
+  .ing.editing.selected{background:#fdebea;border-color:#cf6b5a;color:#cf6b5a;}
+  .ing.editing.selected .nm{color:#cf6b5a;text-decoration:line-through;}
+  .ing.editing.selected::after{content:"✓";position:absolute;top:3px;right:5px;font-size:11px;color:#cf6b5a;font-weight:700;}
+  .ing.editing:hover{border-color:#cf6b5a;transform:none;box-shadow:none;}
+  #checklist-edit-foot .add-btn{font-family:inherit;font-size:13px;cursor:pointer;color:#fff;border:none;padding:8px 16px;border-radius:8px;}
+  #checklist-edit-foot .add-btn:disabled{background:#d8d2c2;cursor:not-allowed;}
+  .edit-note{font-size:12px;}
   .modal-foot{padding:12px 22px;border-top:1px solid var(--line);text-align:right;}
   #checklist-foot{display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:left;}
   .add-ing-row{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;}
@@ -328,17 +333,27 @@
   <div class="modal">
     <div class="modal-head">
       <div><div class="modal-title">재료 테스트 체크리스트</div><div class="modal-sub" id="progress">0개 완료</div></div>
-      <button id="close-checklist" class="close-x">✕</button>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="edit-ing-toggle" class="reset-btn" style="padding:6px 12px;font-size:12px;">✏️ 편집</button>
+        <button id="close-checklist" class="close-x">✕</button>
+      </div>
     </div>
-    <div class="form-note">형태 진행 : 미음 → 무른 죽 → 무른 밥 / 잘게 썬 것</div>
+    <div class="form-note" id="checklist-note">형태 진행 : 미음 → 무른 죽 → 무른 밥 / 잘게 썬 것</div>
+    <div class="form-note edit-note" id="checklist-edit-note" style="display:none;background:#fdebea;color:#cf6b5a;">삭제할 재료를 눌러 선택하세요. <b>완료 기록이 있으면 함께 삭제됩니다.</b></div>
     <div class="modal-body" id="checklist-body"></div>
     <div class="modal-foot" id="checklist-foot">
-      <div class="add-ing-row">
+      <div class="add-ing-row" id="add-ing-row">
         <input id="new-ing-name" type="text" placeholder="새 재료 이름">
         <select id="new-ing-cat" aria-label="카테고리"></select>
         <button id="add-ing-btn" class="add-btn">+ 추가</button>
       </div>
       <button id="reset-checklist" class="reset-btn">전체 초기화</button>
+    </div>
+    <div class="modal-foot edit-foot" id="checklist-edit-foot" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <button id="edit-cancel" class="reset-btn">편집 종료</button>
+        <button id="edit-delete" class="add-btn" style="background:#cf6b5a;">선택 삭제 (0)</button>
+      </div>
     </div>
   </div>
 </div>
@@ -601,10 +616,11 @@ if(window.supabase){
   try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){ sb=null; }
 }
 const LS_KEY="doyoung_bbf_state";
-let State={tested:{},logs:{},overrides:{},customIngredients:[],toys:[],toysInitialized:false};
+let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false};
 (function loadLocal(){
   try{ Object.assign(State, JSON.parse(localStorage.getItem(LS_KEY))||{}); }catch(e){}
   State.tested=State.tested||{}; State.logs=State.logs||{}; State.overrides=State.overrides||{}; State.customIngredients=State.customIngredients||[];
+  State.deletedBuiltin=State.deletedBuiltin||[];
   State.toys=State.toys||[];
   try{ const t=JSON.parse(localStorage.getItem('doyoung_tested_ingredients')); if(t&&!Object.keys(State.tested).length) Object.keys(t).forEach(k=>State.tested[k]=t[k]===true?{done:true}:t[k]); }catch(e){}
   try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
@@ -627,8 +643,9 @@ async function syncDown(){
     const {data,error}=await sb.from('bbf_state').select('data').eq('id','doyoung').maybeSingle();
     if(error){ setSync('err'); return; }
     if(data&&data.data){
-      State=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],toys:[],toysInitialized:false},data.data);
+      State=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false},data.data);
       State.customIngredients=State.customIngredients||[];
+      State.deletedBuiltin=State.deletedBuiltin||[];
       State.toys=State.toys||[];
       try{ localStorage.setItem(LS_KEY,JSON.stringify(State)); }catch(e){}
       renderTables(); renderChecklist(); renderToys(); setSync('ok');
@@ -1027,7 +1044,8 @@ function saveMealEdit(){
 function fillIngredientList(){
   const dl=document.getElementById('ingredient-list');
   const all=new Set();
-  categories.forEach(([,items])=>items.forEach(n=>all.add(n)));
+  const deleted=new Set(State.deletedBuiltin||[]);
+  categories.forEach(([,items])=>items.forEach(n=>{ if(!deleted.has(n)) all.add(n); }));
   tab1.forEach(wk=>wk.days.forEach(d=>{ d.base.concat(d.top).forEach(it=>all.add(it[0])); }));
   tab2.forEach(wk=>wk.days.forEach(d=>{ d.meals.forEach(m=>{ m.base.concat(m.top).forEach(it=>all.add(it[0])); }); }));
   (State.customIngredients||[]).forEach(c=>all.add(c.name));
@@ -1049,39 +1067,69 @@ const categories=[
   ["씨앗/견과",["흑임자","들깨가루","참깨","호두","잣"]],
   ["알레르기 항원",["밀가루","땅콩","계란"]],
 ];
+function visibleIngredientsForCat(cat, items){
+  const allBuiltin=new Set(categories.flatMap(([,its])=>its));
+  const deleted=new Set(State.deletedBuiltin||[]);
+  const builtinShown = items.filter(n => !deleted.has(n));
+  const customs = (State.customIngredients||[])
+    .filter(c=>c.cat===cat && !allBuiltin.has(c.name))
+    .map(c=>c.name);
+  return [...builtinShown, ...customs].sort((a,b)=>a.localeCompare(b,'ko'));
+}
 function getTotalCount(){
-  return categories.reduce((a,[,its])=>a+its.length,0) + (State.customIngredients?State.customIngredients.length:0);
+  return categories.reduce((a,[cat,its])=>a+visibleIngredientsForCat(cat,its).length, 0);
 }
 function updateProgress(){
   const done=Object.keys(State.tested).filter(k=>State.tested[k]).length;
   document.getElementById('progress').textContent=`${done} / ${getTotalCount()}개 완료`;
 }
+/* 편집 모드 상태 */
+let isChecklistEditMode=false;
+let selectedForDelete=new Set();
+function setChecklistEditMode(on){
+  isChecklistEditMode=on;
+  if(!on) selectedForDelete.clear();
+  document.getElementById('edit-ing-toggle').textContent = on ? '편집 중…' : '✏️ 편집';
+  document.getElementById('checklist-note').style.display = on ? 'none' : '';
+  document.getElementById('checklist-edit-note').style.display = on ? '' : 'none';
+  document.getElementById('add-ing-row').style.display = on ? 'none' : '';
+  document.getElementById('reset-checklist').style.display = on ? 'none' : '';
+  document.getElementById('checklist-foot').style.display = on ? 'none' : '';
+  document.getElementById('checklist-edit-foot').style.display = on ? '' : 'none';
+  renderChecklist();
+  updateEditDeleteButton();
+}
+function updateEditDeleteButton(){
+  const btn=document.getElementById('edit-delete');
+  const n=selectedForDelete.size;
+  btn.textContent='선택 삭제 ('+n+')';
+  btn.disabled = n===0;
+}
 function renderChecklist(){
   const body=document.getElementById('checklist-body');
-  const allBuiltin=new Set(categories.flatMap(([,its])=>its));
   body.innerHTML=categories.map(([cat,items])=>{
-    // 기본 카테고리에 이미 있는 이름은 customs에서 제외 (옛 데이터로 들어간 중복 방지)
-    const customs=(State.customIngredients||[]).filter(c=>c.cat===cat && !allBuiltin.has(c.name)).map(c=>c.name);
-    const all=[...items, ...customs].sort((a,b)=>a.localeCompare(b,'ko'));
+    const all=visibleIngredientsForCat(cat,items);
     const chips=all.map(name=>{
-      const isCustom=customs.includes(name);
       const rec=State.tested[name];
       const done=rec?' done':'';
-      const custom=isCustom?' custom':'';
-      const meta=rec&&rec.date?`<span class="d">${rec.date.slice(5).replace('-','/')}</span>`:'';
-      const delBtn=isCustom?`<span class="ing-del" data-del-name="${esc(name)}" title="삭제">✕</span>`:'';
-      return `<button class="ing${done}${custom}" data-name="${esc(name)}"><span class="nm">${esc(name)}</span>${meta}${delBtn}</button>`;
+      const editing=isChecklistEditMode?' editing':'';
+      const selected=(isChecklistEditMode && selectedForDelete.has(name))?' selected':'';
+      const meta=(!isChecklistEditMode && rec&&rec.date)?`<span class="d">${rec.date.slice(5).replace('-','/')}</span>`:'';
+      return `<button class="ing${done}${editing}${selected}" data-name="${esc(name)}"><span class="nm">${esc(name)}</span>${meta}</button>`;
     }).join('');
     const doneN=all.filter(n=>State.tested[n]).length;
-    return `<div class="cat"><div class="cat-name">${cat}<span class="count">${doneN}/${all.length}</span></div><div class="items">${chips}</div></div>`;
+    return all.length ? `<div class="cat"><div class="cat-name">${cat}<span class="count">${doneN}/${all.length}</span></div><div class="items">${chips}</div></div>` : '';
   }).join('');
-  body.querySelectorAll('.ing').forEach(el=>el.addEventListener('click',e=>{
-    if(e.target.closest('.ing-del')) return;
-    openDetail(el.dataset.name);
-  }));
-  body.querySelectorAll('.ing-del').forEach(el=>el.addEventListener('click',e=>{
-    e.stopPropagation();
-    deleteCustomIngredient(el.dataset.delName);
+  body.querySelectorAll('.ing').forEach(el=>el.addEventListener('click',()=>{
+    const name=el.dataset.name;
+    if(isChecklistEditMode){
+      if(selectedForDelete.has(name)) selectedForDelete.delete(name);
+      else selectedForDelete.add(name);
+      el.classList.toggle('selected');
+      updateEditDeleteButton();
+    } else {
+      openDetail(name);
+    }
   }));
   updateProgress();
 }
@@ -1089,7 +1137,16 @@ function addCustomIngredient(){
   const nameEl=document.getElementById('new-ing-name'), catEl=document.getElementById('new-ing-cat');
   const name=nameEl.value.trim(), cat=catEl.value;
   if(!name) return;
-  const exists=[...categories.flatMap(([,its])=>its),...(State.customIngredients||[]).map(c=>c.name)].includes(name);
+  /* 만약 삭제된 기본 재료를 다시 추가하려는 경우 → 복구 */
+  if((State.deletedBuiltin||[]).includes(name)){
+    State.deletedBuiltin=State.deletedBuiltin.filter(n=>n!==name);
+    nameEl.value=''; save(); renderChecklist(); fillIngredientList(); nameEl.focus();
+    return;
+  }
+  const exists=[
+    ...categories.flatMap(([,its])=>its).filter(n=>!(State.deletedBuiltin||[]).includes(n)),
+    ...(State.customIngredients||[]).map(c=>c.name)
+  ].includes(name);
   if(exists){ alert('"'+name+'"은(는) 이미 있어요'); nameEl.focus(); nameEl.select(); return; }
   State.customIngredients=State.customIngredients||[];
   State.customIngredients.push({cat,name});
@@ -1097,11 +1154,24 @@ function addCustomIngredient(){
   save(); renderChecklist(); fillIngredientList();
   nameEl.focus();
 }
-function deleteCustomIngredient(name){
-  if(!confirm('"'+name+'" 재료를 삭제할까요?\n테스트 기록이 있다면 함께 사라집니다.')) return;
-  State.customIngredients=(State.customIngredients||[]).filter(c=>c.name!==name);
-  if(State.tested[name]) delete State.tested[name];
-  save(); renderChecklist(); fillIngredientList();
+function executeSelectedDelete(){
+  if(!selectedForDelete.size) return;
+  if(!confirm(selectedForDelete.size+'개 재료를 삭제할까요?\n완료 기록이 있다면 함께 사라집니다.')) return;
+  const allBuiltin=new Set(categories.flatMap(([,its])=>its));
+  State.deletedBuiltin=State.deletedBuiltin||[];
+  selectedForDelete.forEach(name=>{
+    if(allBuiltin.has(name)){
+      /* 기본 재료 → 삭제 목록에 추가 */
+      if(!State.deletedBuiltin.includes(name)) State.deletedBuiltin.push(name);
+    } else {
+      /* 사용자 추가 재료 → customIngredients 에서 제거 */
+      State.customIngredients=(State.customIngredients||[]).filter(c=>c.name!==name);
+    }
+    if(State.tested[name]) delete State.tested[name];
+  });
+  selectedForDelete.clear();
+  save(); fillIngredientList();
+  setChecklistEditMode(false);
 }
 
 /* 체크리스트 모달 하단의 카테고리 select 채우기 + 추가 이벤트 부착 (categories 정의 후) */
@@ -1134,9 +1204,12 @@ document.getElementById('detail-undo').onclick=()=>{ if(!currentName)return; del
 document.getElementById('detail-close').onclick=closeDetail;
 dOverlay.addEventListener('click',e=>{ if(e.target===dOverlay) closeDetail(); });
 document.getElementById('open-checklist').onclick=()=>overlay.classList.add('open');
-document.getElementById('close-checklist').onclick=()=>overlay.classList.remove('open');
-overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+document.getElementById('close-checklist').onclick=()=>{ if(isChecklistEditMode) setChecklistEditMode(false); overlay.classList.remove('open'); };
+overlay.addEventListener('click',e=>{ if(e.target===overlay){ if(isChecklistEditMode) setChecklistEditMode(false); overlay.classList.remove('open'); } });
 document.getElementById('reset-checklist').onclick=()=>{ if(confirm('전체 체크 기록을 지울까요?')){ Object.keys(State.tested).forEach(k=>delete State.tested[k]); save(); renderChecklist(); } };
+document.getElementById('edit-ing-toggle').onclick=()=>setChecklistEditMode(!isChecklistEditMode);
+document.getElementById('edit-cancel').onclick=()=>setChecklistEditMode(false);
+document.getElementById('edit-delete').onclick=executeSelectedDelete;
 
 /* ============ 탭 ============ */
 document.querySelectorAll('.tab').forEach(btn=>{
