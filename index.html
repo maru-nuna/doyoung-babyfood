@@ -707,9 +707,19 @@ function makeCell(items,date,mi,field,mealName){
   const cls=['mealcell',field,changed?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
 }
-function makeLog(date,mi,field,mealName,extraHtml){
+/* 끼니 계획에 들어있는 단위에서 먹은 양에 붙일 단위를 결정 (ml 만 있으면 ml, 그 외 g) */
+function preferredUnit(day, mi){
+  const t=computedTotal(day, mi);
+  if(t.ml>0 && t.g===0) return 'ml';
+  return 'g';
+}
+function makeLog(date,mi,field,mealName,extraHtml,day){
   const key=`${date}|${mi}|${field}`;
-  const val=State.logs[key]||'';
+  let val=State.logs[key]||'';
+  if(val && field==='eaten' && day){
+    const n=parseInt(val,10);
+    if(!isNaN(n)) val = n + preferredUnit(day, mi);
+  }
   return `<td class="mealcell log ${field}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><div class="log-text">${esc(val)}</div>${extraHtml||''}</td>`;
 }
 function eatenPctHtml(day, mi){
@@ -729,7 +739,7 @@ function mealRows(d,mi,mealName){
   h+='<tr class="row-base"><td class="rowlabel">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   h+='<tr class="row-top"><td class="rowlabel">토핑</td>'+d.map(x=>makeCell(getMeals(x)[mi].top,x.date,mi,'top',mealName)).join('')+'</tr>';
   h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
-  h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName,eatenPctHtml(x,mi))).join('')+'</tr>';
+  h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName,eatenPctHtml(x,mi),x)).join('')+'</tr>';
   h+='<tr><td class="rowlabel">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
   return h;
 }
