@@ -52,7 +52,25 @@
   .panel{display:none;} .panel.active{display:block;animation:fade .3s ease;}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  .new-foods{background:var(--sage-soft);border:1px dashed #cdd9c6;border-radius:14px;padding:12px 16px;margin-bottom:22px;font-size:14px;}
+  .new-foods{background:var(--sage-soft);border:1px dashed #cdd9c6;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:14px;}
+  .overall-progress{display:flex;align-items:center;gap:12px;width:100%;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:22px;cursor:pointer;font-family:inherit;text-align:left;transition:.15s;box-shadow:0 2px 10px rgba(120,110,90,.04);}
+  .overall-progress:hover{border-color:var(--sage);box-shadow:0 4px 14px rgba(122,148,113,.12);}
+  .op-label{font-size:13px;font-weight:700;color:var(--ink);flex-shrink:0;}
+  .op-bar{flex:1;height:10px;background:var(--line);border-radius:5px;overflow:hidden;min-width:0;}
+  .op-bar .fill{height:100%;background:linear-gradient(90deg,var(--sage),#8fb088);transition:width .4s ease;}
+  .op-pct{font-size:14px;font-weight:700;color:var(--sage);flex-shrink:0;min-width:42px;text-align:right;}
+  .op-hint{font-size:11px;color:var(--muted);flex-shrink:0;}
+  .progress-modal{max-width:520px;}
+  .progress-modal .modal-body{padding:14px 22px 8px;}
+  .pg-summary{background:var(--sage-soft);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;font-size:13px;color:var(--sage);}
+  .pg-summary b{font-size:18px;}
+  .pg-list{display:flex;flex-direction:column;gap:8px;}
+  .pg-row{display:grid;grid-template-columns:80px 1fr 92px;gap:10px;align-items:center;font-size:13px;}
+  .pg-row .name{font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pg-row .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;}
+  .pg-row .bar .f{height:100%;background:linear-gradient(90deg,var(--sage),#8fb088);}
+  .pg-row .meta{font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;}
+  .pg-empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 0;}
   .new-foods b{color:var(--sage);}
   .nf-chip{display:inline-block;background:#fff3cd;color:#9a6b00;border:1px solid #ffe08a;border-radius:8px;padding:2px 9px;margin:3px 3px 0 0;font-size:13px;}
   .nf-empty{color:var(--muted);font-size:13px;}
@@ -74,8 +92,8 @@
   td.rowlabel{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;width:64px;white-space:nowrap;position:sticky;left:0;}
   .cell-list{display:flex;flex-direction:column;gap:3px;align-items:center;}
   .item{font-size:12.5px;word-break:keep-all;overflow-wrap:anywhere;max-width:100%;} .item .g{color:var(--muted);font-size:11px;}
-  .new-item{font-weight:700;color:inherit;}
-  .eaten-on .new-item{background:#fff3cd;color:#9a6b00;padding:2px 7px;border-radius:7px;border:1px solid #ffe08a;}
+  .new-item{background:#fff3cd;color:#9a6b00;padding:2px 7px;border-radius:7px;border:1px solid #ffe08a;font-weight:700;}
+  .new-item .g{color:#9a6b00;}
   .row-base td:not(.rowlabel){background:#fbfdfa;}
   .row-top td:not(.rowlabel){background:#fffcf9;}
   .row-snack td:not(.rowlabel){background:#fcfaff;}
@@ -178,10 +196,12 @@
 
   <section id="t1" class="panel active">
     <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t1-new"></span></div>
+    <button class="overall-progress" id="t1-progress" type="button"></button>
     <div id="t1-weeks"></div>
   </section>
   <section id="t2" class="panel">
     <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t2-new"></span></div>
+    <button class="overall-progress" id="t2-progress" type="button"></button>
     <div id="t2-weeks"></div>
   </section>
 
@@ -225,6 +245,23 @@
     <div class="modal-foot detail-foot">
       <button id="detail-undo" class="reset-btn">완료 취소</button>
       <button id="detail-done" class="check-btn done-btn">확인 완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- 진행률 상세 -->
+<div id="progress-overlay" class="overlay detail-overlay">
+  <div class="modal progress-modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="pg-title">진행 상세</div>
+        <div class="modal-sub" id="pg-sub"></div>
+      </div>
+      <button id="pg-close" class="close-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="pg-summary" id="pg-summary"></div>
+      <div class="pg-list" id="pg-list"></div>
     </div>
   </div>
 </div>
@@ -502,13 +539,76 @@ function dayRatio(day){
   });
   return {plan,actual,ratio:plan?Math.min(1,actual/plan):0};
 }
-function ratioCell(day){
-  const r=dayRatio(day);
-  if(!r.plan) return '<th></th>';
-  const pct=Math.round(r.ratio*100);
-  const full=pct>=100;
-  return `<th><div class="ratio-bar"><div class="fill" style="width:${Math.min(100,pct)}%"></div></div><div class="ratio-text${full?' full':''}">${r.actual}/${r.plan}g · ${pct}%</div></th>`;
+/* 한 탭(weeks)의 전체 누적 + 재료별 진행률 */
+function tabStats(weeks){
+  let totalPlan=0, totalActual=0;
+  const ing=new Map(); // name → {plan, est}
+  weeks.forEach(wk=>wk.days.forEach(day=>{
+    getMeals(day).forEach((m,mi)=>{
+      const ovBase=State.overrides[`${day.date}|${mi}|base`];
+      const ovTop =State.overrides[`${day.date}|${mi}|top`];
+      const baseItems = ovBase!=null ? parseItemsLocal(ovBase) : m.base.map(it=>({name:it[0],g:it[1]}));
+      const topItems  = ovTop !=null ? parseItemsLocal(ovTop ) : m.top .map(it=>({name:it[0],g:it[1]}));
+      const planTotal = baseItems.reduce((a,it)=>a+(it.g||0),0) + topItems.reduce((a,it)=>a+(it.g||0),0);
+      const eaten = parseInt(State.logs[`${day.date}|${mi}|eaten`],10);
+      const hasActual = !isNaN(eaten);
+      totalPlan += planTotal;
+      if(hasActual) totalActual += eaten;
+      const mealRatio = (hasActual && planTotal>0) ? Math.min(1,eaten/planTotal) : 0;
+      [...baseItems, ...topItems].forEach(it=>{
+        if(!it.name) return;
+        if(!ing.has(it.name)) ing.set(it.name,{plan:0,est:0});
+        const s=ing.get(it.name);
+        s.plan += (it.g||0);
+        if(hasActual) s.est += (it.g||0) * mealRatio;
+      });
+    });
+  }));
+  const ingredients = Array.from(ing.entries())
+    .map(([name,s])=>({name,plan:s.plan,est:Math.round(s.est),ratio:s.plan?s.est/s.plan:0}))
+    .sort((a,b)=>b.ratio-a.ratio || b.plan-a.plan);
+  return {totalPlan,totalActual,overall:totalPlan?Math.min(1,totalActual/totalPlan):0,ingredients};
 }
+function renderOverallProgress(){
+  [['t1',tab1,'1~28일'],['t2',tab2,'29~56일']].forEach(([k,weeks,label])=>{
+    const el=document.getElementById(k+'-progress');
+    const s=tabStats(weeks);
+    const pct=Math.round(s.overall*100);
+    el.innerHTML=`
+      <span class="op-label">${label} 달성</span>
+      <div class="op-bar"><div class="fill" style="width:${Math.min(100,pct)}%"></div></div>
+      <span class="op-pct">${pct}%</span>
+      <span class="op-hint">▸ 재료별</span>
+    `;
+    el.onclick=()=>openProgressDetail(k,weeks,label,s);
+  });
+}
+const pgOverlay=document.getElementById('progress-overlay');
+function openProgressDetail(key,weeks,label,s){
+  document.getElementById('pg-title').textContent=label+' · 재료별 달성률';
+  document.getElementById('pg-sub').textContent='먹은 양 입력값으로 끼니 달성률을 추정해 재료별로 환산한 값입니다';
+  document.getElementById('pg-summary').innerHTML=`
+    <span>전체 계획 <b>${s.totalPlan}g</b></span>
+    <span>실제 먹음 <b>${s.totalActual}g</b></span>
+    <span>달성률 <b>${Math.round(s.overall*100)}%</b></span>
+  `;
+  const list=document.getElementById('pg-list');
+  if(!s.ingredients.length){ list.innerHTML='<div class="pg-empty">아직 데이터가 없어요</div>'; }
+  else{
+    list.innerHTML=s.ingredients.map(it=>{
+      const pct=Math.round(it.ratio*100);
+      return `<div class="pg-row">
+        <span class="name">${esc(it.name)}</span>
+        <div class="bar"><div class="f" style="width:${Math.min(100,pct)}%"></div></div>
+        <span class="meta">${it.est}/${it.plan}g · ${pct}%</span>
+      </div>`;
+    }).join('');
+  }
+  pgOverlay.classList.add('open');
+}
+function closeProgressDetail(){ pgOverlay.classList.remove('open'); }
+document.getElementById('pg-close').onclick=closeProgressDetail;
+pgOverlay.addEventListener('click',e=>{ if(e.target===pgOverlay) closeProgressDetail(); });
 function renderWeeks(weeks,withSnack,labels){
   labels=labels||["1끼"];
   return weeks.map(wk=>{
@@ -516,7 +616,6 @@ function renderWeeks(weeks,withSnack,labels){
     let html=`<div class="week"><div class="week-head"><span>${wk.range}</span></div><table>`;
     html+='<thead><tr><th class="rowlabel">날짜</th>'+d.map(x=>`<th class="date">${x.date}</th>`).join('')+'</tr>';
     html+='<tr><th class="rowlabel"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
-    html+='<tr class="ratio-row"><th class="rowlabel">달성</th>'+d.map(ratioCell).join('')+'</tr>';
     html+='</thead><tbody>';
     labels.forEach((lab,i)=>{
       if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
@@ -554,7 +653,7 @@ function attachCellClick(){
 function renderTables(){
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
-  attachCellClick(); renderNewFoods();
+  attachCellClick(); renderNewFoods(); renderOverallProgress();
 }
 
 /* ============ 끼니 편집 모달 ============ */
@@ -726,9 +825,11 @@ function updateProgress(){
 }
 function renderChecklist(){
   const body=document.getElementById('checklist-body');
+  const allBuiltin=new Set(categories.flatMap(([,its])=>its));
   body.innerHTML=categories.map(([cat,items])=>{
-    const customs=(State.customIngredients||[]).filter(c=>c.cat===cat).map(c=>c.name);
-    const all=[...items, ...customs];
+    // 기본 카테고리에 이미 있는 이름은 customs에서 제외 (옛 데이터로 들어간 중복 방지)
+    const customs=(State.customIngredients||[]).filter(c=>c.cat===cat && !allBuiltin.has(c.name)).map(c=>c.name);
+    const all=[...items, ...customs].sort((a,b)=>a.localeCompare(b,'ko'));
     const chips=all.map(name=>{
       const isCustom=customs.includes(name);
       const rec=State.tested[name];
@@ -813,7 +914,8 @@ document.querySelectorAll('.tab').forEach(btn=>{
   };
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
-  if(mOverlay.classList.contains('open'))closeMealEdit();
+  if(pgOverlay.classList.contains('open'))closeProgressDetail();
+  else if(mOverlay.classList.contains('open'))closeMealEdit();
   else if(dOverlay.classList.contains('open'))closeDetail();
   else overlay.classList.remove('open');
 }});
