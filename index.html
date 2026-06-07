@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>도영이 이유식</title>
+<title>도영이 기록</title>
 <meta name="theme-color" content="#7a9471">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="도영이 이유식">
+<meta name="apple-mobile-web-app-title" content="도영이 기록">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,12 +44,84 @@
     color:#fff;border:none;padding:11px 20px;border-radius:12px;box-shadow:0 4px 14px rgba(122,148,113,.35);transition:.2s;}
   .check-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(122,148,113,.45);}
 
+  .main-tabs{display:flex;gap:6px;margin:20px 0 22px;background:#f3eee2;border-radius:14px;padding:5px;}
+  .main-tab{flex:1;border:none;cursor:pointer;font-family:inherit;font-size:15px;padding:12px;border-radius:10px;background:transparent;color:var(--muted);font-weight:700;transition:.2s;}
+  .main-tab:hover{color:var(--ink);}
+  .main-tab.active{background:var(--paper);color:var(--sage);box-shadow:0 2px 10px rgba(120,110,90,.08);}
+  .main-panel{display:none;} .main-panel.active{display:block;animation:fade .3s ease;}
+
   .tabs{display:flex;gap:6px;margin:22px 0 18px;}
   .tab{border:none;cursor:pointer;font-family:inherit;font-size:15px;padding:10px 22px;
     border-radius:14px 14px 0 0;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:.2s;}
   .tab:hover{color:var(--ink);}
   .tab.active{background:var(--paper);color:var(--sage);font-weight:700;box-shadow:0 -2px 8px rgba(0,0,0,.03);border-bottom:2px solid var(--sage);}
   .panel{display:none;} .panel.active{display:block;animation:fade .3s ease;}
+
+  /* 장난감 탭 */
+  .toy-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .toy-sub{color:var(--muted);font-size:13px;}
+  .toy-head .check-btn{margin-top:0;}
+  .toy-table-wrap{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:6px;overflow-x:auto;box-shadow:0 4px 20px rgba(120,110,90,.04);}
+  table.toy-table{table-layout:auto;width:100%;border-collapse:collapse;min-width:680px;}
+  table.toy-table th{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;padding:12px 10px;text-align:left;border-bottom:1px solid var(--line);}
+  table.toy-table .th-photo{width:88px;}
+  table.toy-table .th-month{width:120px;}
+  table.toy-table .th-rating{width:130px;}
+  table.toy-table .th-name{width:140px;}
+  table.toy-table td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle;}
+  table.toy-table tr.toy-row{cursor:pointer;transition:background .15s;}
+  table.toy-table tr.toy-row:hover td{background:#fbf7ee;}
+  table.toy-table tr:last-child td{border-bottom:none;}
+  .toy-name{font-weight:700;color:var(--ink);}
+  .toy-photo-thumb{width:60px;height:60px;border-radius:10px;object-fit:cover;background:#faf6ee;border:1px solid var(--line);display:block;}
+  .toy-photo-thumb.placeholder{display:flex;align-items:center;justify-content:center;font-size:10px;color:#bdb3a0;text-align:center;line-height:1.2;border-style:dashed;}
+  .toy-months-stack{display:flex;flex-direction:column;gap:5px;align-items:flex-start;}
+  .month-chip{display:inline-block;font-size:11px;font-weight:700;color:#fff;padding:3px 9px;border-radius:999px;white-space:nowrap;letter-spacing:.02em;}
+  .month-chip.m-0{background:linear-gradient(135deg,#9ab8d4,#5a7d96);}
+  .month-chip.m-1{background:linear-gradient(135deg,#a9c4a0,#7a9471);}
+  .month-chip.m-2{background:linear-gradient(135deg,#f0c9a8,#c47a4e);}
+  .month-chip.m-3{background:linear-gradient(135deg,#bba2d4,#8a6ba8);}
+  .toy-rating-stars{display:inline-flex;gap:1px;}
+  .toy-rating-stars .star{position:relative;font-size:16px;line-height:1;color:#e6dfd1;width:16px;text-align:center;}
+  .toy-rating-stars .star::before{content:"\2605";}
+  .toy-rating-stars .star .fill{position:absolute;top:0;left:0;overflow:hidden;width:0;color:#f3b73d;}
+  .toy-rating-stars .star .fill::before{content:"\2605";}
+  .toy-rating-num{font-size:11px;color:var(--muted);margin-left:6px;font-weight:600;}
+  .toy-reviews-stack{display:flex;flex-direction:column;gap:6px;}
+  .toy-review-item{display:flex;gap:8px;align-items:flex-start;}
+  .toy-review-item .month-chip{margin-top:1px;flex-shrink:0;}
+  .toy-review-item .rv-text{font-size:13px;color:#4a4566;line-height:1.5;white-space:pre-wrap;}
+  .toy-empty{padding:30px 20px;text-align:center;color:var(--muted);font-size:13px;}
+
+  /* 장난감 편집 모달 */
+  .toy-modal{max-width:500px;}
+  .toy-photo-area{display:flex;gap:12px;align-items:flex-start;}
+  .toy-photo-preview{width:96px;height:96px;border-radius:12px;background:#faf6ee;border:1.5px dashed #d8d0bc;display:flex;align-items:center;justify-content:center;color:#bdb3a0;font-size:11px;overflow:hidden;flex-shrink:0;}
+  .toy-photo-preview img{width:100%;height:100%;object-fit:cover;}
+  .toy-photo-buttons{display:flex;flex-direction:column;gap:6px;}
+  .toy-photo-pick{display:inline-block;cursor:pointer;font-family:inherit;font-size:13px;background:var(--sage);color:#fff;border:none;padding:8px 14px;border-radius:10px;text-align:center;}
+  .toy-photo-pick:hover{background:#6b8362;}
+  .toy-month-pick{display:flex;flex-wrap:wrap;gap:6px;}
+  .toy-month-pick .month-pick-chip{cursor:pointer;border:1.5px solid var(--line);background:#fff;font-family:inherit;font-size:13px;color:var(--ink);padding:7px 14px;border-radius:999px;transition:.15s;}
+  .toy-month-pick .month-pick-chip:hover{border-color:var(--sage);}
+  .toy-month-pick .month-pick-chip.on{color:#fff;border-color:transparent;font-weight:700;}
+  .toy-month-pick .month-pick-chip.on.m-0{background:#5a7d96;}
+  .toy-month-pick .month-pick-chip.on.m-1{background:#7a9471;}
+  .toy-month-pick .month-pick-chip.on.m-2{background:#c47a4e;}
+  .toy-month-pick .month-pick-chip.on.m-3{background:#8a6ba8;}
+  .toy-rating-edit{display:flex;align-items:center;gap:10px;}
+  .toy-rating-edit .rating-stars{display:inline-flex;gap:2px;cursor:pointer;user-select:none;}
+  .toy-rating-edit .star{position:relative;font-size:26px;line-height:1;color:#e6dfd1;width:26px;text-align:center;}
+  .toy-rating-edit .star::before{content:"\2605";}
+  .toy-rating-edit .star .fill{position:absolute;top:0;left:0;overflow:hidden;width:0;color:#f3b73d;}
+  .toy-rating-edit .star .fill::before{content:"\2605";}
+  .toy-rating-edit .rating-num{font-weight:700;color:var(--sage);font-size:15px;min-width:34px;}
+  .toy-review-input{display:flex;flex-direction:column;gap:6px;background:#faf6ee;border:1px solid var(--line);border-radius:10px;padding:10px;}
+  .toy-review-input + .toy-review-input{margin-top:8px;}
+  .toy-review-input .rv-head{display:flex;align-items:center;gap:8px;}
+  .toy-review-input textarea{font-family:inherit;font-size:13.5px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;resize:vertical;outline:none;min-height:54px;}
+  .toy-review-input textarea:focus{border-color:var(--sage);}
+  .toy-reviews-empty{color:var(--muted);font-size:12px;padding:8px 4px;font-style:italic;}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   .new-foods{background:var(--sage-soft);border:1px dashed #cdd9c6;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:14px;}
@@ -105,7 +177,6 @@
   .mealcell.log:empty::before,.snackcell:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
   .changed-item{background:var(--changed-soft);color:var(--changed);padding:2px 7px;border-radius:7px;border:1px solid #c5d6ea;font-weight:700;}
   .changed-item .g{color:var(--changed);}
-  td.cell-changed::after{content:"✎ 변경";display:block;font-size:9.5px;color:#8fb0d6;white-space:nowrap;margin-top:2px;}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
@@ -172,43 +243,73 @@
   <header>
     <div class="topbar">
       <div>
-        <h1 class="title">도영이 이유식 🥣</h1>
-        <div class="sub">단위 : g · 베이스 / 토핑 / 간식 단계별 기록</div>
+        <h1 class="title">도영이 기록</h1>
+        <div class="sub">이유식 식단 + 장난감 후기</div>
       </div>
       <div class="actions">
         <div class="sync"><span id="sync-dot" class="dot"></span><span id="sync-text">로컬 저장</span></div>
       </div>
     </div>
+  </header>
+
+  <div class="main-tabs">
+    <button class="main-tab active" data-main="m1">🥣 이유식</button>
+    <button class="main-tab" data-main="m2">🧸 장난감</button>
+  </div>
+
+  <section id="m1" class="main-panel active">
     <div class="legend">
       <span class="chip base">베이스</span>
       <span class="chip top">토핑</span>
       <span class="chip snack">간식</span>
-      <span class="chip newc">🆕 새로 먹은 재료 (먹은 양 입력 시)</span>
+      <span class="chip newc">🆕 새로 먹은 재료</span>
       <span class="chip chgc">✎ 계획과 다름</span>
     </div>
     <button id="open-checklist" class="check-btn">📋 재료 테스트 체크리스트</button>
-  </header>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="t1">1~28일</button>
-    <button class="tab" data-tab="t2">29~56일</button>
-  </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="t1">1~28일</button>
+      <button class="tab" data-tab="t2">29~56일</button>
+    </div>
 
-  <section id="t1" class="panel active">
-    <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t1-new"></span></div>
-    <button class="overall-progress" id="t1-progress" type="button"></button>
-    <div id="t1-weeks"></div>
+    <section id="t1" class="panel active">
+      <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t1-new"></span></div>
+      <button class="overall-progress" id="t1-progress" type="button"></button>
+      <div id="t1-weeks"></div>
+    </section>
+    <section id="t2" class="panel">
+      <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t2-new"></span></div>
+      <button class="overall-progress" id="t2-progress" type="button"></button>
+      <div id="t2-weeks"></div>
+    </section>
+
+    <div class="foot">
+      베이스·토핑 칸을 눌러 실제 먹은 메뉴로 수정할 수 있어요. 계획과 달라지면 <span style="background:var(--changed-soft);color:var(--changed);padding:1px 6px;border-radius:5px;">파란색</span>으로 표시됩니다.<br>
+      새 재료는 그 끼니의 <b>먹은 양</b>을 입력하면 <span style="background:#fff3cd;color:#9a6b00;padding:1px 6px;border-radius:5px;">노란색</span>으로 강조되고 위 목록에 추가돼요.
+    </div>
   </section>
-  <section id="t2" class="panel">
-    <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t2-new"></span></div>
-    <button class="overall-progress" id="t2-progress" type="button"></button>
-    <div id="t2-weeks"></div>
-  </section>
 
-  <div class="foot">
-    베이스·토핑 칸을 눌러 실제 먹은 메뉴로 수정할 수 있어요. 계획과 달라지면 <span style="background:var(--changed-soft);color:var(--changed);padding:1px 6px;border-radius:5px;">파란색</span>으로 표시됩니다.<br>
-    새 재료는 그 끼니의 <b>먹은 양</b>을 입력하면 <span style="background:#fff3cd;color:#9a6b00;padding:1px 6px;border-radius:5px;">노란색</span>으로 강조되고 위 목록에 추가돼요.
-  </div>
+  <section id="m2" class="main-panel">
+    <div class="toy-head">
+      <div class="toy-sub">개월수별 장난감과 후기 · 행을 누르면 편집</div>
+      <button id="add-toy" class="check-btn">+ 장난감 추가</button>
+    </div>
+    <div class="toy-table-wrap">
+      <table class="toy-table">
+        <thead>
+          <tr>
+            <th class="th-month">개월수</th>
+            <th class="th-photo">사진</th>
+            <th class="th-name">장난감</th>
+            <th class="th-rating">추천</th>
+            <th class="th-review">후기</th>
+          </tr>
+        </thead>
+        <tbody id="toy-tbody"></tbody>
+      </table>
+      <div id="toy-empty" class="toy-empty" style="display:none">아직 등록한 장난감이 없어요. <b>+ 장난감 추가</b> 버튼으로 시작해보세요.</div>
+    </div>
+  </section>
 </div>
 
 <!-- 체크리스트 -->
@@ -245,6 +346,61 @@
     <div class="modal-foot detail-foot">
       <button id="detail-undo" class="reset-btn">완료 취소</button>
       <button id="detail-done" class="check-btn done-btn">확인 완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- 장난감 편집 -->
+<div id="toy-overlay" class="overlay detail-overlay">
+  <div class="modal toy-modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="toy-title">장난감 추가</div>
+        <div class="modal-sub">사진·이름·개월수·별점·후기 입력</div>
+      </div>
+      <button id="toy-close" class="close-x">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="field">
+        <span class="flabel">사진 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 한 장 (자동 압축)</span></span>
+        <div class="toy-photo-area">
+          <div id="toy-photo-preview" class="toy-photo-preview">사진 없음</div>
+          <div class="toy-photo-buttons">
+            <label class="toy-photo-pick">
+              사진 선택
+              <input type="file" id="toy-photo-input" accept="image/*" hidden>
+            </label>
+            <button type="button" id="toy-photo-remove" class="reset-btn" style="display:none">제거</button>
+          </div>
+        </div>
+      </div>
+      <label class="field">
+        <span class="flabel">장난감 이름</span>
+        <input type="text" id="toy-name" placeholder="예: 오볼">
+      </label>
+      <div class="field">
+        <span class="flabel">개월수 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 여러 개 선택 가능</span></span>
+        <div id="toy-months" class="toy-month-pick"></div>
+      </div>
+      <div class="field">
+        <span class="flabel">추천 별점 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 별을 클릭하면 0.5 단위로 설정</span></span>
+        <div class="toy-rating-edit">
+          <div id="toy-rating-stars" class="rating-stars"></div>
+          <span id="toy-rating-label" class="rating-num">—</span>
+          <button type="button" id="toy-rating-clear" class="reset-btn" style="padding:4px 10px;font-size:11px;">초기화</button>
+        </div>
+      </div>
+      <div class="field" id="toy-reviews-field">
+        <span class="flabel">후기 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 선택한 개월수마다 따로</span></span>
+        <div id="toy-reviews"></div>
+      </div>
+    </div>
+    <div class="modal-foot detail-foot">
+      <button id="toy-delete" class="reset-btn" style="color:#cf6b5a;border-color:#e5c4be;">삭제</button>
+      <div style="display:flex;gap:8px;">
+        <button id="toy-cancel" class="reset-btn">취소</button>
+        <button id="toy-save" class="check-btn done-btn">저장</button>
+      </div>
     </div>
   </div>
 </div>
@@ -419,10 +575,11 @@ if(window.supabase){
   try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){ sb=null; }
 }
 const LS_KEY="doyoung_bbf_state";
-let State={tested:{},logs:{},overrides:{},customIngredients:[]};
+let State={tested:{},logs:{},overrides:{},customIngredients:[],toys:[],toysInitialized:false};
 (function loadLocal(){
   try{ Object.assign(State, JSON.parse(localStorage.getItem(LS_KEY))||{}); }catch(e){}
   State.tested=State.tested||{}; State.logs=State.logs||{}; State.overrides=State.overrides||{}; State.customIngredients=State.customIngredients||[];
+  State.toys=State.toys||[];
   try{ const t=JSON.parse(localStorage.getItem('doyoung_tested_ingredients')); if(t&&!Object.keys(State.tested).length) Object.keys(t).forEach(k=>State.tested[k]=t[k]===true?{done:true}:t[k]); }catch(e){}
   try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
 })();
@@ -444,10 +601,11 @@ async function syncDown(){
     const {data,error}=await sb.from('bbf_state').select('data').eq('id','doyoung').maybeSingle();
     if(error){ setSync('err'); return; }
     if(data&&data.data){
-      State=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[]},data.data);
+      State=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],toys:[],toysInitialized:false},data.data);
       State.customIngredients=State.customIngredients||[];
+      State.toys=State.toys||[];
       try{ localStorage.setItem(LS_KEY,JSON.stringify(State)); }catch(e){}
-      renderTables(); renderChecklist(); setSync('ok');
+      renderTables(); renderChecklist(); renderToys(); setSync('ok');
     }else{ await syncUp(); }
   }catch(e){ setSync('err'); }
 }
@@ -914,14 +1072,260 @@ document.querySelectorAll('.tab').forEach(btn=>{
   };
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
-  if(pgOverlay.classList.contains('open'))closeProgressDetail();
+  if(toyOverlay.classList.contains('open'))closeToyEdit();
+  else if(pgOverlay.classList.contains('open'))closeProgressDetail();
   else if(mOverlay.classList.contains('open'))closeMealEdit();
   else if(dOverlay.classList.contains('open'))closeDetail();
   else overlay.classList.remove('open');
 }});
 
+/* ============ 장난감 ============ */
+const TOY_MONTHS=["0개월","1~3개월","4~5개월","6개월"];
+const TOY_MONTH_CLASS={"0개월":"m-0","1~3개월":"m-1","4~5개월":"m-2","6개월":"m-3"};
+const INITIAL_TOYS=[
+  {name:"초점책",months:["0개월"],rating:0,reviews:[{month:"0개월",text:"잘 본 것 같음"}]},
+  {name:"타이니러브 모빌",months:["0개월"],rating:0,reviews:[{month:"0개월",text:"조금 보여주다가 안 보여주기 시작함"}]},
+  {name:"오볼",months:["1~3개월","4~5개월"],rating:0,reviews:[{month:"1~3개월",text:"진짜 잘 씀. 지금까지 씀"},{month:"4~5개월",text:"고리를 몇 개 끼워주니 더 잘 씀"}]},
+  {name:"아기 병풍",months:["1~3개월","4~5개월"],rating:0,reviews:[{month:"1~3개월",text:"엄청 잘 보진 않음"},{month:"4~5개월",text:"잘 보기 시작"}]},
+  {name:"까꿍책",months:["1~3개월"],rating:0,reviews:[{month:"1~3개월",text:"집중해서 잘 봄"}]},
+  {name:"치발기",months:["4~5개월"],rating:0,reviews:[{month:"4~5개월",text:"치즈, 손바닥, 당근, 초코바나나 등 다양하게 잘 씀"}]},
+  {name:"여러 책들",months:["4~5개월"],rating:0,reviews:[{month:"4~5개월",text:"샘플로 받은 책들 읽어주면 집중해서 봄"}]},
+  {name:"컵쌓기",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"컵을 무너뜨리는 것을 즐김"}]},
+  {name:"링(도넛모양) 쌓기",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"아직 원리를 이해하진 못하나, 맨 위에 꺼 빼서 씀"}]},
+  {name:"에듀테이블",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"맨 위에 있는 걸 뱅글뱅글 돌리면 홀린 듯이 봄"}]},
+  {name:"액티비티 가든",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"아직까지는 흥미를 보이진 않음"}]}
+];
+function maybeSeedToys(){
+  if(!State.toysInitialized && (!State.toys || !State.toys.length)){
+    State.toys = INITIAL_TOYS.map(t=>({id:'toy_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),photo:null,...t}));
+    State.toysInitialized = true;
+    save();
+  }
+}
+function toyMonthOrder(m){ return TOY_MONTHS.indexOf(m); }
+function sortedToys(){
+  return State.toys.slice().sort((a,b)=>{
+    const am=Math.min(...(a.months||[]).map(toyMonthOrder).filter(n=>n>=0).concat([99]));
+    const bm=Math.min(...(b.months||[]).map(toyMonthOrder).filter(n=>n>=0).concat([99]));
+    if(am!==bm) return am-bm;
+    return (a.name||'').localeCompare(b.name||'','ko');
+  });
+}
+function staticStarsHTML(val){
+  let h='<div class="toy-rating-stars">';
+  for(let i=0;i<5;i++){
+    const pct=Math.max(0,Math.min(1,val-i))*100;
+    h+=`<span class="star"><span class="fill" style="width:${pct}%"></span></span>`;
+  }
+  h+='</div>';
+  if(val>0) h+=`<span class="toy-rating-num">${val.toFixed(1)}</span>`;
+  return h;
+}
+function renderToys(){
+  maybeSeedToys();
+  const tbody=document.getElementById('toy-tbody');
+  const empty=document.getElementById('toy-empty');
+  const toys=sortedToys();
+  if(!toys.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=toys.map(t=>{
+    const monthChips=(t.months||[]).slice().sort((a,b)=>toyMonthOrder(a)-toyMonthOrder(b))
+      .map(m=>`<span class="month-chip ${TOY_MONTH_CLASS[m]||''}">${esc(m)}</span>`).join('');
+    const photoHtml = t.photo
+      ? `<img class="toy-photo-thumb" src="${t.photo}" alt="">`
+      : `<div class="toy-photo-thumb placeholder">사진<br>없음</div>`;
+    const reviews=(t.reviews||[]).filter(r=>r.text && r.text.trim());
+    const reviewsHtml = reviews.length
+      ? '<div class="toy-reviews-stack">'+reviews.map(r=>`<div class="toy-review-item"><span class="month-chip ${TOY_MONTH_CLASS[r.month]||''}">${esc(r.month)}</span><span class="rv-text">${esc(r.text)}</span></div>`).join('')+'</div>'
+      : '<span style="color:var(--muted);font-size:12px;">—</span>';
+    return `<tr class="toy-row" data-id="${esc(t.id)}">
+      <td><div class="toy-months-stack">${monthChips||'<span style="color:var(--muted);font-size:12px;">미지정</span>'}</div></td>
+      <td>${photoHtml}</td>
+      <td class="toy-name">${esc(t.name||'(이름 없음)')}</td>
+      <td>${staticStarsHTML(t.rating||0)}</td>
+      <td>${reviewsHtml}</td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('.toy-row').forEach(tr=>{
+    tr.addEventListener('click',()=>openToyEdit(tr.dataset.id));
+  });
+}
+
+/* 사진 리사이즈 + 압축 */
+function resizePhoto(file){
+  return new Promise((resolve,reject)=>{
+    if(!file){ resolve(null); return; }
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        const maxSize=400;
+        const scale=Math.min(maxSize/img.width, maxSize/img.height, 1);
+        const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.72));
+      };
+      img.onerror=reject;
+      img.src=ev.target.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* 장난감 편집 모달 */
+const toyOverlay=document.getElementById('toy-overlay');
+let currentToy=null;
+let editingPhoto=null;
+let editingMonths=new Set();
+let editingRating=0;
+
+function openToyEdit(id){
+  const isNew=!id;
+  currentToy = isNew ? {id:'toy_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:'',months:[],rating:0,reviews:[],photo:null} : State.toys.find(t=>t.id===id);
+  if(!currentToy) return;
+  document.getElementById('toy-title').textContent = isNew ? '장난감 추가' : '장난감 편집';
+  document.getElementById('toy-name').value = currentToy.name || '';
+  editingPhoto = currentToy.photo || null;
+  editingRating = currentToy.rating || 0;
+  editingMonths = new Set(currentToy.months || []);
+  renderToyPhotoPreview();
+  renderToyMonthPick();
+  renderToyRatingStars();
+  renderToyReviewInputs();
+  document.getElementById('toy-delete').style.display = isNew ? 'none' : 'inline-block';
+  toyOverlay.classList.add('open');
+  setTimeout(()=>document.getElementById('toy-name').focus(),60);
+}
+function closeToyEdit(){ toyOverlay.classList.remove('open'); currentToy=null; }
+
+function renderToyPhotoPreview(){
+  const el=document.getElementById('toy-photo-preview');
+  const rm=document.getElementById('toy-photo-remove');
+  if(editingPhoto){ el.innerHTML=`<img src="${editingPhoto}" alt="">`; rm.style.display='inline-block'; }
+  else { el.textContent='사진 없음'; rm.style.display='none'; }
+}
+function renderToyMonthPick(){
+  const el=document.getElementById('toy-months');
+  el.innerHTML=TOY_MONTHS.map(m=>{
+    const on=editingMonths.has(m);
+    return `<button type="button" class="month-pick-chip ${TOY_MONTH_CLASS[m]||''} ${on?'on':''}" data-month="${esc(m)}">${esc(m)}</button>`;
+  }).join('');
+  el.querySelectorAll('.month-pick-chip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const m=btn.dataset.month;
+      if(editingMonths.has(m)) editingMonths.delete(m);
+      else editingMonths.add(m);
+      renderToyMonthPick();
+      renderToyReviewInputs();
+    });
+  });
+}
+function renderToyRatingStars(){
+  const wrap=document.getElementById('toy-rating-stars');
+  wrap.innerHTML='';
+  for(let i=0;i<5;i++){
+    const s=document.createElement('span'); s.className='star';
+    const f=document.createElement('span'); f.className='fill';
+    s.appendChild(f); wrap.appendChild(s);
+  }
+  paintToyStars(editingRating);
+  function valFromEvent(ev){
+    const stars=wrap.querySelectorAll('.star');
+    for(let i=0;i<stars.length;i++){
+      const rect=stars[i].getBoundingClientRect();
+      if(ev.clientX<=rect.right){
+        const half = ev.clientX < rect.left + rect.width/2;
+        return i + (half?0.5:1);
+      }
+    }
+    return 5;
+  }
+  wrap.onmousemove=e=>paintToyStars(valFromEvent(e));
+  wrap.onmouseleave=()=>paintToyStars(editingRating);
+  wrap.onclick=e=>{ editingRating=valFromEvent(e); paintToyStars(editingRating); };
+  document.getElementById('toy-rating-clear').onclick=()=>{ editingRating=0; paintToyStars(0); };
+}
+function paintToyStars(val){
+  const wrap=document.getElementById('toy-rating-stars');
+  wrap.querySelectorAll('.star').forEach((st,i)=>{
+    const pct=Math.max(0,Math.min(1,val-i))*100;
+    st.querySelector('.fill').style.width=pct+'%';
+  });
+  document.getElementById('toy-rating-label').textContent = val>0 ? val.toFixed(1) : '—';
+}
+function renderToyReviewInputs(){
+  const wrap=document.getElementById('toy-reviews');
+  const sortedMonths=[...editingMonths].sort((a,b)=>toyMonthOrder(a)-toyMonthOrder(b));
+  if(!sortedMonths.length){
+    wrap.innerHTML='<div class="toy-reviews-empty">개월수를 먼저 선택하세요</div>';
+    return;
+  }
+  // 기존 reviews 캐시 (사용자가 입력 중인 텍스트 보존)
+  const cache={};
+  wrap.querySelectorAll('.toy-review-input textarea').forEach(t=>{ cache[t.dataset.month]=t.value; });
+  // currentToy.reviews 도 fallback 으로
+  (currentToy.reviews||[]).forEach(r=>{ if(cache[r.month]==null) cache[r.month]=r.text||''; });
+  wrap.innerHTML=sortedMonths.map(m=>`
+    <div class="toy-review-input">
+      <div class="rv-head"><span class="month-chip ${TOY_MONTH_CLASS[m]||''}">${esc(m)}</span></div>
+      <textarea data-month="${esc(m)}" placeholder="이 개월수에 어땠는지 자유롭게">${esc(cache[m]||'')}</textarea>
+    </div>
+  `).join('');
+}
+
+document.getElementById('toy-photo-input').addEventListener('change', async (e)=>{
+  const file=e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    editingPhoto = await resizePhoto(file);
+    renderToyPhotoPreview();
+  }catch(err){ alert('사진을 처리할 수 없어요'); }
+  e.target.value='';
+});
+document.getElementById('toy-photo-remove').onclick=()=>{ editingPhoto=null; renderToyPhotoPreview(); };
+document.getElementById('toy-close').onclick=closeToyEdit;
+document.getElementById('toy-cancel').onclick=closeToyEdit;
+toyOverlay.addEventListener('click',e=>{ if(e.target===toyOverlay) closeToyEdit(); });
+
+document.getElementById('toy-save').onclick=()=>{
+  if(!currentToy) return;
+  const name=document.getElementById('toy-name').value.trim();
+  if(!name){ alert('장난감 이름을 입력해주세요'); document.getElementById('toy-name').focus(); return; }
+  const months=[...editingMonths].sort((a,b)=>toyMonthOrder(a)-toyMonthOrder(b));
+  const reviews=[];
+  document.querySelectorAll('#toy-reviews textarea').forEach(t=>{
+    const text=t.value.trim();
+    if(text) reviews.push({month:t.dataset.month, text});
+  });
+  const updated={id:currentToy.id, name, months, rating:editingRating, reviews, photo:editingPhoto||null};
+  const idx=State.toys.findIndex(t=>t.id===currentToy.id);
+  if(idx>=0) State.toys[idx]=updated;
+  else State.toys.push(updated);
+  save(); renderToys(); closeToyEdit();
+};
+document.getElementById('toy-delete').onclick=()=>{
+  if(!currentToy) return;
+  if(!confirm('"'+(currentToy.name||'이 장난감')+'"을(를) 삭제할까요?')) return;
+  State.toys=State.toys.filter(t=>t.id!==currentToy.id);
+  save(); renderToys(); closeToyEdit();
+};
+document.getElementById('add-toy').onclick=()=>openToyEdit(null);
+
+/* ============ 상위 탭 (이유식 / 장난감) ============ */
+document.querySelectorAll('.main-tab').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.main-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.main).classList.add('active');
+  };
+});
+
 /* ============ 시작 ============ */
-renderTables(); renderChecklist(); setSync(sb?'ok':'local');
+renderTables(); renderChecklist(); renderToys(); setSync(sb?'ok':'local');
 if(sb) syncDown();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
 </script>

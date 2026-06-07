@@ -1,7 +1,7 @@
 {
-  "name": "도영이 이유식",
-  "short_name": "이유식",
-  "description": "도영이 이유식 식단표 · 재료 테스트 기록",
+  "name": "도영이 기록",
+  "short_name": "도영기록",
+  "description": "도영이 이유식 식단 + 장난감 후기",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
