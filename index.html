@@ -63,12 +63,14 @@
   .toy-head .check-btn{margin-top:0;}
   .toy-table-wrap{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:6px;overflow-x:auto;box-shadow:0 4px 20px rgba(120,110,90,.04);}
   table.toy-table{table-layout:auto;width:100%;border-collapse:collapse;min-width:680px;}
-  table.toy-table th{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;padding:12px 10px;text-align:left;border-bottom:1px solid var(--line);}
+  table.toy-table th{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;padding:12px 10px;text-align:center;border-bottom:1px solid var(--line);}
   table.toy-table .th-photo{width:88px;}
   table.toy-table .th-month{width:120px;}
   table.toy-table .th-rating{width:130px;}
   table.toy-table .th-name{width:140px;}
-  table.toy-table td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle;}
+  table.toy-table td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle;text-align:center;}
+  /* 후기 컬럼은 긴 텍스트라 좌측 정렬 유지 */
+  table.toy-table .th-review,table.toy-table td:nth-child(5){text-align:left;}
   table.toy-table tr.toy-row{cursor:pointer;transition:background .15s;}
   table.toy-table tr.toy-row:hover td{background:#fbf7ee;}
   table.toy-table tr:last-child td{border-bottom:none;}
@@ -777,9 +779,25 @@ let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[]
   try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
 })();
 let saveTimer=null;
+let syncDownInFlight=false; /* syncDown 진행 중이면 syncUp 미루기 */
+function stateRichness(s){
+  /* '진짜 사용자 입력'의 양 — 시드만 있는 toys 는 제외 (이름/사진/별점/후기로 가중치) */
+  if(!s) return 0;
+  return (Object.keys(s.logs||{}).length)
+       + (Object.keys(s.overrides||{}).length)
+       + (Object.keys(s.tested||{}).length)
+       + ((s.customIngredients||[]).length)
+       + ((s.deletedBuiltin||[]).length)
+       + ((s.toys||[]).filter(t=>t.photo||t.rating>0||(t.reviews||[]).some(r=>r.text&&r.text.trim())).length);
+}
 function save(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(State)); }catch(e){}
-  if(sb){ setSync('busy'); clearTimeout(saveTimer); saveTimer=setTimeout(syncUp,600); }
+  if(sb){
+    setSync('busy');
+    clearTimeout(saveTimer);
+    /* syncDown 진행 중이면 일단 미룸 — 빈 State 가 클라우드를 덮어쓰는 사고 방지 */
+    saveTimer=setTimeout(()=>{ if(syncDownInFlight){ saveTimer=setTimeout(()=>syncUp(),400); } else syncUp(); }, 600);
+  }
 }
 async function syncUp(){
   try{
@@ -790,18 +808,31 @@ async function syncUp(){
 async function syncDown(){
   if(!sb) return;
   setSync('busy');
+  syncDownInFlight=true;
   try{
     const {data,error}=await sb.from('bbf_state').select('data').eq('id','doyoung').maybeSingle();
     if(error){ setSync('err'); return; }
     if(data&&data.data){
-      State=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false},data.data);
-      State.customIngredients=State.customIngredients||[];
-      State.deletedBuiltin=State.deletedBuiltin||[];
-      State.toys=State.toys||[];
+      const remote=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false},data.data);
+      remote.customIngredients=remote.customIngredients||[];
+      remote.deletedBuiltin=remote.deletedBuiltin||[];
+      remote.toys=remote.toys||[];
+      /* 보호 규칙: 로컬이 클라우드보다 명백히 풍부하면 덮어쓰지 않고 로컬을 push */
+      const localRichness=stateRichness(State);
+      const remoteRichness=stateRichness(remote);
+      if(localRichness>remoteRichness+3){
+        console.warn('[bbf] 로컬이 더 풍부함('+localRichness+' vs '+remoteRichness+') → 로컬을 클라우드로 push');
+        syncDownInFlight=false;
+        await syncUp();
+        setSync('ok');
+        return;
+      }
+      State=remote;
       try{ localStorage.setItem(LS_KEY,JSON.stringify(State)); }catch(e){}
       renderTables(); renderChecklist(); renderToys(); setSync('ok');
     }else{ await syncUp(); }
   }catch(e){ setSync('err'); }
+  finally{ syncDownInFlight=false; }
 }
 function setSync(s){
   const dot=document.getElementById('sync-dot'), txt=document.getElementById('sync-text');
@@ -1394,6 +1425,8 @@ const INITIAL_TOYS=[
   {name:"액티비티 가든",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"아직까지는 흥미를 보이진 않음"}]}
 ];
 function maybeSeedToys(){
+  /* Supabase 동기화 결과를 기다리는 중이면 빈 데이터로 덮지 않도록 시드 보류 */
+  if(sb && syncDownInFlight) return;
   if(!State.toysInitialized && (!State.toys || !State.toys.length)){
     State.toys = INITIAL_TOYS.map(t=>({id:'toy_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),photo:null,...t}));
     State.toysInitialized = true;
