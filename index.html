@@ -345,7 +345,7 @@
   .modal{background:var(--paper);width:100%;max-width:680px;max-height:86vh;border-radius:20px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);}
   .detail-modal{max-width:440px;}
   .modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 22px 14px;border-bottom:1px solid var(--line);}
-  .modal-title{font-family:'Gaegu',cursive;font-size:26px;color:var(--sage);}
+  .modal-title{font-family:'Gaegu',cursive;font-size:26px;color:var(--sage);word-break:keep-all;}
   .modal-sub{color:var(--muted);font-size:13px;margin-top:2px;}
   .close-x{border:none;background:#f3eee4;color:var(--muted);cursor:pointer;width:32px;height:32px;border-radius:50%;font-size:14px;}
   .close-x:hover{background:#e9e2d4;color:var(--ink);}
@@ -378,7 +378,7 @@
   .add-ing-row .add-btn{font-family:inherit;font-size:13px;cursor:pointer;background:var(--sage);color:#fff;border:none;padding:8px 14px;border-radius:8px;flex-shrink:0;}
   .add-ing-row .add-btn:hover{background:#6b8362;}
   #checklist-foot .reset-btn{align-self:flex-end;}
-  .reset-btn{font-family:inherit;font-size:13px;cursor:pointer;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:10px;}
+  .reset-btn{font-family:inherit;font-size:13px;cursor:pointer;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:10px;white-space:nowrap;}
   .reset-btn:hover{border-color:var(--peach);color:var(--peach);}
   .detail-body{padding:18px 22px 8px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;}
   .field{display:flex;flex-direction:column;gap:6px;}
@@ -495,8 +495,8 @@
 <div id="overlay" class="overlay">
   <div class="modal">
     <div class="modal-head">
-      <div><div class="modal-title">재료 테스트 체크리스트</div><div class="modal-sub" id="progress">0개 완료</div></div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="min-width:0;"><div class="modal-title">재료 테스트 체크리스트</div><div class="modal-sub" id="progress">0개 완료</div></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
         <button id="edit-ing-toggle" class="reset-btn" style="padding:6px 12px;font-size:12px;">편집</button>
         <button id="close-checklist" class="close-x">✕</button>
       </div>
@@ -550,7 +550,7 @@
     </div>
     <div class="detail-body">
       <div class="field">
-        <span class="flabel">사진 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 한 장 (자동 압축)</span></span>
+        <span class="flabel">사진 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 한 장 (자동 압축) · 붙여넣기 가능</span></span>
         <div class="toy-photo-area">
           <div id="toy-photo-preview" class="toy-photo-preview">사진 없음</div>
           <div class="toy-photo-buttons">
@@ -558,6 +558,7 @@
               사진 선택
               <input type="file" id="toy-photo-input" accept="image/*" hidden>
             </label>
+            <button type="button" id="toy-photo-paste" class="toy-photo-pick" style="background:#fff;color:var(--sage);border:1px solid #cdd9c6;">📋 붙여넣기</button>
             <button type="button" id="toy-photo-remove" class="reset-btn" style="display:none">제거</button>
           </div>
         </div>
@@ -1707,6 +1708,41 @@ document.getElementById('toy-photo-input').addEventListener('change', async (e)=
   e.target.value='';
 });
 document.getElementById('toy-photo-remove').onclick=()=>{ editingPhoto=null; renderToyPhotoPreview(); };
+/* 클립보드 사진 적용 (붙여넣기) */
+async function applyClipboardImageFile(file){
+  if(!file) return false;
+  try{ editingPhoto = await resizePhoto(file); renderToyPhotoPreview(); return true; }
+  catch(err){ alert('붙여넣은 사진을 처리할 수 없어요'); return false; }
+}
+/* Ctrl/⌘+V — 장난감 편집이 열려 있을 때만 동작 */
+document.addEventListener('paste', e=>{
+  if(!toyOverlay.classList.contains('open')) return;
+  const items=(e.clipboardData||window.clipboardData||{}).items||[];
+  for(const it of items){
+    if(it.type && it.type.indexOf('image')===0){
+      const file=it.getAsFile();
+      if(file){ e.preventDefault(); applyClipboardImageFile(file); }
+      return;
+    }
+  }
+});
+/* '붙여넣기' 버튼 — 클립보드 읽기 API 사용 (지원/권한 없으면 단축키 안내) */
+document.getElementById('toy-photo-paste').onclick=async ()=>{
+  if(!(navigator.clipboard && navigator.clipboard.read)){
+    alert('이 브라우저에서는 버튼 붙여넣기가 안 돼요.\n사진을 복사한 뒤 Ctrl+V (Mac은 ⌘+V) 로 붙여넣어 주세요.');
+    return;
+  }
+  try{
+    const items=await navigator.clipboard.read();
+    for(const item of items){
+      const type=item.types.find(t=>t.indexOf('image')===0);
+      if(type){ const blob=await item.getType(type); await applyClipboardImageFile(blob); return; }
+    }
+    alert('클립보드에 사진이 없어요. 사진을 먼저 복사해 주세요.');
+  }catch(err){
+    alert('클립보드를 읽지 못했어요.\n사진을 복사한 뒤 Ctrl+V (Mac은 ⌘+V) 로 붙여넣어 주세요.');
+  }
+};
 document.getElementById('toy-close').onclick=closeToyEdit;
 document.getElementById('toy-cancel').onclick=closeToyEdit;
 toyOverlay.addEventListener('click',e=>{ if(e.target===toyOverlay) closeToyEdit(); });
