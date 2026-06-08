@@ -322,6 +322,8 @@
   .item{font-size:12.5px;word-break:keep-all;overflow-wrap:anywhere;max-width:100%;} .item .g{color:var(--muted);font-size:11px;}
   .new-item{background:#fff3cd;color:#9a6b00;padding:2px 7px;border-radius:7px;border:1px solid #ffe08a;font-weight:700;}
   .new-item .g{color:#9a6b00;}
+  .item .ratio{display:inline-block;font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;white-space:nowrap;}
+  .new-item .ratio{color:#9a6b00;background:#fff7df;border-color:#ffe08a;}
   .row-base td:not(.rowlabel){background:#fbfdfa;}
   .row-top td:not(.rowlabel){background:#fffcf9;}
   .row-snack td:not(.rowlabel){background:#fcfaff;}
@@ -393,6 +395,13 @@
   .item-row .item-unit{width:62px;flex-shrink:0;font-family:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 6px;background:#fdfbf7;outline:none;cursor:pointer;}
   .item-row .item-unit:focus{border-color:var(--sage);background:#fff;}
   .item-row .g-suffix{color:var(--muted);font-size:13px;}
+  .ratio-list{display:flex;flex-direction:column;gap:6px;}
+  .ratio-row-edit{display:flex;align-items:center;gap:8px;}
+  .ratio-row-edit .ratio-name{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--ink);min-width:48px;}
+  .ratio-row-edit .ratio-input{width:72px;flex:0 0 auto;font-family:inherit;font-size:14px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fdfbf7;outline:none;text-align:right;}
+  .ratio-row-edit .ratio-input:focus{border-color:var(--sage);background:#fff;}
+  .ratio-row-edit .ratio-suffix{color:var(--muted);font-size:13px;}
+  .ratio-empty{color:var(--muted);font-size:12px;padding:4px 2px;font-style:italic;}
   .item-del{background:transparent;border:1px solid var(--line);cursor:pointer;width:32px;height:36px;border-radius:8px;color:var(--muted);font-size:13px;flex-shrink:0;}
   .item-del:hover{border-color:var(--peach);color:var(--peach);background:var(--peach-soft);}
   .add-item-btn{margin-top:2px;font-family:inherit;font-size:13px;background:transparent;border:1px dashed #cdd9c6;color:var(--sage);padding:8px 12px;border-radius:10px;cursor:pointer;width:100%;transition:.15s;}
@@ -619,6 +628,10 @@
           <div class="item-list" id="meal-base-list"></div>
           <button type="button" class="add-item-btn" data-target="base">+ 베이스 재료 추가</button>
         </div>
+        <div class="field" id="meal-ratio-field">
+          <span class="flabel">배죽 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 쌀·오트밀 물 배수</span></span>
+          <div class="ratio-list" id="meal-ratio-list"></div>
+        </div>
         <div class="field" id="meal-top-field">
           <span class="flabel">토핑 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
           <div class="item-list" id="meal-top-list"></div>
@@ -769,12 +782,13 @@ if(window.supabase){
   try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){ sb=null; }
 }
 const LS_KEY="doyoung_bbf_state";
-let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false};
+let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,ratios:{},ratiosInitialized:false};
 (function loadLocal(){
   try{ Object.assign(State, JSON.parse(localStorage.getItem(LS_KEY))||{}); }catch(e){}
   State.tested=State.tested||{}; State.logs=State.logs||{}; State.overrides=State.overrides||{}; State.customIngredients=State.customIngredients||[];
   State.deletedBuiltin=State.deletedBuiltin||[];
   State.toys=State.toys||[];
+  State.ratios=State.ratios||{};
   try{ const t=JSON.parse(localStorage.getItem('doyoung_tested_ingredients')); if(t&&!Object.keys(State.tested).length) Object.keys(t).forEach(k=>State.tested[k]=t[k]===true?{done:true}:t[k]); }catch(e){}
   try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
 })();
@@ -813,10 +827,11 @@ async function syncDown(){
     const {data,error}=await sb.from('bbf_state').select('data').eq('id','doyoung').maybeSingle();
     if(error){ setSync('err'); return; }
     if(data&&data.data){
-      const remote=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false},data.data);
+      const remote=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,ratios:{},ratiosInitialized:false},data.data);
       remote.customIngredients=remote.customIngredients||[];
       remote.deletedBuiltin=remote.deletedBuiltin||[];
       remote.toys=remote.toys||[];
+      remote.ratios=remote.ratios||{};
       /* 보호 규칙: 로컬이 클라우드보다 명백히 풍부하면 덮어쓰지 않고 로컬을 push */
       const localRichness=stateRichness(State);
       const remoteRichness=stateRichness(remote);
@@ -843,14 +858,68 @@ function setSync(s){
 /* ============ 렌더 ============ */
 function esc(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function plainText(items){ return (!items||!items.length)?'':items.map(it=>`${it[0]} ${it[1]}g`).join(' · '); }
-function cellList(items){
+/* 한 칸의 '실제 적용' 재료 목록 (override 있으면 그걸, 없으면 계획) */
+function effectiveItemsFor(day, mi, field){
+  const ov=State.overrides[`${day.date}|${mi}|${field}`];
+  if(ov!=null) return parseItemsLocal(ov);
+  const meal=getMeals(day)[mi];
+  const arr=field==='base'?meal.base:meal.top;
+  return arr.map(it=>({name:it[0],g:it[1],unit:'g'}));
+}
+/* override 까지 반영해 '재료가 처음 등장하는 칸'을 시간순으로 동적 계산 */
+let firstAppearSet=new Set();
+function recomputeFirstAppearances(){
+  const seen=new Set(); firstAppearSet=new Set();
+  const allDays=[];
+  tab1.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
+  tab2.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
+  allDays.forEach(day=>{
+    getMeals(day).forEach((m,mi)=>{
+      ['base','top'].forEach(field=>{
+        effectiveItemsFor(day,mi,field).forEach(it=>{
+          if(!it.name) return;
+          if(!seen.has(it.name)){
+            seen.add(it.name);
+            firstAppearSet.add(`${day.date}|${mi}|${field}|${it.name}`);
+          }
+        });
+      });
+    });
+  });
+}
+function isFirstAppear(date,mi,field,name){
+  return date!=null && firstAppearSet.has(`${date}|${mi}|${field}|${name}`);
+}
+/* 배죽(쌀·오트밀 물 배수) — 베이스 재료 옆에 표시할 라벨 */
+const RATIO_GRAINS=['쌀','오트밀'];
+function ratioLabel(date, field, name){
+  if(field!=='base' || date==null) return '';
+  const r=(State.ratios||{})[`${date}|${name}`];
+  return (r!=null && r!=='') ? ` <span class="ratio">${esc(r)}배죽</span>` : '';
+}
+/* 5/15 ~ 6/8 의 쌀·오트밀 배죽을 10으로 1회 채움 (계획에 그 재료가 있는 날만) */
+function maybeSeedRatios(){
+  if(State.ratiosInitialized) return;
+  State.ratios=State.ratios||{};
+  for(const wk of tab1){
+    let stop=false;
+    for(const day of wk.days){
+      day.base.forEach(b=>{ if(RATIO_GRAINS.includes(b[0])) State.ratios[`${day.date}|${b[0]}`]=10; });
+      if(day.date==='6/8'){ stop=true; break; }
+    }
+    if(stop) break;
+  }
+  State.ratiosInitialized=true;
+  save();
+}
+function cellList(items, date, mi, field){
   if(!items||!items.length) return '<span class="empty">·</span>';
   return '<div class="cell-list">'+items.map(it=>{
-    const cls=it[2]?'item new-item':'item';
-    return `<span class="${cls}">${esc(it[0])} <span class="g">${it[1]}g</span></span>`;
+    const cls=isFirstAppear(date,mi,field,it[0])?'item new-item':'item';
+    return `<span class="${cls}">${esc(it[0])} <span class="g">${it[1]}g</span>${ratioLabel(date,field,it[0])}</span>`;
   }).join('')+'</div>';
 }
-function cellListFromText(text, planItems){
+function cellListFromText(text, planItems, date, mi, field){
   const parts=parseItemsLocal(text);
   if(!parts.length) return '<span class="empty">·</span>';
   /* 계획은 모두 g 단위 */
@@ -858,8 +927,10 @@ function cellListFromText(text, planItems){
   return '<div class="cell-list">'+parts.map(p=>{
     const plan=planMap.get(p.name);
     const isChanged = !plan || plan.g!==p.g || (plan.unit||'g')!==(p.unit||'g');
-    const cls = isChanged ? 'item changed-item' : 'item';
-    return `<span class="${cls}">${esc(p.name)} <span class="g">${p.g}${p.unit||'g'}</span></span>`;
+    /* 처음 등장하는 재료면 '수정(파란색)'보다 '새 재료(노란색)'를 우선 */
+    const cls = isFirstAppear(date,mi,field,p.name) ? 'item new-item'
+              : (isChanged ? 'item changed-item' : 'item');
+    return `<span class="${cls}">${esc(p.name)} <span class="g">${p.g}${p.unit||'g'}</span>${ratioLabel(date,field,p.name)}</span>`;
   }).join('')+'</div>';
 }
 function parseItemsLocal(text){
@@ -902,7 +973,7 @@ function makeCell(items,date,mi,field,mealName){
   const ov=State.overrides[key];
   const changed = ov!=null && ov!==planTxt;
   const eatenOn = !!State.logs[dm+'|eaten'];
-  const inner = changed ? cellListFromText(ov, items) : cellList(items);
+  const inner = changed ? cellListFromText(ov, items, date, mi, field) : cellList(items, date, mi, field);
   const cls=['mealcell',field,changed?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
 }
@@ -1072,6 +1143,8 @@ function attachCellClick(){
   });
 }
 function renderTables(){
+  maybeSeedRatios();
+  recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
   attachCellClick(); renderNewFoods(); renderOverallProgress();
@@ -1125,6 +1198,17 @@ function renderItemList(containerId, items){
     };
   });
 }
+function renderMealRatios(baseItems, date){
+  const field=document.getElementById('meal-ratio-field');
+  const list=document.getElementById('meal-ratio-list');
+  const uniq=[...new Set(baseItems.map(it=>it.name).filter(n=>RATIO_GRAINS.includes(n)))];
+  if(!uniq.length){ field.style.display='none'; list.innerHTML=''; return; }
+  field.style.display='';
+  list.innerHTML=uniq.map(n=>{
+    const v=(State.ratios||{})[`${date}|${n}`];
+    return `<div class="ratio-row-edit"><span class="ratio-name">${esc(n)}</span><input type="number" class="ratio-input" data-name="${esc(n)}" inputmode="numeric" min="0" step="1" placeholder="예: 10" value="${(v!=null&&v!=='')?v:''}"><span class="ratio-suffix">배죽</span></div>`;
+  }).join('');
+}
 function readItemList(containerId){
   return Array.from(document.getElementById(containerId).querySelectorAll('.item-row')).map(row=>({
     name: row.querySelector('.item-name').value,
@@ -1161,6 +1245,7 @@ function openMealEdit(date,mi,mealName,focusField){
   const topItems  = ovTop !=null ? parseItems(ovTop ) : meal.top .map(it=>({name:it[0],g:it[1],unit:'g'}));
   renderItemList('meal-base-list', baseItems);
   renderItemList('meal-top-list',  topItems);
+  renderMealRatios(baseItems, date);
   document.getElementById('meal-eaten').value=State.logs[`${date}|${mi}|eaten`]||'';
   document.getElementById('meal-memo').value=State.logs[`${date}|${mi}|memo`]||'';
   document.getElementById('meal-memo-label').innerHTML='메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
@@ -1211,6 +1296,11 @@ function saveMealEdit(){
     const topV=itemsToText(readItemList('meal-top-list'));
     if(!topV || topV===currentMeal.planTopText) delete State.overrides[`${date}|${mi}|top`];
     else State.overrides[`${date}|${mi}|top`]=topV;
+    State.ratios=State.ratios||{};
+    document.querySelectorAll('#meal-ratio-list .ratio-input').forEach(inp=>{
+      const key=`${date}|${inp.dataset.name}`, v=parseInt(inp.value,10);
+      if(!isNaN(v)&&v>0) State.ratios[key]=v; else delete State.ratios[key];
+    });
     const eatenV=document.getElementById('meal-eaten').value.trim();
     if(eatenV) State.logs[`${date}|${mi}|eaten`]=eatenV;
     else delete State.logs[`${date}|${mi}|eaten`];
