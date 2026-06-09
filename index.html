@@ -224,9 +224,9 @@
     .toy-name{word-break:keep-all;overflow-wrap:anywhere;line-height:1.3;}
     .month-chip{font-size:10px;padding:2px 7px;}
     .toy-months-stack{gap:4px;}
-    .toy-rating-stars{flex-wrap:nowrap;}
-    .toy-rating-stars .star{font-size:13px;width:13px;}
-    .toy-rating-num{font-size:10px;margin-left:4px;}
+    .toy-rating-stars{flex-wrap:nowrap;gap:0;justify-content:center;}
+    .toy-rating-stars .star{font-size:12px;width:12px;}
+    .toy-rating-num{font-size:10px;margin-left:0;display:block;}
     /* 후기: 칩+텍스트 세로 배치 + 4줄까지만, 길면 자동 말 줄임 (자세히는 행 클릭) */
     .toy-review-item{flex-direction:column;gap:3px;align-items:flex-start;}
     .toy-review-item .month-chip{margin-top:0;}
@@ -316,6 +316,7 @@
   .eaten-pct{font-size:10px;color:var(--muted);margin-top:3px;line-height:1;letter-spacing:.02em;}
   .eaten-pct.full{color:var(--sage);font-weight:700;}
   thead .date{font-weight:700;color:var(--ink);background:#faf6ee;}
+  thead .date.today{color:var(--peach);box-shadow:inset 0 0 0 2px var(--peach);border-radius:6px;}
   thead .dday{color:var(--muted);font-size:11px;background:#fdfbf6;}
   td.rowlabel{background:#faf6ee;color:var(--muted);font-weight:700;font-size:12px;width:64px;white-space:nowrap;position:sticky;left:0;}
   .cell-list{display:flex;flex-direction:column;gap:3px;align-items:center;}
@@ -324,6 +325,7 @@
   .new-item .g{color:#9a6b00;}
   .item .ratio{display:inline-block;font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;white-space:nowrap;}
   .new-item .ratio{color:#9a6b00;background:#fff7df;border-color:#ffe08a;}
+  .item .ratio.ratio-new{color:#9a6b00;background:#fff3cd;border-color:#ffe08a;}
   .row-base td:not(.rowlabel){background:#fbfdfa;}
   .row-top td:not(.rowlabel){background:#fffcf9;}
   .row-snack td:not(.rowlabel){background:#fcfaff;}
@@ -550,7 +552,7 @@
     </div>
     <div class="detail-body">
       <div class="field">
-        <span class="flabel">사진 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 한 장 (자동 압축) · 붙여넣기 가능</span></span>
+        <span class="flabel">사진 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 한 장 (자동 압축) · 복사한 사진은 Ctrl/⌘+V</span></span>
         <div class="toy-photo-area">
           <div id="toy-photo-preview" class="toy-photo-preview">사진 없음</div>
           <div class="toy-photo-buttons">
@@ -558,7 +560,6 @@
               사진 선택
               <input type="file" id="toy-photo-input" accept="image/*" hidden>
             </label>
-            <button type="button" id="toy-photo-paste" class="toy-photo-pick" style="background:#fff;color:var(--sage);border:1px solid #cdd9c6;">📋 붙여넣기</button>
             <button type="button" id="toy-photo-remove" class="reset-btn" style="display:none">제거</button>
           </div>
         </div>
@@ -893,10 +894,29 @@ function isFirstAppear(date,mi,field,name){
 }
 /* 배죽(쌀·오트밀 물 배수) — 베이스 재료 옆에 표시할 라벨 */
 const RATIO_GRAINS=['쌀','오트밀'];
+/* 배죽 값이 직전 값과 달라지는 날(변화) — 노란색 강조 대상 */
+let ratioChangeSet=new Set();
+function recomputeRatioChanges(){
+  ratioChangeSet=new Set();
+  const allDays=[];
+  tab1.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
+  tab2.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
+  const last={};
+  allDays.forEach(day=>{
+    RATIO_GRAINS.forEach(n=>{
+      const r=(State.ratios||{})[`${day.date}|${n}`];
+      if(r==null||r==='') return;
+      if(last[n]!=null && Number(r)!==Number(last[n])) ratioChangeSet.add(`${day.date}|${n}`);
+      last[n]=r;
+    });
+  });
+}
 function ratioLabel(date, field, name){
   if(field!=='base' || date==null) return '';
   const r=(State.ratios||{})[`${date}|${name}`];
-  return (r!=null && r!=='') ? ` <span class="ratio">${esc(r)}배죽</span>` : '';
+  if(r==null||r==='') return '';
+  const changed=ratioChangeSet.has(`${date}|${name}`);
+  return ` <span class="ratio${changed?' ratio-new':''}">${esc(r)}배죽</span>`;
 }
 /* 5/15 ~ 6/8 의 쌀·오트밀 배죽을 10으로 1회 채움 (계획에 그 재료가 있는 날만) */
 function maybeSeedRatios(){
@@ -1104,10 +1124,11 @@ document.getElementById('pg-close').onclick=closeProgressDetail;
 pgOverlay.addEventListener('click',e=>{ if(e.target===pgOverlay) closeProgressDetail(); });
 function renderWeeks(weeks,withSnack,labels){
   labels=labels||["1끼"];
+  const _t=new Date(), todayMD=(_t.getMonth()+1)+'/'+_t.getDate();
   return weeks.map(wk=>{
     const d=wk.days, span=d.length+1;
     let html=`<div class="week"><div class="week-head"><span>${wk.range}</span></div><table>`;
-    html+='<thead><tr><th class="rowlabel">날짜</th>'+d.map(x=>`<th class="date">${x.date}</th>`).join('')+'</tr>';
+    html+='<thead><tr><th class="rowlabel">날짜</th>'+d.map(x=>`<th class="date${x.date===todayMD?' today':''}">${x.date}</th>`).join('')+'</tr>';
     html+='<tr><th class="rowlabel"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
     html+='</thead><tbody>';
     labels.forEach((lab,i)=>{
@@ -1145,6 +1166,7 @@ function attachCellClick(){
 }
 function renderTables(){
   maybeSeedRatios();
+  recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
@@ -1726,23 +1748,6 @@ document.addEventListener('paste', e=>{
     }
   }
 });
-/* '붙여넣기' 버튼 — 클립보드 읽기 API 사용 (지원/권한 없으면 단축키 안내) */
-document.getElementById('toy-photo-paste').onclick=async ()=>{
-  if(!(navigator.clipboard && navigator.clipboard.read)){
-    alert('이 브라우저에서는 버튼 붙여넣기가 안 돼요.\n사진을 복사한 뒤 Ctrl+V (Mac은 ⌘+V) 로 붙여넣어 주세요.');
-    return;
-  }
-  try{
-    const items=await navigator.clipboard.read();
-    for(const item of items){
-      const type=item.types.find(t=>t.indexOf('image')===0);
-      if(type){ const blob=await item.getType(type); await applyClipboardImageFile(blob); return; }
-    }
-    alert('클립보드에 사진이 없어요. 사진을 먼저 복사해 주세요.');
-  }catch(err){
-    alert('클립보드를 읽지 못했어요.\n사진을 복사한 뒤 Ctrl+V (Mac은 ⌘+V) 로 붙여넣어 주세요.');
-  }
-};
 document.getElementById('toy-close').onclick=closeToyEdit;
 document.getElementById('toy-cancel').onclick=closeToyEdit;
 toyOverlay.addEventListener('click',e=>{ if(e.target===toyOverlay) closeToyEdit(); });
