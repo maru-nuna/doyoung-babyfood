@@ -1572,13 +1572,19 @@ document.getElementById('edit-cancel').onclick=()=>setChecklistEditMode(false);
 document.getElementById('edit-delete').onclick=executeSelectedDelete;
 
 /* ============ 탭 ============ */
+function selectSubTab(id){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id===id));
+}
 document.querySelectorAll('.tab').forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active');
-  };
+  btn.onclick=()=>selectSubTab(btn.dataset.tab);
 });
+/* 6/12(29일차 시작)이 되면 기본 탭을 두 번째(29~56일)로 */
+function applyDefaultSubTab(){
+  const cut=new Date(SCHEDULE_YEAR,5,12); /* 6/12 */
+  const n=new Date(), today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  if(today.getTime() >= cut.getTime()) selectSubTab('t2');
+}
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
   if(toyOverlay.classList.contains('open'))closeToyEdit();
   else if(pgOverlay.classList.contains('open'))closeProgressDetail();
@@ -1867,6 +1873,7 @@ function applyViewOnly(){
 
 /* ============ 시작 ============ */
 applyViewOnly();
+applyDefaultSubTab();
 renderTables(); renderChecklist(); renderToys(); setSync(sb?'ok':'local');
 if(sb) syncDown();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
