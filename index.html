@@ -724,14 +724,14 @@ const tab1 = [
     {date:"6/6",dday:"D+207",n:"23일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15,true]],total:100},
     {date:"6/7",dday:"D+208",n:"24일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
     {date:"6/8",dday:"D+209",n:"25일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
-    {date:"6/9",dday:"D+210",n:"쉬어가기",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
-    {date:"6/10",dday:"D+211",n:"쉬어가기",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
-    {date:"6/11",dday:"D+212",n:"쉬어가기",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
+    {date:"6/9",dday:"D+210",n:"쉬어가기",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
+    {date:"6/10",dday:"D+211",n:"쉬어가기",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
+    {date:"6/11",dday:"D+212",n:"쉬어가기",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
   ]},
   { range:"6/12 ~ 6/14 · 고구마", days:[
-    {date:"6/12",dday:"D+213",n:"26일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15,true]],total:100},
-    {date:"6/13",dday:"D+214",n:"27일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
-    {date:"6/14",dday:"D+215",n:"28일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
+    {date:"6/12",dday:"D+213",n:"26일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["고구마",15,true]],total:115},
+    {date:"6/13",dday:"D+214",n:"27일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["고구마",15]],total:115},
+    {date:"6/14",dday:"D+215",n:"28일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["고구마",15]],total:115},
   ]},
 ];
 
@@ -774,6 +774,21 @@ const weeks2 = [
   ]},
 ];
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
+/* 한 끼를 목표 g수에 맞춰 재료별로 비율(골고루) 스케일 — 합이 정확히 target */
+function scaleMeal(base, top, target){
+  const items=base.concat(top);
+  const orig=items.reduce((a,it)=>a+it[1],0)||1;
+  const g=items.map(it=>Math.round(it[1]*target/orig));
+  g[g.indexOf(Math.max(...g))] += target - g.reduce((a,b)=>a+b,0);
+  return {
+    base: base.map((it,k)=>[it[0], g[k]]),
+    top:  top.map((it,k)=>{ const v=g[base.length+k]; return it.length>2?[it[0],v,it[2]]:[it[0],v]; }),
+    total: target
+  };
+}
+/* 하루 총량 램프(115 이후 3일마다 +5, 150 상한) 과 오전/오후(단출/풍성) 분할 */
+const MEAL_SPLIT={120:[50,70],125:[50,75],130:[55,75],135:[55,80],140:[60,80],145:[60,85],150:[65,85]};
+function dayTarget(di){ return Math.min(150, 120 + 5*Math.floor(di/3)); }
 function buildTab2(){
   /* 고구마 미섭취로 일정 미룸(6/9~6/11 쉬어가기, 고구마 6/12~6/14): 29일차 시작 6/12 → 6/15 */
   const weeks=[]; let d=new Date(2025,5,15); let dday=216,n=29;
@@ -782,6 +797,7 @@ function buildTab2(){
   tab1.forEach(wk=>wk.days.forEach(day=>{
     [...day.base, ...day.top].forEach(it=>introduced.add(it[0]));
   }));
+  let di=0;
   weeks2.forEach(w=>{
     const days=[]; let s,e;
     w.days.forEach((row,i)=>{
@@ -795,11 +811,12 @@ function buildTab2(){
       const pmTop=row.pm.map(it=>[it[0],it[1]]);
       /* 이 row 끝나면 등장 기록 누적 — am/pm 양쪽 다 */
       [...row.am, ...row.pm].forEach(it=>introduced.add(it[0]));
+      const sp=MEAL_SPLIT[dayTarget(di)];
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-        {base:base.map(b=>b.slice()),top:amTop,total:sumg(base,amTop)},
-        {base:base.map(b=>b.slice()),top:pmTop,total:sumg(base,pmTop)},
+        scaleMeal(base, amTop, sp[0]),
+        scaleMeal(base, pmTop, sp[1]),
       ]});
-      d.setDate(d.getDate()+1); dday++; n++;
+      d.setDate(d.getDate()+1); dday++; n++; di++;
     });
     weeks.push({range:s+" ~ "+e+" · "+w.porridge,days});
   });
