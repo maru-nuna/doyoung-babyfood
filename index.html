@@ -341,6 +341,9 @@
   .row-snack td:not(.rowlabel){background:#fcfaff;}
   .row-base .rowlabel{color:var(--base-ink);} .row-top .rowlabel{color:var(--top-ink);} .row-snack .rowlabel{color:var(--snack-ink);}
   .total{font-weight:700;color:var(--ink);}
+  .row-day-total .rowlabel{color:var(--sage);}
+  .row-day-total td:not(.rowlabel){background:var(--sage-soft);}
+  .day-total{font-weight:700;color:var(--sage);}
   .mealcell,.snackcell{cursor:pointer;min-width:54px;color:var(--ink);font-size:12px;transition:background .15s;-webkit-tap-highlight-color:rgba(122,148,113,.18);}
   .mealcell:hover,.snackcell:hover{background:#fbf7ee;}
   .mealcell:active,.snackcell:active{background:#fff8e8;}
@@ -724,22 +727,17 @@ const tab1 = [
     {date:"6/6",dday:"D+207",n:"23일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15,true]],total:100},
     {date:"6/7",dday:"D+208",n:"24일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
     {date:"6/8",dday:"D+209",n:"25일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
-    {date:"6/9",dday:"D+210",n:"쉬어가기",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
-    {date:"6/10",dday:"D+211",n:"쉬어가기",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
-    {date:"6/11",dday:"D+212",n:"쉬어가기",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
-  ]},
-  { range:"6/12 ~ 6/14 · 고구마", days:[
-    {date:"6/12",dday:"D+213",n:"26일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["고구마",15,true]],total:115},
-    {date:"6/13",dday:"D+214",n:"27일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["고구마",15]],total:115},
-    {date:"6/14",dday:"D+215",n:"28일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["고구마",15]],total:115},
+    {date:"6/9",dday:"D+210",n:"26일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
+    {date:"6/10",dday:"D+211",n:"27일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
+    {date:"6/11",dday:"D+212",n:"28일차",base:[["쌀",35],["오트밀",20]],top:[["소고기",15],["애호박",15],["감자",15],["비타민",15]],total:115},
   ]},
 ];
 
 const weeks2 = [
   {rice:30,oat:15,porridge:"8배죽",days:[
-    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15]],nw:"닭고기"},
-    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15]],nw:"닭고기"},
-    {am:[["닭고기",15],["애호박",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15]],nw:"닭고기"},
+    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15],["고구마",15]],nw:"닭고기"},
+    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15],["고구마",15]],nw:"닭고기"},
+    {am:[["닭고기",15],["애호박",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15],["고구마",15]],nw:"닭고기"},
     {am:[["소고기",15],["양파",15]],pm:[["닭고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
     {am:[["소고기",15],["양파",15]],pm:[["닭고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
     {am:[["닭고기",15],["양파",15]],pm:[["소고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
@@ -790,8 +788,8 @@ function scaleMeal(base, top, target){
 const MEAL_SPLIT={120:[50,70],125:[50,75],130:[55,75],135:[55,80],140:[60,80],145:[60,85],150:[65,85]};
 function dayTarget(di){ return Math.min(150, 120 + 5*Math.floor(di/3)); }
 function buildTab2(){
-  /* 고구마 미섭취로 일정 미룸(6/9~6/11 쉬어가기, 고구마 6/12~6/14): 29일차 시작 6/12 → 6/15 */
-  const weeks=[]; let d=new Date(2025,5,15); let dday=216,n=29;
+  /* 29일차(두 번째 탭) 시작 6/12, 2끼 */
+  const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29;
   /* 이미 등장한 재료 누적 — tab1 + tab2 둘 다 포함해서 '진짜 첫 등장'에만 new 마킹 */
   const introduced=new Set();
   tab1.forEach(wk=>wk.days.forEach(day=>{
@@ -1098,6 +1096,14 @@ function mealRows(d,mi,mealName){
   h+='<tr><td class="rowlabel">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
   return h;
 }
+function dayTotalRow(d){
+  return '<tr class="row-day-total"><td class="rowlabel">하루 총량</td>'+d.map(x=>{
+    let g=0, ml=0;
+    getMeals(x).forEach((m,mi)=>{ const t=computedTotal(x,mi); g+=t.g; ml+=t.ml; });
+    const tx=totalText({g,ml});
+    return `<td class="total day-total">${tx||'<span class="empty">·</span>'}</td>`;
+  }).join('')+'</tr>';
+}
 function snackRow(d){
   let h='<tr class="snack-band"><td colspan="'+(d.length+1)+'">간식</td></tr>';
   h+='<tr class="row-snack"><td class="rowlabel">간식</td>'+d.map(x=>{
@@ -1199,6 +1205,7 @@ function renderWeeks(weeks,withSnack,labels){
       if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
       html+=mealRows(d,i,lab);
     });
+    if(labels.length>1) html+=dayTotalRow(d);
     if(withSnack) html+=snackRow(d);
     html+='</tbody></table></div>';
     return html;
