@@ -724,9 +724,14 @@ const tab1 = [
     {date:"6/6",dday:"D+207",n:"23일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15,true]],total:100},
     {date:"6/7",dday:"D+208",n:"24일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
     {date:"6/8",dday:"D+209",n:"25일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
-    {date:"6/9",dday:"D+210",n:"26일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15,true]],total:100},
-    {date:"6/10",dday:"D+211",n:"27일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
-    {date:"6/11",dday:"D+212",n:"28일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
+    {date:"6/9",dday:"D+210",n:"쉬어가기",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
+    {date:"6/10",dday:"D+211",n:"쉬어가기",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
+    {date:"6/11",dday:"D+212",n:"쉬어가기",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["비타민",15]],total:100},
+  ]},
+  { range:"6/12 ~ 6/14 · 고구마", days:[
+    {date:"6/12",dday:"D+213",n:"26일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15,true]],total:100},
+    {date:"6/13",dday:"D+214",n:"27일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
+    {date:"6/14",dday:"D+215",n:"28일차",base:[["쌀",30],["오트밀",15]],top:[["소고기",10],["애호박",15],["감자",15],["고구마",15]],total:100},
   ]},
 ];
 
@@ -770,7 +775,8 @@ const weeks2 = [
 ];
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
-  const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29;
+  /* 고구마 미섭취로 일정 미룸(6/9~6/11 쉬어가기, 고구마 6/12~6/14): 29일차 시작 6/12 → 6/15 */
+  const weeks=[]; let d=new Date(2025,5,15); let dday=216,n=29;
   /* 이미 등장한 재료 누적 — tab1 + tab2 둘 다 포함해서 '진짜 첫 등장'에만 new 마킹 */
   const introduced=new Set();
   tab1.forEach(wk=>wk.days.forEach(day=>{
@@ -1579,9 +1585,10 @@ function selectSubTab(id){
 document.querySelectorAll('.tab').forEach(btn=>{
   btn.onclick=()=>selectSubTab(btn.dataset.tab);
 });
-/* 6/12(29일차 시작)이 되면 기본 탭을 두 번째(29~56일)로 */
+/* 29일차(두 번째 탭) 시작일이 되면 기본 탭을 두 번째(29~56일)로 — 시작일은 tab2 데이터에서 자동 추적 */
 function applyDefaultSubTab(){
-  const cut=new Date(SCHEDULE_YEAR,5,12); /* 6/12 */
+  const first = tab2[0] && tab2[0].days[0] && tab2[0].days[0].date;
+  const cut = dateOfMD(first); if(!cut) return;
   const n=new Date(), today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
   if(today.getTime() >= cut.getTime()) selectSubTab('t2');
 }
