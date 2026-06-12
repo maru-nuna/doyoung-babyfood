@@ -784,9 +784,9 @@ function scaleMeal(base, top, target){
     total: target
   };
 }
-/* 하루 총량 램프(115 이후 3일마다 +5, 150 상한) 과 오전/오후(단출/풍성) 분할 */
-const MEAL_SPLIT={120:[50,70],125:[50,75],130:[55,75],135:[55,80],140:[60,80],145:[60,85],150:[65,85]};
-function dayTarget(di){ return Math.min(150, 120 + 5*Math.floor(di/3)); }
+/* 한 끼 목표 g수(80~120) — 오전(단출) 80→100, 오후(풍성) 100→120, 3일마다 +5 */
+function amTarget(di){ return Math.min(100, 80 + 5*Math.floor(di/3)); }
+function pmTarget(di){ return Math.min(120, 100 + 5*Math.floor(di/3)); }
 function buildTab2(){
   /* 29일차(두 번째 탭) 시작 6/12, 2끼 */
   const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29;
@@ -809,10 +809,9 @@ function buildTab2(){
       const pmTop=row.pm.map(it=>[it[0],it[1]]);
       /* 이 row 끝나면 등장 기록 누적 — am/pm 양쪽 다 */
       [...row.am, ...row.pm].forEach(it=>introduced.add(it[0]));
-      const sp=MEAL_SPLIT[dayTarget(di)];
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-        scaleMeal(base, amTop, sp[0]),
-        scaleMeal(base, pmTop, sp[1]),
+        scaleMeal(base, amTop, amTarget(di)),
+        scaleMeal(base, pmTop, pmTarget(di)),
       ]});
       d.setDate(d.getDate()+1); dday++; n++; di++;
     });
