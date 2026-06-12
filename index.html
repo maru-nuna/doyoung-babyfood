@@ -1332,7 +1332,7 @@ function readItemList(containerId){
 function addItemToList(target){
   const containerId='meal-'+target+'-list';
   const arr=readItemList(containerId);
-  arr.push({name:'',g:'',unit:'g'});
+  arr.push({name:'',g: target==='top'?15:'', unit:'g'});
   renderItemList(containerId,arr);
   setTimeout(()=>{
     const rows=document.querySelectorAll('#'+containerId+' .item-row');
