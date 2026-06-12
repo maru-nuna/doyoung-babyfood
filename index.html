@@ -432,6 +432,9 @@
   .modal-group.actual-group .modal-group-head{color:var(--peach);}
   .mg-icon{font-size:14px;}
   .mg-hint{font-weight:400;color:var(--muted);font-size:11px;margin-left:auto;}
+  .plan-total{font-size:13px;font-weight:700;color:var(--sage);background:var(--sage-soft);border-radius:8px;padding:8px 12px;text-align:right;}
+  .plan-total .pt-label{font-weight:400;color:var(--muted);margin-right:6px;}
+  .plan-total:empty{display:none;}
 
   /* ===== 보기 전용 공유 모드 (?view=1) ===== */
   .viewonly .main-tabs{display:none;}
@@ -665,6 +668,7 @@
           <div class="item-list" id="meal-top-list"></div>
           <button type="button" class="add-item-btn" data-target="top">+ 토핑 재료 추가</button>
         </div>
+        <div class="plan-total" id="meal-plan-total"></div>
         <span class="hint">단위는 g 또는 ml. 모두 비우면 원래 계획으로 돌아갑니다.</span>
       </div>
       <datalist id="ingredient-list"></datalist>
@@ -1308,6 +1312,7 @@ function renderItemList(containerId, items){
       const idx=parseInt(btn.closest('.item-row').dataset.i,10);
       arr.splice(idx,1);
       renderItemList(containerId,arr);
+      updatePlanTotal();
     };
   });
 }
@@ -1329,11 +1334,23 @@ function readItemList(containerId){
     unit: (row.querySelector('.item-unit')?row.querySelector('.item-unit').value:'g')||'g'
   }));
 }
+/* 계획 베이스+토핑의 실시간 합계 — 먹은 양 입력 참고용 */
+function updatePlanTotal(){
+  const el=document.getElementById('meal-plan-total');
+  if(!el) return;
+  if(!currentMeal || currentMeal.snack){ el.innerHTML=''; return; }
+  const items=readItemList('meal-base-list').concat(readItemList('meal-top-list'));
+  const sums={g:0, ml:0};
+  items.forEach(it=>{ const u=it.unit||'g'; sums[u]=(sums[u]||0)+(it.g||0); });
+  const parts=[]; if(sums.g>0)parts.push(sums.g+'g'); if(sums.ml>0)parts.push(sums.ml+'ml');
+  el.innerHTML = parts.length ? `<span class="pt-label">계획 총량</span>${parts.join(' · ')}` : '';
+}
 function addItemToList(target){
   const containerId='meal-'+target+'-list';
   const arr=readItemList(containerId);
   arr.push({name:'',g: target==='top'?15:'', unit:'g'});
   renderItemList(containerId,arr);
+  updatePlanTotal();
   setTimeout(()=>{
     const rows=document.querySelectorAll('#'+containerId+' .item-row');
     const last=rows[rows.length-1];
@@ -1360,6 +1377,7 @@ function openMealEdit(date,mi,mealName,focusField){
   renderItemList('meal-base-list', baseItems);
   renderItemList('meal-top-list',  topItems);
   renderMealRatios(baseItems, date);
+  updatePlanTotal();
   document.getElementById('meal-eaten').value=State.logs[`${date}|${mi}|eaten`]||'';
   document.getElementById('meal-memo').value=State.logs[`${date}|${mi}|memo`]||'';
   document.getElementById('meal-memo-label').innerHTML='메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
@@ -1442,6 +1460,10 @@ document.getElementById('meal-close').onclick=closeMealEdit;
 document.getElementById('meal-cancel').onclick=closeMealEdit;
 document.getElementById('meal-save').onclick=saveMealEdit;
 mOverlay.addEventListener('click',e=>{ if(e.target===mOverlay) closeMealEdit(); });
+/* 베이스·토핑 입력이 바뀔 때마다 계획 총량 실시간 갱신 */
+['input','change'].forEach(ev=>mOverlay.addEventListener(ev,e=>{
+  if(e.target.classList && (e.target.classList.contains('item-g')||e.target.classList.contains('item-name')||e.target.classList.contains('item-unit'))) updatePlanTotal();
+}));
 
 /* ============ 체크리스트 ============ */
 const categories=[
