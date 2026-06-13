@@ -743,7 +743,8 @@ const tab1 = [
 
 /* 두 번째 탭(6/12~, 2끼) — 균형 식단 (출처: 뿐이 토핑 이유식)
    매 끼니 = 곡류 + 고기 + 푸른잎 + 뿌리/구황 + 열매채소 + 가변(두부 등) + 신규(테스트)
-   · 신규 재료는 3일마다 한 종류만 테스트 / 나머지 토핑은 5일마다 순서대로 교체(퐁당퐁당 X)
+   · 신규: 3일 테스트 + 3일 안전식(=6일마다 한 종류), 하루 한 종류만 / 토핑은 5일마다 순서대로
+   · 안전식 날엔 곡류(미음)를 늘려 목표 g수 유지
    · 곡류 = 쌀 + (오트밀 또는 현미) 블록마다 번갈아(둘 다 동시 X)
    · 베이스 3단계: 쌀30·15(135) → 쌀60·15(165) → 쌀60·30(180) */
 const NEWSEQ=['현미','밀가루','닭고기','양파','고구마','땅콩','두부','시금치','청경채','돼지고기','무'];
@@ -760,25 +761,28 @@ function buildTab2(){
     for(let i=0;i<7;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===6)e=ds;
-      const nb=Math.floor(di/3); /* 신규 테스트: 3일마다 한 종류 */
-      const tb=Math.floor(di/5); /* 나머지 토핑 로테이션: 5일마다 */
-      const safe=new Set(tab1safe); for(let b=0;b<nb;b++) if(NEWSEQ[b]) safe.add(NEWSEQ[b]);
-      const newFood = nb<NEWSEQ.length ? NEWSEQ[nb] : null;
+      const SB=Math.floor(di/6);   /* 6일 슈퍼블록: 0~2일 신규 테스트, 3~5일 안전식 */
+      const isTest=(di%6)<3;
+      const tb=Math.floor(di/5);   /* 토핑 로테이션 5일 */
+      const safe=new Set(tab1safe);
+      for(let sb=0; sb<=SB; sb++){ if(NEWSEQ[sb] && di >= sb*6+3) safe.add(NEWSEQ[sb]); }
+      const newFood = (isTest && SB<NEWSEQ.length) ? NEWSEQ[SB] : null;
       const av=c=>CAT[c].filter(f=>safe.has(f));
       const rot=(a,off)=>a.length?a[(tb+off)%a.length]:null;
       const tl=[]; const add=x=>{ if(x && !tl.includes(x)) tl.push(x); };
       add(rot(av('meat'),0)); add(rot(av('leaf'),0)); add(rot(av('root'),0)); add(rot(av('fruit'),0));
-      [ safe.has('두부')?'두부':null, rot(av('root'),1), rot(av('fruit'),1), rot(av('leaf'),1) ].forEach(x=>{ if(tl.length<5) add(x); });
-      if(tl.length<5){ [...safe].forEach(f=>{ if(tl.length<5 && TOPSET.includes(f)) add(f); }); }
-      const top = tl.slice(0,5).map(f=>[f,15]);
+      [ safe.has('두부')?'두부':null, rot(av('root'),1), rot(av('fruit'),1), rot(av('leaf'),1), rot(av('meat'),1) ].forEach(add);
+      [...safe].forEach(f=>{ if(TOPSET.includes(f)) add(f); });
+      const need = newFood ? 5 : 6; /* 테스트일: 안전5+신규1, 안전식일: 안전6 */
+      const top = tl.slice(0,need).map(f=>[f,15]);
+      const numTop = top.length + (newFood?1:0);
       const isNew = newFood && !safe.has(newFood);
-      const newAm = newFood ? (isNew?[newFood,15,true]:[newFood,15]) : null;
       const grain2 = (safe.has('현미') && tb%2===1) ? '현미' : '오트밀';
       const stage = di<8 ? 0 : di<22 ? 1 : 2;
       const rice = stage===0 ? 30 : 60;
-      const g2 = stage===2 ? 30 : 15;
+      const g2 = (stage===0?135:stage===1?165:180) - rice - numTop*15; /* 곡류로 목표량 채움 */
       const base=[["쌀",rice],[grain2,g2]];
-      const amTop = newAm ? top.concat([newAm]) : top.slice();
+      const amTop = newFood ? top.concat([ isNew?[newFood,15,true]:[newFood,15] ]) : top.slice();
       const pmTop = newFood ? top.concat([[newFood,15]]) : top.slice();
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
         {base:base.map(b=>b.slice()), top:amTop, total:sumg(base,amTop)},
