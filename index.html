@@ -495,7 +495,8 @@
     <div class="foot" style="text-align:left;">
       · 계획과 달라진 메뉴는 <span style="background:var(--changed-soft);color:var(--changed);padding:1px 6px;border-radius:5px;">파란색</span>으로 표시됩니다.<br>
       · 새롭게 추가된 메뉴는 <span style="background:#fff3cd;color:#9a6b00;padding:1px 6px;border-radius:5px;">노란색</span>으로 표시됩니다.<br>
-      · 괄호 안에 적힌 숫자는 <b>큐브 개수</b>입니다.
+      · 괄호 안에 적힌 숫자는 <b>큐브 개수</b>입니다.<br>
+      <span style="display:inline-block;margin-top:8px;color:var(--muted);">출처 : 〈뿐이 토핑 이유식〉</span>
     </div>
   </section>
 
@@ -740,78 +741,53 @@ const tab1 = [
   ]},
 ];
 
-const weeks2 = [
-  {rice:30,oat:15,porridge:"8배죽",days:[
-    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15],["고구마",15]],nw:"닭고기"},
-    {am:[["닭고기",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15],["고구마",15]],nw:"닭고기"},
-    {am:[["닭고기",15],["애호박",15]],pm:[["소고기",15],["애호박",15],["감자",15],["단호박",15],["고구마",15]],nw:"닭고기"},
-    {am:[["소고기",15],["양파",15]],pm:[["닭고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
-    {am:[["소고기",15],["양파",15]],pm:[["닭고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
-    {am:[["닭고기",15],["양파",15]],pm:[["소고기",15],["고구마",15],["브로콜리",15]],nw:"양파"},
-    {am:[["소고기",15],["비타민채",15]],pm:[["닭고기",15],["감자",15],["양파",15]],nw:null},
-  ]},
-  {rice:35,oat:15,porridge:"7배죽",days:[
-    {am:[["두부",20]],pm:[["소고기",15],["애호박",15],["감자",15],["양파",15]],nw:"두부"},
-    {am:[["두부",20]],pm:[["소고기",15],["애호박",15],["감자",15],["양파",15]],nw:"두부"},
-    {am:[["두부",20],["애호박",15]],pm:[["소고기",15],["애호박",15],["감자",15],["양파",15]],nw:"두부"},
-    {am:[["소고기",15],["당근",15]],pm:[["두부",20],["브로콜리",15],["닭고기",15]],nw:"당근"},
-    {am:[["닭고기",15],["당근",15]],pm:[["소고기",15],["브로콜리",15],["두부",20]],nw:"당근"},
-    {am:[["소고기",15],["당근",15]],pm:[["두부",20],["브로콜리",15],["닭고기",15]],nw:"당근"},
-    {am:[["닭고기",15],["비타민채",15]],pm:[["소고기",15],["고구마",15],["당근",15]],nw:null},
-  ]},
-  {rice:40,oat:20,porridge:"6배죽",days:[
-    {am:[["소고기",15],["청경채",15]],pm:[["닭고기",15],["당근",15],["감자",15]],nw:"청경채"},
-    {am:[["소고기",15],["청경채",15]],pm:[["닭고기",15],["당근",15],["감자",15]],nw:"청경채"},
-    {am:[["닭고기",15],["청경채",15]],pm:[["소고기",15],["당근",15],["감자",15]],nw:"청경채"},
-    {am:[["소고기",15],["시금치",15]],pm:[["닭고기",15],["양파",15],["두부",20]],nw:"시금치"},
-    {am:[["두부",20],["시금치",15]],pm:[["소고기",15],["양파",15],["닭고기",15]],nw:"시금치"},
-    {am:[["소고기",15],["시금치",15]],pm:[["닭고기",15],["양파",15],["두부",20]],nw:"시금치"},
-    {am:[["두부",20],["애호박",15]],pm:[["소고기",15],["청경채",15],["시금치",15]],nw:null},
-  ]},
-  {rice:45,oat:20,porridge:"6배죽",days:[
-    {am:[["대구",15]],pm:[["소고기",15],["단호박",15],["감자",15]],nw:"대구"},
-    {am:[["대구",15],["청경채",15]],pm:[["소고기",15],["단호박",15],["감자",15]],nw:"대구"},
-    {am:[["대구",15],["단호박",15]],pm:[["소고기",15],["청경채",15],["감자",15]],nw:"대구"},
-    {am:[["소고기",15],["새송이",15]],pm:[["대구",15],["당근",15],["닭고기",15]],nw:"새송이"},
-    {am:[["닭고기",15],["새송이",15]],pm:[["소고기",15],["당근",15],["대구",15]],nw:"새송이"},
-    {am:[["소고기",15],["새송이",15]],pm:[["닭고기",15],["당근",15],["대구",15]],nw:"새송이"},
-    {am:[["닭고기",15],["배추",15]],pm:[["소고기",15],["당근",15],["감자",15]],nw:"배추"},
-  ]},
-];
+/* 두 번째 탭(6/12~, 2끼) — 균형 식단 (출처: 뿐이 토핑 이유식)
+   매 끼니 = 곡류 + 고기 + 푸른잎 + 뿌리/구황 + 열매채소 + 가변(두부 등) + 신규(테스트)
+   · 신규 재료는 3일마다 한 종류만 테스트 / 나머지 토핑은 5일마다 순서대로 교체(퐁당퐁당 X)
+   · 곡류 = 쌀 + (오트밀 또는 현미) 블록마다 번갈아(둘 다 동시 X)
+   · 베이스 3단계: 쌀30·15(135) → 쌀60·15(165) → 쌀60·30(180) */
+const NEWSEQ=['현미','밀가루','닭고기','양파','고구마','땅콩','두부','시금치','청경채','돼지고기','무'];
+const CAT={meat:['소고기','닭고기','돼지고기'],leaf:['브로콜리','시금치','청경채'],root:['감자','고구마','단호박','무'],fruit:['애호박','양파']};
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
-/* 한 끼를 목표 g수에 맞춰 재료별로 비율(골고루) 스케일 — 합이 정확히 target */
 function buildTab2(){
-  /* 29일차(두 번째 탭) 시작 6/12, 2끼 — 큐브 단위 구성
-     토핑 종류당 15g(1큐브), 오전 베이스 쌀60·오트밀, 오후 베이스 쌀30·오트밀.
-     증량: 2주마다 오트밀 1큐브(10g)씩 */
-  const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29;
-  const introduced=new Set();
-  tab1.forEach(wk=>wk.days.forEach(day=>{
-    [...day.base, ...day.top].forEach(it=>introduced.add(it[0]));
-  }));
-  let di=0;
-  weeks2.forEach(w=>{
+  const porridge=['8배죽','7배죽','6배죽','6배죽'];
+  const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29,di=0;
+  const tab1safe=new Set();
+  tab1.forEach(wk=>wk.days.forEach(dy=>[...dy.base,...dy.top].forEach(it=>tab1safe.add(it[0]))));
+  const TOPSET=CAT.meat.concat(CAT.leaf,CAT.root,CAT.fruit,['두부']);
+  for(let w=0; w<4; w++){
     const days=[]; let s,e;
-    w.days.forEach((row,i)=>{
+    for(let i=0;i<7;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===6)e=ds;
-      const oat = 10 + 10*Math.floor(di/14);
-      const amBase=[["쌀",60],["오트밀",oat]];
-      const pmBase=[["쌀",30],["오트밀",oat]];
-      const amTop=row.am.map(it=>{
-        const isFirstAppear = it[0]===row.nw && !introduced.has(it[0]);
-        return isFirstAppear ? [it[0],15,true] : [it[0],15];
-      });
-      const pmTop=row.pm.map(it=>[it[0],15]);
-      [...row.am, ...row.pm].forEach(it=>introduced.add(it[0]));
+      const nb=Math.floor(di/3); /* 신규 테스트: 3일마다 한 종류 */
+      const tb=Math.floor(di/5); /* 나머지 토핑 로테이션: 5일마다 */
+      const safe=new Set(tab1safe); for(let b=0;b<nb;b++) if(NEWSEQ[b]) safe.add(NEWSEQ[b]);
+      const newFood = nb<NEWSEQ.length ? NEWSEQ[nb] : null;
+      const av=c=>CAT[c].filter(f=>safe.has(f));
+      const rot=(a,off)=>a.length?a[(tb+off)%a.length]:null;
+      const tl=[]; const add=x=>{ if(x && !tl.includes(x)) tl.push(x); };
+      add(rot(av('meat'),0)); add(rot(av('leaf'),0)); add(rot(av('root'),0)); add(rot(av('fruit'),0));
+      [ safe.has('두부')?'두부':null, rot(av('root'),1), rot(av('fruit'),1), rot(av('leaf'),1) ].forEach(x=>{ if(tl.length<5) add(x); });
+      if(tl.length<5){ [...safe].forEach(f=>{ if(tl.length<5 && TOPSET.includes(f)) add(f); }); }
+      const top = tl.slice(0,5).map(f=>[f,15]);
+      const isNew = newFood && !safe.has(newFood);
+      const newAm = newFood ? (isNew?[newFood,15,true]:[newFood,15]) : null;
+      const grain2 = (safe.has('현미') && tb%2===1) ? '현미' : '오트밀';
+      const stage = di<8 ? 0 : di<22 ? 1 : 2;
+      const rice = stage===0 ? 30 : 60;
+      const g2 = stage===2 ? 30 : 15;
+      const base=[["쌀",rice],[grain2,g2]];
+      const amTop = newAm ? top.concat([newAm]) : top.slice();
+      const pmTop = newFood ? top.concat([[newFood,15]]) : top.slice();
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-        {base:amBase, top:amTop, total:sumg(amBase,amTop)},
-        {base:pmBase, top:pmTop, total:sumg(pmBase,pmTop)},
+        {base:base.map(b=>b.slice()), top:amTop, total:sumg(base,amTop)},
+        {base:base.map(b=>b.slice()), top:pmTop, total:sumg(base,pmTop)},
       ]});
       d.setDate(d.getDate()+1); dday++; n++; di++;
-    });
-    weeks.push({range:s+" ~ "+e+" · "+w.porridge,days});
-  });
+    }
+    weeks.push({range:s+" ~ "+e+" · "+porridge[w], days});
+  }
   return weeks;
 }
 const tab2 = buildTab2();
@@ -1213,16 +1189,22 @@ function renderWeeks(weeks,withSnack,labels){
   }).join('');
 }
 
-const newIndex={t1:[],t2:[]};
-tab1.forEach(wk=>wk.days.forEach(day=>{[...day.base,...day.top].forEach(it=>{if(it[2])newIndex.t1.push({name:it[0],dm:`${day.date}|0`});});}));
-tab2.forEach(wk=>wk.days.forEach(day=>{day.meals[0].top.forEach(it=>{if(it[2])newIndex.t2.push({name:it[0],dm:`${day.date}|0`});});}));
+/* 새롭게 먹은 재료 — '실제 먹은(수정 반영) 메뉴에 그 재료가 있고' + 그 끼니 먹은 양이 입력된 경우만.
+   firstAppearSet 은 override까지 반영한 첫 등장이라, 수정으로 빠진 재료는 자동 제외됨 */
 function renderNewFoods(){
+  const t1Dates=new Set(); tab1.forEach(wk=>wk.days.forEach(d=>t1Dates.add(d.date)));
+  const out={t1:[],t2:[]}, seen={t1:new Set(),t2:new Set()};
+  firstAppearSet.forEach(key=>{
+    const p=key.split('|'); const date=p[0], mi=p[1], name=p[3];
+    if(!State.logs[`${date}|${mi}|eaten`]) return;
+    const k = t1Dates.has(date) ? 't1' : 't2';
+    if(seen[k].has(name)) return;
+    seen[k].add(name); out[k].push(name);
+  });
   [['t1','t1-new'],['t2','t2-new']].forEach(([k,id])=>{
-    const seen=new Set(), out=[];
-    newIndex[k].forEach(x=>{ if(State.logs[x.dm+'|eaten'] && !seen.has(x.name)){ seen.add(x.name); out.push(x.name); }});
     const el=document.getElementById(id);
-    el.innerHTML = out.length ? out.map(n=>`<span class="nf-chip">${esc(n)}</span>`).join('')
-                              : '<span class="nf-empty">· 아직 없음 — 먹은 양을 입력하면 추가돼요</span>';
+    el.innerHTML = out[k].length ? out[k].map(n=>`<span class="nf-chip">${esc(n)}</span>`).join('')
+                                 : '<span class="nf-empty">· 아직 없음 — 먹은 양을 입력하면 추가돼요</span>';
   });
 }
 
