@@ -333,7 +333,7 @@
   .item{font-size:12.5px;word-break:keep-all;overflow-wrap:anywhere;max-width:100%;} .item .g{color:var(--muted);font-size:11px;}
   .new-item{background:#fff3cd;color:#9a6b00;padding:2px 7px;border-radius:7px;border:1px solid #ffe08a;font-weight:700;}
   .new-item .g{color:#9a6b00;}
-  .item .cube{font-size:11px;color:var(--muted);margin-left:1px;}
+  .item .cube{font-size:11px;color:var(--muted);white-space:nowrap;}
   .new-item .cube,.changed-item .cube{color:inherit;opacity:.75;}
   .item .ratio{display:inline-block;font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;white-space:nowrap;}
   .new-item .ratio{color:#9a6b00;background:#fff7df;border-color:#ffe08a;}
@@ -743,11 +743,10 @@ const tab1 = [
 
 /* 두 번째 탭(6/12~, 2끼) — 균형 식단 (출처: 뿐이 토핑 이유식)
    매 끼니 = 곡류 + 고기 + 푸른잎 + 뿌리/구황 + 열매채소 + 가변(두부 등) + 신규(테스트)
-   · 신규: 3일 테스트 + 3일 안전식(=6일마다 한 종류), 하루 한 종류만 / 토핑은 5일마다 순서대로
-   · 안전식 날엔 곡류(미음)를 늘려 목표 g수 유지
-   · 곡류 = 쌀 + (오트밀 또는 현미) 블록마다 번갈아(둘 다 동시 X)
+   · 신규: 3일마다 한 종류씩 (고구마 6/12 → 현미 6/15 → 밀가루 6/18 …), 하루 한 종류만
+   · 토핑은 5일마다 순서대로 / 곡류 = 쌀 + (오트밀 또는 현미) 번갈아(둘 다 동시 X)
    · 베이스 3단계: 쌀30·15(135) → 쌀60·15(165) → 쌀60·30(180) */
-const NEWSEQ=['현미','밀가루','닭고기','양파','고구마','땅콩','두부','시금치','청경채','돼지고기','무'];
+const NEWSEQ=['고구마','현미','밀가루','닭고기','양파','땅콩','두부','시금치','청경채','돼지고기','무'];
 const CAT={meat:['소고기','닭고기','돼지고기'],leaf:['브로콜리','시금치','청경채'],root:['감자','고구마','단호박','무'],fruit:['애호박','양파']};
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
@@ -761,12 +760,11 @@ function buildTab2(){
     for(let i=0;i<7;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===6)e=ds;
-      const SB=Math.floor(di/6);   /* 6일 슈퍼블록: 0~2일 신규 테스트, 3~5일 안전식 */
-      const isTest=(di%6)<3;
+      const nb=Math.floor(di/3);   /* 신규: 3일마다 한 종류 */
       const tb=Math.floor(di/5);   /* 토핑 로테이션 5일 */
       const safe=new Set(tab1safe);
-      for(let sb=0; sb<=SB; sb++){ if(NEWSEQ[sb] && di >= sb*6+3) safe.add(NEWSEQ[sb]); }
-      const newFood = (isTest && SB<NEWSEQ.length) ? NEWSEQ[SB] : null;
+      for(let b=0;b<nb;b++) if(NEWSEQ[b]) safe.add(NEWSEQ[b]);
+      const newFood = nb<NEWSEQ.length ? NEWSEQ[nb] : null;
       const av=c=>CAT[c].filter(f=>safe.has(f));
       const rot=(a,off)=>a.length?a[(tb+off)%a.length]:null;
       const tl=[]; const add=x=>{ if(x && !tl.includes(x)) tl.push(x); };
@@ -958,7 +956,9 @@ function cubeSize(name){ return name==='쌀'?30 : name==='오트밀'?10 : 15; }
 function cubeLabel(name, g, unit){
   if(unit && unit!=='g') return '';
   const c=g/cubeSize(name);
-  return (Number.isInteger(c) && c>0) ? ` <span class="cube">(${c})</span>` : '';
+  if(!(c>0)) return '';
+  const txt = Number.isInteger(c) ? c : c.toFixed(1);
+  return `<span class="cube"> (${txt})</span>`;
 }
 /* 5/15 ~ 6/8 의 쌀·오트밀 배죽을 10으로 1회 채움 (계획에 그 재료가 있는 날만) */
 function maybeSeedRatios(){
