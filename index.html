@@ -765,6 +765,8 @@ const tab1 = [
    · 토핑은 5일마다 순서대로 */
 const NEWSEQ=['고구마',null,'닭고기','밀가루','양파','땅콩','계란 노른자','두부','시금치','청경채','돼지고기','무'];
 const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
+/* 알러지 재료 중 병원 접근성을 위해 특정 날짜(월~목)로 시작일 고정 */
+const ALLERGEN_STARTS={'밀가루':'6/22'};
 const CAT={meat:['소고기','닭고기','돼지고기'],veg1:['브로콜리','시금치','청경채','비타민'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
@@ -787,8 +789,9 @@ function buildTab2(){
       const rot=(a,off)=>a.length?a[(tb+off)%a.length]:null;
       const isMeat=f=>CAT.meat.includes(f);
       const newIsMeat = newFood && isMeat(newFood);
-      /* 알러지 재료는 3일 슬롯의 첫날(di%3===0)에만 넣음 */
-      const allergenBlocked = newFood && ALLERGENS.has(newFood) && (di%3!==0);
+      /* 알러지 재료는 지정 시작일(ALLERGEN_STARTS) 또는 슬롯 첫날에만 넣음 */
+      const _allergenStart = ALLERGEN_STARTS[newFood||''];
+      const allergenBlocked = newFood && ALLERGENS.has(newFood) && (_allergenStart ? ds!==_allergenStart : di%3!==0);
       /* 고기 1종(10g) — 신규가 고기면 그게 고기 슬롯 */
       const theMeat = (newIsMeat && !allergenBlocked) ? newFood : rot(av('meat'),0);
       /* 채소 5종(15g) — 신규가 채소면 포함, 순서대로 */
