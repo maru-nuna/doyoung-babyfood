@@ -369,6 +369,7 @@
   td.sublabel{width:44px;min-width:44px;font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;white-space:nowrap;padding:8px 4px;text-align:center;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
   @media(max-width:600px){td.sublabel{width:36px;min-width:36px;font-size:10px;padding:5px 2px;left:50px;} th.rowlabel[colspan]{width:86px;}}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
+  .meal-band-2 td{border-top:3px solid #e8b89a;background:#f5e6d8;color:#a0522d;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
 
@@ -759,10 +760,10 @@ const tab1 = [
 
 /* 두 번째 탭(6/12~, 2끼) — 균형 식단 (출처: 뿐이 토핑 이유식)
    매 끼니 = 곡류 + 고기 + 푸른잎 + 뿌리/구황 + 열매채소 + 가변(두부 등) + 신규(테스트)
-   · 신규: 3일마다 한 종류씩 (고구마 6/12 → 현미 6/15 → 밀가루 6/18 …), 하루 한 종류만
-   · 토핑은 5일마다 순서대로 / 곡류 = 쌀 + (오트밀 또는 현미) 번갈아(둘 다 동시 X)
-   · 베이스 3단계: 쌀30·15(135) → 쌀60·15(165) → 쌀60·30(180) */
-const NEWSEQ=['고구마','현미','밀가루','닭고기','양파','땅콩','계란 노른자','두부','시금치','청경채','돼지고기','무'];
+   · 신규: 3일마다 한 종류씩 (고구마 6/12 → 닭고기 6/18 → 밀가루 6/21 …), 하루 한 종류만
+   · 현미는 베이스에 고정(6/15~), 오트밀(~6/14) → 현미(6/15~) / 쌀 30g 고정
+   · 토핑은 5일마다 순서대로 */
+const NEWSEQ=['고구마',null,'닭고기','밀가루','양파','땅콩','계란 노른자','두부','시금치','청경채','돼지고기','무'];
 const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
 const CAT={meat:['소고기','닭고기','돼지고기'],veg1:['브로콜리','시금치','청경채','비타민'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
@@ -793,18 +794,25 @@ function buildTab2(){
       /* 채소 5종(15g) — 신규가 채소면 포함, 순서대로 */
       const vl=[]; const vadd=x=>{ if(x && x!==theMeat && !isMeat(x) && !vl.includes(x)) vl.push(x); };
       if(newFood && !newIsMeat && !allergenBlocked) vadd(newFood);
-      vadd(rot(av('veg1'),0)); vadd(rot(av('veg3'),0)); vadd(rot(av('veg2'),0));
-      [ safe.has('두부')?'두부':null, rot(av('veg3'),1), rot(av('veg2'),1), rot(av('veg1'),1) ].forEach(vadd);
+      const veg3av=av('veg3');
+      vadd(rot(av('veg1'),0)); vadd(veg3av[0]||null); vadd(rot(av('veg2'),0));
+      [ safe.has('두부')?'두부':null, veg3av[1]||null, rot(av('veg2'),1), rot(av('veg1'),1) ].forEach(vadd);
       [...safe].forEach(f=>{ if(TOPSET.includes(f)) vadd(f); });
       const vegs = vl.slice(0,5);
       const top = (theMeat?[[theMeat,10]]:[]).concat(vegs.map(v=>[v,15]));
       const topSum = (theMeat?10:0) + vegs.length*15;
-      const grain2 = (safe.has('현미') && tb%2===1) ? '현미' : '오트밀';
-      const stage = di<8 ? 0 : di<22 ? 1 : 2;
-      const rice = stage===0 ? 30 : 60;
-      const g2 = (stage===0?135:stage===1?165:175) - rice - topSum; /* 곡류로 목표량 채움 */
+      const grain2 = di < 3 ? '오트밀' : '현미';
+      const rice = 30;
+      const g2 = di < 4 ? 15 : 30;
       const base=[["쌀",rice],[grain2,g2]];
-      const amTop = top; const pmTop = top;
+      /* 특정 날짜 2끼 토핑 오버라이드 */
+      const pm2Override={
+        '6/17':t=>t.map(it=>it[0]==='비타민'?['청경채',15]:it.slice()),
+        '6/21':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
+        '6/22':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
+        '6/23':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
+      }[ds];
+      const amTop = top; const pmTop = pm2Override ? pm2Override(top) : top;
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
         {base:base.map(b=>b.slice()), top:amTop, total:sumg(base,amTop)},
         {base:base.map(b=>b.slice()), top:pmTop, total:sumg(base,pmTop)},
@@ -974,15 +982,8 @@ function ratioLabel(date, field, name){
   const changed=ratioChangeSet.has(`${date}|${name}`) && !isFutureDate(date);
   return ` <span class="ratio${changed?' ratio-new':''}">${esc(r)}배죽</span>`;
 }
-/* 큐브 개수 표시 (쌀30g·오트밀10g·토핑15g = 1큐브). 정수 큐브일 때만 (N) */
-function cubeSize(name){ return name==='쌀'?30 : (name==='오트밀'||name==='현미'||name==='소고기'||name==='닭고기'||name==='돼지고기')?10 : 15; }
-function cubeLabel(name, g, unit){
-  if(unit && unit!=='g') return '';
-  const c=g/cubeSize(name);
-  if(!(c>0)) return '';
-  const txt = Number.isInteger(c) ? c : c.toFixed(1);
-  return `<span class="cube"> (${txt})</span>`;
-}
+function cubeSize(){ return 0; }
+function cubeLabel(){ return ''; }
 /* 5/15 ~ 6/8 의 쌀·오트밀 배죽을 10으로 1회 채움 (계획에 그 재료가 있는 날만) */
 function maybeSeedRatios(){
   if(State.ratiosInitialized) return;
@@ -1245,7 +1246,7 @@ function renderWeeks(weeks,withSnack,labels){
     html+='<tr><th class="rowlabel" colspan="2"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
     html+='</thead><tbody>';
     labels.forEach((lab,i)=>{
-      if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
+      if(labels.length>1) html+=`<tr class="meal-band${i>0?' meal-band-2':''}"><td colspan="${span}">${lab}</td></tr>`;
       html+=mealRows(d,i,lab);
     });
     if(labels.length>1) html+=dayTotalRow(d);
