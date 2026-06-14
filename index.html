@@ -365,6 +365,8 @@
   .changed-item .g{color:var(--changed);}
   .allergy-item{color:#c0392b;font-weight:700;}
   .allergy-item .g{color:#c0392b;}
+  td.sublabel{width:44px;min-width:44px;font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;white-space:nowrap;padding:8px 5px;text-align:right;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
+  @media(max-width:600px){td.sublabel{width:34px;min-width:34px;font-size:10px;padding:5px 3px;left:50px;}}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
@@ -1113,22 +1115,23 @@ function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
 }
 function mealRows(d,mi,mealName){
   let h='';
-  h+='<tr class="row-base"><td class="rowlabel">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
+  h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   const topCats=[
     {label:'고기', fn:n=>CAT.meat.includes(n), def:10},
     {label:'잎채소', fn:n=>CAT.leaf.includes(n), def:15},
     {label:'구황작물', fn:n=>!CAT.meat.includes(n)&&!CAT.leaf.includes(n), def:15},
   ];
-  topCats.forEach(({label,fn,def})=>{
-    h+=`<tr class="row-top"><td class="rowlabel">${label}</td>`+d.map(x=>makeCatTopCell(getMeals(x)[mi].top,x.date,mi,mealName,fn,def)).join('')+'</tr>';
+  topCats.forEach(({label,fn,def},idx)=>{
+    const lh=idx===0?`<td class="rowlabel" rowspan="3">토핑</td><td class="sublabel">${label}</td>`:`<td class="sublabel">${label}</td>`;
+    h+=`<tr class="row-top">${lh}`+d.map(x=>makeCatTopCell(getMeals(x)[mi].top,x.date,mi,mealName,fn,def)).join('')+'</tr>';
   });
-  h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
-  h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName,eatenPctHtml(x,mi),x)).join('')+'</tr>';
-  h+='<tr><td class="rowlabel">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
+  h+='<tr><td class="rowlabel" colspan="2">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
+  h+='<tr><td class="rowlabel" colspan="2">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName,eatenPctHtml(x,mi),x)).join('')+'</tr>';
+  h+='<tr><td class="rowlabel" colspan="2">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
   return h;
 }
 function dayTotalRow(d){
-  return '<tr class="row-day-total"><td class="rowlabel">하루 총량</td>'+d.map(x=>{
+  return '<tr class="row-day-total"><td class="rowlabel" colspan="2">하루 총량</td>'+d.map(x=>{
     let g=0, ml=0;
     getMeals(x).forEach((m,mi)=>{ const t=computedTotal(x,mi); g+=t.g; ml+=t.ml; });
     const tx=totalText({g,ml});
@@ -1136,15 +1139,15 @@ function dayTotalRow(d){
   }).join('')+'</tr>';
 }
 function dayEatenRow(d){
-  return '<tr class="row-day-eaten"><td class="rowlabel">하루 먹은양</td>'+d.map(x=>{
+  return '<tr class="row-day-eaten"><td class="rowlabel" colspan="2">하루 먹은양</td>'+d.map(x=>{
     let eaten=0, hasAny=false;
     getMeals(x).forEach((m,mi)=>{ const e=parseInt(State.logs[`${x.date}|${mi}|eaten`],10); if(!isNaN(e)){eaten+=e;hasAny=true;} });
     return `<td class="${hasAny?'day-eaten':''}">${hasAny?eaten+'g':'<span class="empty">·</span>'}</td>`;
   }).join('')+'</tr>';
 }
 function snackRow(d){
-  let h='<tr class="snack-band"><td colspan="'+(d.length+1)+'">간식</td></tr>';
-  h+='<tr class="row-snack"><td class="rowlabel">간식</td>'+d.map(x=>{
+  let h='<tr class="snack-band"><td colspan="'+(d.length+2)+'">간식</td></tr>';
+  h+='<tr class="row-snack"><td class="rowlabel" colspan="2">간식</td>'+d.map(x=>{
     const key=`${x.date}|s|snack`;
     return `<td class="snackcell" data-date="${esc(x.date)}"><div class="log-text">${esc(State.logs[key]||'')}</div></td>`;
   }).join('')+'</tr>';
@@ -1234,10 +1237,10 @@ function renderWeeks(weeks,withSnack,labels){
   labels=labels||["1끼"];
   const _t=new Date(), todayMD=(_t.getMonth()+1)+'/'+_t.getDate();
   return weeks.map(wk=>{
-    const d=wk.days, span=d.length+1;
+    const d=wk.days, span=d.length+2;
     let html=`<div class="week"><div class="week-head"><span>${wk.range}</span></div><table>`;
-    html+='<thead><tr><th class="rowlabel">날짜</th>'+d.map(x=>`<th class="date${x.date===todayMD?' today':''}">${x.date}<span class="wd">(${weekdayOf(x.date)})</span></th>`).join('')+'</tr>';
-    html+='<tr><th class="rowlabel"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
+    html+='<thead><tr><th class="rowlabel" colspan="2">날짜</th>'+d.map(x=>`<th class="date${x.date===todayMD?' today':''}">${x.date}<span class="wd">(${weekdayOf(x.date)})</span></th>`).join('')+'</tr>';
+    html+='<tr><th class="rowlabel" colspan="2"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
     html+='</thead><tbody>';
     labels.forEach((lab,i)=>{
       if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
@@ -1292,7 +1295,9 @@ function markTodayColumn(){
     table.querySelectorAll('tr').forEach(tr=>{
       const cells=[...tr.children];
       if(cells.length<=1) return; /* 밴드(콜스팬) 행은 건너뜀 */
-      const cell=cells[col];
+      /* rowspan 셀이 있는 행(토핑 고기 행)은 날짜 칸이 한 칸 뒤로 밀림 */
+      const hasRowspan=[...cells].some(c=>parseInt(c.getAttribute('rowspan')||'1')>1);
+      const cell=cells[col+(hasRowspan?1:0)];
       if(cell && !cell.hasAttribute('colspan')) colCells.push(cell);
     });
     colCells.forEach(c=>c.classList.add('tcol'));
