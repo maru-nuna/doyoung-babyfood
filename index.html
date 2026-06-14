@@ -86,6 +86,10 @@
   .month-chip.m-1{background:linear-gradient(135deg,#a9c4a0,#7a9471);}
   .month-chip.m-2{background:linear-gradient(135deg,#f0c9a8,#c47a4e);}
   .month-chip.m-3{background:linear-gradient(135deg,#bba2d4,#8a6ba8);}
+  .month-chip.m-4{background:linear-gradient(135deg,#f0a8c0,#c04870);}
+  .month-chip.m-5{background:linear-gradient(135deg,#a8d4cc,#4e9a8a);}
+  .month-chip.m-6{background:linear-gradient(135deg,#d4c8a4,#8a7a4a);}
+  .month-chip.m-7{background:linear-gradient(135deg,#a8b0d4,#4a588a);}
   .toy-rating-stars{display:inline-flex;gap:1px;}
   .toy-rating-stars .star{position:relative;font-size:16px;line-height:1;color:#e6dfd1;width:16px;text-align:center;}
   .toy-rating-stars .star::before{content:"\2605";}
@@ -114,6 +118,10 @@
   .toy-month-pick .month-pick-chip.on.m-1{background:#7a9471;}
   .toy-month-pick .month-pick-chip.on.m-2{background:#c47a4e;}
   .toy-month-pick .month-pick-chip.on.m-3{background:#8a6ba8;}
+  .toy-month-pick .month-pick-chip.on.m-4{background:#c04870;}
+  .toy-month-pick .month-pick-chip.on.m-5{background:#4e9a8a;}
+  .toy-month-pick .month-pick-chip.on.m-6{background:#8a7a4a;}
+  .toy-month-pick .month-pick-chip.on.m-7{background:#4a588a;}
   .toy-rating-edit{display:flex;align-items:center;gap:10px;}
   .toy-rating-edit .rating-stars{display:inline-flex;gap:2px;cursor:pointer;user-select:none;}
   .toy-rating-edit .star{position:relative;font-size:26px;line-height:1;color:#e6dfd1;width:26px;text-align:center;}
@@ -346,12 +354,17 @@
   .row-day-total .rowlabel{color:var(--sage);}
   .row-day-total td:not(.rowlabel){background:var(--sage-soft);}
   .day-total{font-weight:700;color:var(--sage);}
+  .row-day-eaten .rowlabel{color:var(--peach);}
+  .row-day-eaten td:not(.rowlabel){background:var(--peach-soft);}
+  .day-eaten{font-weight:700;color:var(--peach);}
   .mealcell,.snackcell{cursor:pointer;min-width:54px;color:var(--ink);font-size:12px;transition:background .15s;-webkit-tap-highlight-color:rgba(122,148,113,.18);}
   .mealcell:hover,.snackcell:hover{background:#fbf7ee;}
   .mealcell:active,.snackcell:active{background:#fff8e8;}
   .mealcell.log:empty::before,.snackcell:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
   .changed-item{background:var(--changed-soft);color:var(--changed);padding:2px 7px;border-radius:7px;border:1px solid #c5d6ea;font-weight:700;}
   .changed-item .g{color:var(--changed);}
+  .allergy-item{color:#c0392b;font-weight:700;}
+  .allergy-item .g{color:#c0392b;}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
@@ -746,7 +759,8 @@ const tab1 = [
    · 신규: 3일마다 한 종류씩 (고구마 6/12 → 현미 6/15 → 밀가루 6/18 …), 하루 한 종류만
    · 토핑은 5일마다 순서대로 / 곡류 = 쌀 + (오트밀 또는 현미) 번갈아(둘 다 동시 X)
    · 베이스 3단계: 쌀30·15(135) → 쌀60·15(165) → 쌀60·30(180) */
-const NEWSEQ=['고구마','현미','밀가루','닭고기','양파','땅콩','두부','시금치','청경채','돼지고기','무'];
+const NEWSEQ=['고구마','현미','밀가루','닭고기','양파','땅콩','계란 노른자','두부','시금치','청경채','돼지고기','무'];
+const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
 const CAT={meat:['소고기','닭고기','돼지고기'],leaf:['브로콜리','시금치','청경채'],root:['감자','고구마','단호박','무'],fruit:['애호박','양파']};
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
@@ -769,11 +783,13 @@ function buildTab2(){
       const rot=(a,off)=>a.length?a[(tb+off)%a.length]:null;
       const isMeat=f=>CAT.meat.includes(f);
       const newIsMeat = newFood && isMeat(newFood);
+      /* 알러지 재료는 3일 슬롯의 첫날(di%3===0)에만 넣음 */
+      const allergenBlocked = newFood && ALLERGENS.has(newFood) && (di%3!==0);
       /* 고기 1종(10g) — 신규가 고기면 그게 고기 슬롯 */
-      const theMeat = newIsMeat ? newFood : rot(av('meat'),0);
+      const theMeat = (newIsMeat && !allergenBlocked) ? newFood : rot(av('meat'),0);
       /* 채소 5종(15g) — 신규가 채소면 포함, 순서대로 */
       const vl=[]; const vadd=x=>{ if(x && x!==theMeat && !isMeat(x) && !vl.includes(x)) vl.push(x); };
-      if(newFood && !newIsMeat) vadd(newFood);
+      if(newFood && !newIsMeat && !allergenBlocked) vadd(newFood);
       vadd(rot(av('leaf'),0)); vadd(rot(av('root'),0)); vadd(rot(av('fruit'),0));
       [ safe.has('두부')?'두부':null, rot(av('root'),1), rot(av('fruit'),1), rot(av('leaf'),1) ].forEach(vadd);
       [...safe].forEach(f=>{ if(TOPSET.includes(f)) vadd(f); });
@@ -1072,10 +1088,40 @@ function eatenPctHtml(day, mi){
   const full=pct>=100;
   return `<div class="eaten-pct${full?' full':''}">${pct}%</div>`;
 }
+function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
+  const key=`${date}|${mi}|top`;
+  const planTxt=plainText(allPlanTop);
+  const ov=State.overrides[key];
+  const eatenOn=!!State.logs[`${date}|${mi}|eaten`];
+  const effTop = ov!=null ? parseItemsLocal(ov) : allPlanTop.map(it=>({name:it[0],g:it[1],unit:'g'}));
+  const catItems = effTop.filter(it=>filterFn(it.name));
+  const cls=['mealcell','top',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
+  if(!catItems.length)
+    return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><span class="empty">·</span></td>`;
+  const planMap=new Map(allPlanTop.map(it=>[it[0],it[1]]));
+  const inner='<div class="cell-list">'+catItems.map(it=>{
+    const planG=planMap.get(it.name);
+    const isChangedItem=(planG==null||planG!==it.g)&&!isFutureDate(date)&&ov!=null;
+    const isFirst=isFirstAppear(date,mi,'top',it.name);
+    const isAllergyTest=ALLERGENS.has(it.name)&&isFirst;
+    const itemCls=isAllergyTest?'item allergy-item':(isFirst?'item new-item':(isChangedItem?'item changed-item':'item'));
+    const showG=it.g!==defaultG;
+    const gHtml=showG?` <span class="g">${it.g}${it.unit||'g'}</span>${cubeLabel(it.name,it.g,it.unit||'g')}`:'';
+    return `<span class="${itemCls}">${esc(it.name)}${gHtml}</span>`;
+  }).join('')+'</div>';
+  return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
+}
 function mealRows(d,mi,mealName){
   let h='';
   h+='<tr class="row-base"><td class="rowlabel">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
-  h+='<tr class="row-top"><td class="rowlabel">토핑</td>'+d.map(x=>makeCell(getMeals(x)[mi].top,x.date,mi,'top',mealName)).join('')+'</tr>';
+  const topCats=[
+    {label:'고기', fn:n=>CAT.meat.includes(n), def:10},
+    {label:'잎채소', fn:n=>CAT.leaf.includes(n), def:15},
+    {label:'구황작물', fn:n=>!CAT.meat.includes(n)&&!CAT.leaf.includes(n), def:15},
+  ];
+  topCats.forEach(({label,fn,def})=>{
+    h+=`<tr class="row-top"><td class="rowlabel">${label}</td>`+d.map(x=>makeCatTopCell(getMeals(x)[mi].top,x.date,mi,mealName,fn,def)).join('')+'</tr>';
+  });
   h+='<tr><td class="rowlabel">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
   h+='<tr><td class="rowlabel">먹은 양</td>'+d.map(x=>makeLog(x.date,mi,'eaten',mealName,eatenPctHtml(x,mi),x)).join('')+'</tr>';
   h+='<tr><td class="rowlabel">메모</td>'+d.map(x=>makeLog(x.date,mi,'memo',mealName)).join('')+'</tr>';
@@ -1087,6 +1133,13 @@ function dayTotalRow(d){
     getMeals(x).forEach((m,mi)=>{ const t=computedTotal(x,mi); g+=t.g; ml+=t.ml; });
     const tx=totalText({g,ml});
     return `<td class="total day-total">${tx||'<span class="empty">·</span>'}</td>`;
+  }).join('')+'</tr>';
+}
+function dayEatenRow(d){
+  return '<tr class="row-day-eaten"><td class="rowlabel">하루 먹은양</td>'+d.map(x=>{
+    let eaten=0, hasAny=false;
+    getMeals(x).forEach((m,mi)=>{ const e=parseInt(State.logs[`${x.date}|${mi}|eaten`],10); if(!isNaN(e)){eaten+=e;hasAny=true;} });
+    return `<td class="${hasAny?'day-eaten':''}">${hasAny?eaten+'g':'<span class="empty">·</span>'}</td>`;
   }).join('')+'</tr>';
 }
 function snackRow(d){
@@ -1191,6 +1244,7 @@ function renderWeeks(weeks,withSnack,labels){
       html+=mealRows(d,i,lab);
     });
     if(labels.length>1) html+=dayTotalRow(d);
+    if(labels.length>1) html+=dayEatenRow(d);
     if(withSnack) html+=snackRow(d);
     html+='</tbody></table></div>';
     return html;
@@ -1634,8 +1688,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
 }});
 
 /* ============ 장난감 ============ */
-const TOY_MONTHS=["0개월","1~3개월","4~5개월","6개월"];
-const TOY_MONTH_CLASS={"0개월":"m-0","1~3개월":"m-1","4~5개월":"m-2","6개월":"m-3"};
+const TOY_MONTHS=["0개월","1~3개월","4~5개월","6개월","7~9개월","10~12개월","13~18개월","19~24개월"];
+const TOY_MONTH_CLASS={"0개월":"m-0","1~3개월":"m-1","4~5개월":"m-2","6개월":"m-3","7~9개월":"m-4","10~12개월":"m-5","13~18개월":"m-6","19~24개월":"m-7"};
 const INITIAL_TOYS=[
   {name:"초점책",months:["0개월"],rating:0,reviews:[{month:"0개월",text:"잘 본 것 같음"}]},
   {name:"타이니러브 모빌",months:["0개월"],rating:0,reviews:[{month:"0개월",text:"조금 보여주다가 안 보여주기 시작함"}]},
