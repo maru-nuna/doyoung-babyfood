@@ -315,6 +315,7 @@
   table{border-collapse:collapse;width:100%;min-width:760px;table-layout:fixed;}
   th,td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13px;vertical-align:middle;}
   th.rowlabel{width:64px;background:#faf6ee;color:var(--muted);font-weight:700;position:sticky;left:0;z-index:2;}
+  th.rowlabel[colspan]{width:auto;}
   th.rowlabel,td.rowlabel{box-shadow:1px 0 0 var(--line);}
   td.rowlabel{z-index:2;}
   .ratio-row th{padding:6px 4px;background:#fdfbf6;}
@@ -365,8 +366,9 @@
   .changed-item .g{color:var(--changed);}
   .allergy-item{color:#c0392b;font-weight:700;}
   .allergy-item .g{color:#c0392b;}
-  td.sublabel{width:44px;min-width:44px;font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;white-space:nowrap;padding:8px 5px;text-align:right;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
-  @media(max-width:600px){td.sublabel{width:34px;min-width:34px;font-size:10px;padding:5px 3px;left:50px;}}
+  td.sublabel{font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;padding:0;text-align:right;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
+  td.sublabel .sl{display:inline-block;min-width:52px;width:52px;white-space:nowrap;padding:8px 4px;box-sizing:border-box;vertical-align:top;}
+  @media(max-width:600px){td.sublabel .sl{min-width:40px;width:40px;font-size:10px;padding:5px 3px;}}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
@@ -763,14 +765,14 @@ const tab1 = [
    · 베이스 3단계: 쌀30·15(135) → 쌀60·15(165) → 쌀60·30(180) */
 const NEWSEQ=['고구마','현미','밀가루','닭고기','양파','땅콩','계란 노른자','두부','시금치','청경채','돼지고기','무'];
 const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
-const CAT={meat:['소고기','닭고기','돼지고기'],leaf:['브로콜리','시금치','청경채'],root:['감자','고구마','단호박','무'],fruit:['애호박','양파']};
+const CAT={meat:['소고기','닭고기','돼지고기'],veg1:['브로콜리','시금치','청경채','비타민'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
   const porridge=['8배죽','7배죽','6배죽','6배죽'];
   const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29,di=0;
   const tab1safe=new Set();
   tab1.forEach(wk=>wk.days.forEach(dy=>[...dy.base,...dy.top].forEach(it=>tab1safe.add(it[0]))));
-  const TOPSET=CAT.meat.concat(CAT.leaf,CAT.root,CAT.fruit,['두부']);
+  const TOPSET=CAT.meat.concat(CAT.veg1,CAT.veg2,CAT.veg3,['두부']);
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     for(let i=0;i<7;i++){
@@ -792,8 +794,8 @@ function buildTab2(){
       /* 채소 5종(15g) — 신규가 채소면 포함, 순서대로 */
       const vl=[]; const vadd=x=>{ if(x && x!==theMeat && !isMeat(x) && !vl.includes(x)) vl.push(x); };
       if(newFood && !newIsMeat && !allergenBlocked) vadd(newFood);
-      vadd(rot(av('leaf'),0)); vadd(rot(av('root'),0)); vadd(rot(av('fruit'),0));
-      [ safe.has('두부')?'두부':null, rot(av('root'),1), rot(av('fruit'),1), rot(av('leaf'),1) ].forEach(vadd);
+      vadd(rot(av('veg1'),0)); vadd(rot(av('veg3'),0)); vadd(rot(av('veg2'),0));
+      [ safe.has('두부')?'두부':null, rot(av('veg3'),1), rot(av('veg2'),1), rot(av('veg1'),1) ].forEach(vadd);
       [...safe].forEach(f=>{ if(TOPSET.includes(f)) vadd(f); });
       const vegs = vl.slice(0,5);
       const top = (theMeat?[[theMeat,10]]:[]).concat(vegs.map(v=>[v,15]));
@@ -1118,11 +1120,12 @@ function mealRows(d,mi,mealName){
   h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   const topCats=[
     {label:'고기', fn:n=>CAT.meat.includes(n), def:10},
-    {label:'잎채소', fn:n=>CAT.leaf.includes(n), def:15},
-    {label:'구황작물', fn:n=>!CAT.meat.includes(n)&&!CAT.leaf.includes(n), def:15},
+    {label:'채소1', fn:n=>CAT.veg1.includes(n), def:15},
+    {label:'채소2', fn:n=>!CAT.meat.includes(n)&&!CAT.veg1.includes(n)&&!CAT.veg3.includes(n), def:15},
+    {label:'채소3', fn:n=>CAT.veg3.includes(n), def:15},
   ];
   topCats.forEach(({label,fn,def},idx)=>{
-    const lh=idx===0?`<td class="rowlabel" rowspan="3">토핑</td><td class="sublabel">${label}</td>`:`<td class="sublabel">${label}</td>`;
+    const lh=idx===0?`<td class="rowlabel" rowspan="4">토핑</td><td class="sublabel"><span class="sl">${label}</span></td>`:`<td class="sublabel"><span class="sl">${label}</span></td>`;
     h+=`<tr class="row-top">${lh}`+d.map(x=>makeCatTopCell(getMeals(x)[mi].top,x.date,mi,mealName,fn,def)).join('')+'</tr>';
   });
   h+='<tr><td class="rowlabel" colspan="2">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
