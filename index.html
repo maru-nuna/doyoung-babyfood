@@ -156,15 +156,12 @@
 
     .new-foods{font-size:12.5px;padding:10px 12px;margin-bottom:12px;border-radius:12px;}
     .nf-chip{font-size:11.5px;padding:2px 8px;}
+    .amount-trend{padding:11px 14px 8px;margin-bottom:16px;}
+    .trend-bars{gap:9px;min-height:138px;}
+    .trend-bar{width:22px;}
 
-    .overall-progress{padding:11px 14px;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-    .op-label{font-size:12px;}
-    .op-bar{height:8px;flex:1 1 100%;order:3;}
-    .op-pct{font-size:14px;min-width:36px;}
-    .op-hint{font-size:10px;}
-
-    .week{padding:4px 0;margin-bottom:14px;border-radius:12px;}
-    .week-head{font-size:11.5px;padding:8px 10px 4px;}
+    .week{padding:0 0 4px;margin-bottom:30px;border-radius:12px;}
+    .week-head{font-size:13px;padding:10px 12px;border-radius:12px 12px 0 0;margin-bottom:4px;}
     table{min-width:520px;}
     th,td{padding:6px 4px;font-size:11.5px;}
     td.rowlabel{font-size:11px;width:50px;}
@@ -172,7 +169,7 @@
     thead .dday{font-size:10px;}
     .item{font-size:11px;}
     .item .g{font-size:10px;}
-    .new-item,.changed-item{padding:1px 5px;font-size:11px;}
+    .new-item,.changed-item,.allergy-item{padding:1px 5px;font-size:11px;}
     .log-text{font-size:11.5px;line-height:1.3;}
     .log-text:empty::before{font-size:10px;}
     .eaten-pct{font-size:9px;margin-top:2px;}
@@ -258,17 +255,9 @@
     .toy-review-input{padding:9px;}
     .toy-review-input textarea{font-size:13px;}
 
-    .progress-modal{max-width:none;}
-    .pg-summary{font-size:12px;padding:10px 12px;gap:4px;flex-direction:column;align-items:flex-start;}
-    .pg-summary b{font-size:16px;}
-    .pg-list{gap:7px;}
-    .pg-row{grid-template-columns:72px 1fr 86px;gap:6px;font-size:12px;}
-    .pg-row .name{font-size:12px;}
-    .pg-row .meta{font-size:10px;}
-
     /* 터치에서 hover transform/그림자 어색 → 무효화 */
     .ing:hover,.mealcell:hover,.snackcell:hover,
-    .overall-progress:hover,.tab:hover,.main-tab:hover,
+    .tab:hover,.main-tab:hover,
     .check-btn:hover,table.toy-table tr.toy-row:hover td,
     .add-item-btn:hover,.month-pick-chip:hover{
       transform:none;
@@ -288,30 +277,33 @@
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
   .new-foods{background:var(--sage-soft);border:1px dashed #cdd9c6;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:14px;}
-  .overall-progress{display:flex;align-items:center;gap:12px;width:100%;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:22px;cursor:pointer;font-family:inherit;text-align:left;transition:.15s;box-shadow:0 2px 10px rgba(120,110,90,.04);}
-  .overall-progress:hover{border-color:var(--sage);box-shadow:0 4px 14px rgba(122,148,113,.12);}
-  .op-label{font-size:13px;font-weight:700;color:var(--ink);flex-shrink:0;}
-  .op-bar{flex:1;height:10px;background:var(--line);border-radius:5px;overflow:hidden;min-width:0;}
-  .op-bar .fill{height:100%;background:linear-gradient(90deg,var(--sage),#8fb088);transition:width .4s ease;}
-  .op-pct{font-size:14px;font-weight:700;color:var(--sage);flex-shrink:0;min-width:42px;text-align:right;}
-  .op-hint{font-size:11px;color:var(--muted);flex-shrink:0;}
-  .progress-modal{max-width:520px;}
-  .progress-modal .modal-body{padding:14px 22px 8px;}
-  .pg-summary{background:var(--sage-soft);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;font-size:13px;color:var(--sage);}
-  .pg-summary b{font-size:18px;}
-  .pg-list{display:flex;flex-direction:column;gap:8px;}
-  .pg-row{display:grid;grid-template-columns:80px 1fr 92px;gap:10px;align-items:center;font-size:13px;}
-  .pg-row .name{font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .pg-row .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;}
-  .pg-row .bar .f{height:100%;background:linear-gradient(90deg,var(--sage),#8fb088);}
-  .pg-row .meta{font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;}
-  .pg-empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 0;}
+  .amount-trend{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px 10px;margin-bottom:22px;box-shadow:0 2px 10px rgba(120,110,90,.04);}
+  .trend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .trend-comment{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--muted);}
+  .trend-comment.up{color:var(--sage);}
+  .trend-comment.down{color:var(--peach);}
+  .trend-title{font-size:14px;font-weight:700;color:var(--ink);}
+  .trend-unit{color:var(--muted);font-weight:400;font-size:11px;}
+  .trend-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);}
+  .trend-legend .lg{display:flex;align-items:center;gap:5px;}
+  .trend-legend .lg::before{content:"";width:10px;height:10px;border-radius:3px;}
+  .trend-legend .lg1::before{background:var(--sage);}
+  .trend-legend .lg2::before{background:var(--peach);}
+  .trend-bars{display:flex;align-items:flex-end;gap:12px;overflow-x:auto;padding-bottom:4px;min-height:148px;}
+  .trend-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto;justify-content:flex-end;}
+  .trend-total{font-size:11px;color:var(--ink);font-weight:700;}
+  .trend-bar{width:26px;border-radius:6px 6px 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;background:var(--sage-soft);}
+  .trend-bar .seg{width:100%;}
+  .trend-bar .seg1{background:var(--sage);}
+  .trend-bar .seg2{background:var(--peach);}
+  .trend-date{font-size:10px;color:var(--muted);white-space:nowrap;}
+  .trend-empty{color:var(--muted);font-size:13px;text-align:center;padding:28px 0;}
   .new-foods b{color:var(--sage);}
   .nf-chip{display:inline-block;background:#fff3cd;color:#9a6b00;border:1px solid #ffe08a;border-radius:8px;padding:2px 9px;margin:3px 3px 0 0;font-size:13px;}
   .nf-empty{color:var(--muted);font-size:13px;}
 
-  .week{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:6px 0;margin-bottom:22px;overflow-x:auto;box-shadow:0 4px 20px rgba(120,110,90,.04);}
-  .week-head{font-size:13px;color:var(--muted);padding:10px 14px 6px;}
+  .week{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:0 0 6px;margin-bottom:44px;overflow-x:auto;box-shadow:0 6px 22px rgba(120,110,90,.08);}
+  .week-head{font-size:15px;font-weight:700;color:var(--sage);background:var(--sage-soft);border-radius:18px 18px 0 0;border-bottom:1px solid #dde7d7;padding:13px 18px;margin-bottom:6px;}
   table{border-collapse:collapse;width:100%;min-width:760px;table-layout:fixed;}
   th,td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13px;vertical-align:middle;}
   th.rowlabel{width:64px;background:#faf6ee;color:var(--muted);font-weight:700;position:sticky;left:0;z-index:2;}
@@ -351,6 +343,7 @@
   .row-top td:not(.rowlabel){background:#fffcf9;}
   .row-snack td:not(.rowlabel){background:#fcfaff;}
   .row-base .rowlabel{color:var(--base-ink);} .row-top .rowlabel{color:var(--top-ink);} .row-snack .rowlabel{color:var(--snack-ink);}
+  .row-allergy .rowlabel{color:#c0392b;} .row-allergy td:not(.rowlabel){background:#fffafa;}
   .total{font-weight:700;color:var(--ink);}
   .row-day-total .rowlabel{color:var(--sage);}
   .row-day-total td:not(.rowlabel){background:var(--sage-soft);}
@@ -364,12 +357,13 @@
   .mealcell.log:empty::before,.snackcell:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
   .changed-item{background:var(--changed-soft);color:var(--changed);padding:2px 7px;border-radius:7px;border:1px solid #c5d6ea;font-weight:700;}
   .changed-item .g{color:var(--changed);}
-  .allergy-item{color:#c0392b;font-weight:700;}
+  .allergy-item{background:#fdeaea;color:#c0392b;padding:2px 7px;border-radius:7px;border:1px solid #f3b8b3;font-weight:700;}
   .allergy-item .g{color:#c0392b;}
+  .allergy-item .cube{color:inherit;opacity:.75;}
   td.sublabel{width:44px;min-width:44px;font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;white-space:nowrap;padding:8px 4px;text-align:center;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
+  td.sublabel .sub-g{display:block;font-weight:400;font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:0;}
   @media(max-width:600px){td.sublabel{width:36px;min-width:36px;font-size:10px;padding:5px 2px;left:50px;} th.rowlabel[colspan]{width:86px;}}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
-  .meal-band-2 td{border-top:3px solid #e8b89a;background:#f5e6d8;color:#a0522d;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
 
@@ -500,12 +494,12 @@
 
     <section id="t1" class="panel active">
       <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t1-new"></span></div>
-      <button class="overall-progress" id="t1-progress" type="button"></button>
+      <div class="amount-trend" id="t1-trend"></div>
       <div id="t1-weeks"></div>
     </section>
     <section id="t2" class="panel">
       <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t2-new"></span></div>
-      <button class="overall-progress" id="t2-progress" type="button"></button>
+      <div class="amount-trend" id="t2-trend"></div>
       <div id="t2-weeks"></div>
     </section>
 
@@ -638,23 +632,6 @@
         <button id="toy-cancel" class="reset-btn">취소</button>
         <button id="toy-save" class="check-btn done-btn">저장</button>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- 진행률 상세 -->
-<div id="progress-overlay" class="overlay detail-overlay">
-  <div class="modal progress-modal">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title" id="pg-title">진행 상세</div>
-        <div class="modal-sub" id="pg-sub"></div>
-      </div>
-      <button id="pg-close" class="close-x">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="pg-summary" id="pg-summary"></div>
-      <div class="pg-list" id="pg-list"></div>
     </div>
   </div>
 </div>
@@ -808,14 +785,29 @@ function buildTab2(){
       const rice = 30;
       const g2 = di < 4 ? 15 : 30;
       const base=[["쌀",rice],[grain2,g2]];
-      /* 특정 날짜 2끼 토핑 오버라이드 */
-      const pm2Override={
+      /* 특정 날짜 토핑 오버라이드 — 신규 재료는 1끼(am)에서 테스트 */
+      const amOverride={
         '6/17':t=>t.map(it=>it[0]==='비타민'?['청경채',15]:it.slice()),
+      }[ds];
+      const pmOverride={
         '6/21':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
         '6/22':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
         '6/23':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
       }[ds];
-      const amTop = top; const pmTop = pm2Override ? pm2Override(top) : top;
+      const amTop = amOverride ? amOverride(top) : top;
+      /* 2끼(오후): 신규 재료는 1끼에서만 테스트 → 2끼에선 제외(고기는 기존 고기로 대체) */
+      let pmRaw = top.map(it=>it.slice());
+      if(newFood && !allergenBlocked && pmRaw.some(it=>it[0]===newFood)){
+        if(newIsMeat){
+          const altMeat = av('meat').find(m=>m!==newFood);
+          pmRaw = pmRaw.map(it=>it[0]===newFood?(altMeat?[altMeat,10]:null):it).filter(Boolean);
+        }else{
+          const used=new Set(pmRaw.map(it=>it[0]));
+          const altVeg = TOPSET.filter(f=>safe.has(f)&&!CAT.meat.includes(f)&&!used.has(f)&&f!==newFood)[0];
+          pmRaw = pmRaw.map(it=>it[0]===newFood?(altVeg?[altVeg,15]:null):it).filter(Boolean);
+        }
+      }
+      const pmTop = pmOverride ? pmOverride(pmRaw) : pmRaw;
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
         {base:base.map(b=>b.slice()), top:amTop, total:sumg(base,amTop)},
         {base:base.map(b=>b.slice()), top:pmTop, total:sumg(base,pmTop)},
@@ -1095,6 +1087,20 @@ function eatenPctHtml(day, mi){
   const full=pct>=100;
   return `<div class="eaten-pct${full?' full':''}">${pct}%</div>`;
 }
+function makeAllergyCell(allPlanTop, date, mi, mealName){
+  const key=`${date}|${mi}|top`;
+  const ov=State.overrides[key];
+  const eatenOn=!!State.logs[`${date}|${mi}|eaten`];
+  const effTop = ov!=null ? parseItemsLocal(ov) : allPlanTop.map(it=>({name:it[0],g:it[1],unit:'g'}));
+  const items = effTop.filter(it=>ALLERGENS.has(it.name));
+  const cls=['mealcell','top',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
+  const attrs=`data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"`;
+  if(!items.length) return `<td class="${cls}" ${attrs}><span class="empty">-</span></td>`;
+  const inner='<div class="cell-list">'+items.map(it=>
+    `<span class="item allergy-item">${esc(it.name)} <span class="g">${it.g}${it.unit||'g'}</span></span>`
+  ).join('')+'</div>';
+  return `<td class="${cls}" ${attrs}>${inner}</td>`;
+}
 function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
   const key=`${date}|${mi}|top`;
   const planTxt=plainText(allPlanTop);
@@ -1121,14 +1127,16 @@ function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
 function mealRows(d,mi,mealName){
   let h='';
   h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
+  h+='<tr class="row-allergy"><td class="rowlabel" colspan="2">알러지</td>'+d.map(x=>makeAllergyCell(getMeals(x)[mi].top,x.date,mi,mealName)).join('')+'</tr>';
   const topCats=[
     {label:'고기', fn:n=>CAT.meat.includes(n), def:10},
     {label:'채소1', fn:n=>CAT.veg1.includes(n), def:15},
-    {label:'채소2', fn:n=>!CAT.meat.includes(n)&&!CAT.veg1.includes(n)&&!CAT.veg3.includes(n), def:15},
+    {label:'채소2', fn:n=>!CAT.meat.includes(n)&&!CAT.veg1.includes(n)&&!CAT.veg3.includes(n)&&!ALLERGENS.has(n), def:15},
     {label:'채소3', fn:n=>CAT.veg3.includes(n), def:15},
   ];
   topCats.forEach(({label,fn,def},idx)=>{
-    const lh=idx===0?`<td class="rowlabel" rowspan="4">토핑</td><td class="sublabel">${label}</td>`:`<td class="sublabel">${label}</td>`;
+    const sl=`<td class="sublabel">${label}<span class="sub-g">(${def}g)</span></td>`;
+    const lh=idx===0?`<td class="rowlabel" rowspan="4">토핑</td>${sl}`:sl;
     h+=`<tr class="row-top">${lh}`+d.map(x=>makeCatTopCell(getMeals(x)[mi].top,x.date,mi,mealName,fn,def)).join('')+'</tr>';
   });
   h+='<tr><td class="rowlabel" colspan="2">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
@@ -1169,76 +1177,59 @@ function dayRatio(day){
   });
   return {plan,actual,ratio:plan?Math.min(1,actual/plan):0};
 }
-/* 한 탭(weeks)의 전체 누적 + 재료별 진행률 */
-function tabStats(weeks){
-  let totalPlan=0, totalActual=0;
-  const ing=new Map(); // name → {plan, est}
-  weeks.forEach(wk=>wk.days.forEach(day=>{
-    getMeals(day).forEach((m,mi)=>{
-      const ovBase=State.overrides[`${day.date}|${mi}|base`];
-      const ovTop =State.overrides[`${day.date}|${mi}|top`];
-      const baseItems = ovBase!=null ? parseItemsLocal(ovBase) : m.base.map(it=>({name:it[0],g:it[1]}));
-      const topItems  = ovTop !=null ? parseItemsLocal(ovTop ) : m.top .map(it=>({name:it[0],g:it[1]}));
-      const planTotal = baseItems.reduce((a,it)=>a+(it.g||0),0) + topItems.reduce((a,it)=>a+(it.g||0),0);
-      const eaten = parseInt(State.logs[`${day.date}|${mi}|eaten`],10);
-      const hasActual = !isNaN(eaten);
-      totalPlan += planTotal;
-      if(hasActual) totalActual += eaten;
-      const mealRatio = (hasActual && planTotal>0) ? Math.min(1,eaten/planTotal) : 0;
-      [...baseItems, ...topItems].forEach(it=>{
-        if(!it.name) return;
-        if(!ing.has(it.name)) ing.set(it.name,{plan:0,est:0});
-        const s=ing.get(it.name);
-        s.plan += (it.g||0);
-        if(hasActual) s.est += (it.g||0) * mealRatio;
-      });
-    });
-  }));
-  const ingredients = Array.from(ing.entries())
-    .map(([name,s])=>({name,plan:s.plan,est:Math.round(s.est),ratio:s.plan?s.est/s.plan:0}))
-    .sort((a,b)=>b.ratio-a.ratio || b.plan-a.plan);
-  return {totalPlan,totalActual,overall:totalPlan?Math.min(1,totalActual/totalPlan):0,ingredients};
-}
-function renderOverallProgress(){
-  [['t1',tab1,'1~28일'],['t2',tab2,'29~56일']].forEach(([k,weeks,label])=>{
-    const el=document.getElementById(k+'-progress');
-    const s=tabStats(weeks);
-    const pct=Math.round(s.overall*100);
-    el.innerHTML=`
-      <span class="op-label">${label} 달성</span>
-      <div class="op-bar"><div class="fill" style="width:${Math.min(100,pct)}%"></div></div>
-      <span class="op-pct">${pct}%</span>
-      <span class="op-hint">▸ 재료별</span>
-    `;
-    el.onclick=()=>openProgressDetail(k,weeks,label,s);
+/* 일자별 먹은 양 추이 (기록 있는 날만, 1끼/2끼 누적 막대) */
+function renderAmountTrend(){
+  [['t1',tab1,1],['t2',tab2,2]].forEach(([k,weeks,mealsCount])=>{
+    const el=document.getElementById(k+'-trend');
+    if(!el) return;
+    const days=[];
+    weeks.forEach(wk=>wk.days.forEach(d=>{
+      const e1=parseInt(State.logs[`${d.date}|0|eaten`],10);
+      const e2=mealsCount>1?parseInt(State.logs[`${d.date}|1|eaten`],10):NaN;
+      const m1=isNaN(e1)?0:e1, m2=isNaN(e2)?0:e2;
+      if(m1>0||m2>0) days.push({date:d.date,m1,m2,total:m1+m2});
+    }));
+    const legend = mealsCount>1
+      ? `<div class="trend-legend"><span class="lg lg1">1끼</span><span class="lg lg2">2끼</span></div>` : '';
+    const head=`<div class="trend-head"><span class="trend-title">먹은 양 추이 <span class="trend-unit">(g)</span></span>${legend}</div>`;
+    if(!days.length){
+      el.innerHTML=head+`<div class="trend-empty">아직 먹은 양 기록이 없어요</div>`;
+      return;
+    }
+    el.innerHTML=head+trendComment(days)+`<div class="trend-bars">${days_bars(days,mealsCount)}</div>`;
   });
 }
-const pgOverlay=document.getElementById('progress-overlay');
-function openProgressDetail(key,weeks,label,s){
-  document.getElementById('pg-title').textContent=label+' · 재료별 달성률';
-  document.getElementById('pg-sub').textContent='먹은 양 입력값으로 끼니 달성률을 추정해 재료별로 환산한 값입니다';
-  document.getElementById('pg-summary').innerHTML=`
-    <span>전체 계획 <b>${s.totalPlan}g</b></span>
-    <span>실제 먹음 <b>${s.totalActual}g</b></span>
-    <span>달성률 <b>${Math.round(s.overall*100)}%</b></span>
-  `;
-  const list=document.getElementById('pg-list');
-  if(!s.ingredients.length){ list.innerHTML='<div class="pg-empty">아직 데이터가 없어요</div>'; }
-  else{
-    list.innerHTML=s.ingredients.map(it=>{
-      const pct=Math.round(it.ratio*100);
-      return `<div class="pg-row">
-        <span class="name">${esc(it.name)}</span>
-        <div class="bar"><div class="f" style="width:${Math.min(100,pct)}%"></div></div>
-        <span class="meta">${it.est}/${it.plan}g · ${pct}%</span>
-      </div>`;
-    }).join('');
-  }
-  pgOverlay.classList.add('open');
+/* 최근 1주일 추이 한 문장 (애플 건강 스타일) */
+function trendComment(days){
+  const recent=days.slice(-7);
+  if(recent.length<2) return '';
+  const half=Math.floor(recent.length/2);
+  const avg=a=>a.reduce((s,d)=>s+d.total,0)/a.length;
+  const early=avg(recent.slice(0,half)), late=avg(recent.slice(half));
+  const diff=late-early, pct=early?Math.abs(diff/early):0;
+  let word, cls;
+  if(pct<0.05){ word='비슷한 수준을 유지하고 있어요'; cls='flat'; }
+  else if(diff>0){ word='늘어나는 추세예요'; cls='up'; }
+  else{ word='줄어드는 추세예요'; cls='down'; }
+  return `<div class="trend-comment ${cls}">최근 ${recent.length}일간 먹은 양이 ${word}</div>`;
 }
-function closeProgressDetail(){ pgOverlay.classList.remove('open'); }
-document.getElementById('pg-close').onclick=closeProgressDetail;
-pgOverlay.addEventListener('click',e=>{ if(e.target===pgOverlay) closeProgressDetail(); });
+function days_bars(days,mealsCount){
+  const max=Math.max(...days.map(d=>d.total));
+  const H=120;
+  return days.map(d=>{
+    const h=Math.max(6, Math.round(d.total/max*H));
+    const r1=d.total?Math.round(d.m1/d.total*100):0;
+    const seg2 = (mealsCount>1 && d.m2>0)
+      ? `<div class="seg seg2" style="height:${100-r1}%" title="2끼 ${d.m2}g"></div>` : '';
+    const seg1 = d.m1>0
+      ? `<div class="seg seg1" style="height:${mealsCount>1?r1:100}%" title="1끼 ${d.m1}g"></div>` : '';
+    return `<div class="trend-col">
+      <div class="trend-total">${d.total}</div>
+      <div class="trend-bar" style="height:${h}px">${seg2}${seg1}</div>
+      <div class="trend-date">${d.date}</div>
+    </div>`;
+  }).join('');
+}
 function renderWeeks(weeks,withSnack,labels){
   labels=labels||["1끼"];
   const _t=new Date(), todayMD=(_t.getMonth()+1)+'/'+_t.getDate();
@@ -1249,7 +1240,7 @@ function renderWeeks(weeks,withSnack,labels){
     html+='<tr><th class="rowlabel" colspan="2"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
     html+='</thead><tbody>';
     labels.forEach((lab,i)=>{
-      if(labels.length>1) html+=`<tr class="meal-band${i>0?' meal-band-2':''}"><td colspan="${span}">${lab}</td></tr>`;
+      if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
       html+=mealRows(d,i,lab);
     });
     if(labels.length>1) html+=dayTotalRow(d);
@@ -1319,7 +1310,7 @@ function renderTables(){
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
-  attachCellClick(); renderNewFoods(); renderOverallProgress(); markTodayColumn();
+  attachCellClick(); renderNewFoods(); renderAmountTrend(); markTodayColumn();
 }
 
 /* ============ 끼니 편집 모달 ============ */
@@ -1692,7 +1683,6 @@ function applyDefaultSubTab(){
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
   if(toyOverlay.classList.contains('open'))closeToyEdit();
-  else if(pgOverlay.classList.contains('open'))closeProgressDetail();
   else if(mOverlay.classList.contains('open'))closeMealEdit();
   else if(dOverlay.classList.contains('open'))closeDetail();
   else overlay.classList.remove('open');
