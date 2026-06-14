@@ -315,7 +315,7 @@
   table{border-collapse:collapse;width:100%;min-width:760px;table-layout:fixed;}
   th,td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13px;vertical-align:middle;}
   th.rowlabel{width:64px;background:#faf6ee;color:var(--muted);font-weight:700;position:sticky;left:0;z-index:2;}
-  th.rowlabel[colspan]{width:auto;}
+  th.rowlabel[colspan]{width:108px;}
   th.rowlabel,td.rowlabel{box-shadow:1px 0 0 var(--line);}
   td.rowlabel{z-index:2;}
   .ratio-row th{padding:6px 4px;background:#fdfbf6;}
@@ -366,9 +366,8 @@
   .changed-item .g{color:var(--changed);}
   .allergy-item{color:#c0392b;font-weight:700;}
   .allergy-item .g{color:#c0392b;}
-  td.sublabel{font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;padding:0;text-align:right;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
-  td.sublabel .sl{display:inline-block;min-width:52px;width:52px;white-space:nowrap;padding:8px 4px;box-sizing:border-box;vertical-align:top;}
-  @media(max-width:600px){td.sublabel .sl{min-width:40px;width:40px;font-size:10px;padding:5px 3px;}}
+  td.sublabel{width:44px;min-width:44px;font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;white-space:nowrap;padding:8px 4px;text-align:center;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
+  @media(max-width:600px){td.sublabel{width:36px;min-width:36px;font-size:10px;padding:5px 2px;left:50px;} th.rowlabel[colspan]{width:86px;}}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
@@ -1125,7 +1124,7 @@ function mealRows(d,mi,mealName){
     {label:'채소3', fn:n=>CAT.veg3.includes(n), def:15},
   ];
   topCats.forEach(({label,fn,def},idx)=>{
-    const lh=idx===0?`<td class="rowlabel" rowspan="4">토핑</td><td class="sublabel"><span class="sl">${label}</span></td>`:`<td class="sublabel"><span class="sl">${label}</span></td>`;
+    const lh=idx===0?`<td class="rowlabel" rowspan="4">토핑</td><td class="sublabel">${label}</td>`:`<td class="sublabel">${label}</td>`;
     h+=`<tr class="row-top">${lh}`+d.map(x=>makeCatTopCell(getMeals(x)[mi].top,x.date,mi,mealName,fn,def)).join('')+'</tr>';
   });
   h+='<tr><td class="rowlabel" colspan="2">총량</td>'+d.map(x=>{const t=computedTotal(x,mi);const tx=totalText(t);return `<td class="total">${tx||'<span class="empty">·</span>'}</td>`;}).join('')+'</tr>';
