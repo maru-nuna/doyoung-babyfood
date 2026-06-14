@@ -767,21 +767,25 @@ function buildTab2(){
       const newFood = nb<NEWSEQ.length ? NEWSEQ[nb] : null;
       const av=c=>CAT[c].filter(f=>safe.has(f));
       const rot=(a,off)=>a.length?a[(tb+off)%a.length]:null;
-      const tl=[]; const add=x=>{ if(x && !tl.includes(x)) tl.push(x); };
-      add(rot(av('meat'),0)); add(rot(av('leaf'),0)); add(rot(av('root'),0)); add(rot(av('fruit'),0));
-      [ safe.has('두부')?'두부':null, rot(av('root'),1), rot(av('fruit'),1), rot(av('leaf'),1), rot(av('meat'),1) ].forEach(add);
-      [...safe].forEach(f=>{ if(TOPSET.includes(f)) add(f); });
-      const need = newFood ? 5 : 6; /* 테스트일: 안전5+신규1, 안전식일: 안전6 */
-      const top = tl.slice(0,need).map(f=>[f,15]);
-      const numTop = top.length + (newFood?1:0);
-      const isNew = newFood && !safe.has(newFood);
+      const isMeat=f=>CAT.meat.includes(f);
+      const newIsMeat = newFood && isMeat(newFood);
+      /* 고기 1종(10g) — 신규가 고기면 그게 고기 슬롯 */
+      const theMeat = newIsMeat ? newFood : rot(av('meat'),0);
+      /* 채소 5종(15g) — 신규가 채소면 포함, 순서대로 */
+      const vl=[]; const vadd=x=>{ if(x && x!==theMeat && !isMeat(x) && !vl.includes(x)) vl.push(x); };
+      if(newFood && !newIsMeat) vadd(newFood);
+      vadd(rot(av('leaf'),0)); vadd(rot(av('root'),0)); vadd(rot(av('fruit'),0));
+      [ safe.has('두부')?'두부':null, rot(av('root'),1), rot(av('fruit'),1), rot(av('leaf'),1) ].forEach(vadd);
+      [...safe].forEach(f=>{ if(TOPSET.includes(f)) vadd(f); });
+      const vegs = vl.slice(0,5);
+      const top = (theMeat?[[theMeat,10]]:[]).concat(vegs.map(v=>[v,15]));
+      const topSum = (theMeat?10:0) + vegs.length*15;
       const grain2 = (safe.has('현미') && tb%2===1) ? '현미' : '오트밀';
       const stage = di<8 ? 0 : di<22 ? 1 : 2;
       const rice = stage===0 ? 30 : 60;
-      const g2 = (stage===0?135:stage===1?165:180) - rice - numTop*15; /* 곡류로 목표량 채움 */
+      const g2 = (stage===0?135:stage===1?165:180) - rice - topSum; /* 곡류로 목표량 채움 */
       const base=[["쌀",rice],[grain2,g2]];
-      const amTop = newFood ? top.concat([ isNew?[newFood,15,true]:[newFood,15] ]) : top.slice();
-      const pmTop = newFood ? top.concat([[newFood,15]]) : top.slice();
+      const amTop = top; const pmTop = top;
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
         {base:base.map(b=>b.slice()), top:amTop, total:sumg(base,amTop)},
         {base:base.map(b=>b.slice()), top:pmTop, total:sumg(base,pmTop)},
@@ -952,7 +956,7 @@ function ratioLabel(date, field, name){
   return ` <span class="ratio${changed?' ratio-new':''}">${esc(r)}배죽</span>`;
 }
 /* 큐브 개수 표시 (쌀30g·오트밀10g·토핑15g = 1큐브). 정수 큐브일 때만 (N) */
-function cubeSize(name){ return name==='쌀'?30 : name==='오트밀'?10 : 15; }
+function cubeSize(name){ return name==='쌀'?30 : (name==='오트밀'||name==='소고기'||name==='닭고기'||name==='돼지고기')?10 : 15; }
 function cubeLabel(name, g, unit){
   if(unit && unit!=='g') return '';
   const c=g/cubeSize(name);
