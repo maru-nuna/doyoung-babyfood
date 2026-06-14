@@ -344,7 +344,7 @@
   .row-snack td:not(.rowlabel){background:#fcfaff;}
   .row-base .rowlabel{color:var(--base-ink);} .row-top .rowlabel{color:var(--top-ink);} .row-snack .rowlabel{color:var(--snack-ink);}
   .row-allergy .rowlabel{color:#c0392b;} .row-allergy td:not(.rowlabel){background:#fffafa;}
-  .base-ratio{display:block;margin-top:4px;font-weight:700;font-size:10px;color:var(--base-ink);background:var(--base-tag);border-radius:6px;padding:2px 0;letter-spacing:0;}
+  .base-ratio{display:block;margin-top:4px;font-weight:700;font-size:10px;color:var(--sage);background:var(--sage-soft);border-radius:6px;padding:2px 0;letter-spacing:0;}
   .total{font-weight:700;color:var(--ink);}
   .row-day-total .rowlabel{color:var(--sage);}
   .row-day-total td:not(.rowlabel){background:var(--sage-soft);}
@@ -356,6 +356,8 @@
   .mealcell:hover,.snackcell:hover{background:#fbf7ee;}
   .mealcell:active,.snackcell:active{background:#fff8e8;}
   .mealcell.log:empty::before,.snackcell:empty::before{content:"입력하기";color:#d9d2c5;font-size:11px;}
+  .changed-toggle{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--changed);font-weight:700;cursor:pointer;user-select:none;}
+  .changed-toggle input{width:17px;height:17px;accent-color:var(--changed);cursor:pointer;margin:0;}
   .changed-item{background:var(--changed-soft);color:var(--changed);padding:2px 7px;border-radius:7px;border:1px solid #c5d6ea;font-weight:700;}
   .changed-item .g{color:var(--changed);}
   .allergy-item{background:#fdeaea;color:#c0392b;padding:2px 7px;border-radius:7px;border:1px solid #f3b8b3;font-weight:700;}
@@ -665,6 +667,7 @@
           <button type="button" class="add-item-btn" data-target="top">+ 토핑 재료 추가</button>
         </div>
         <div class="plan-total" id="meal-plan-total"></div>
+        <label class="changed-toggle"><input type="checkbox" id="meal-changed"><span>✎ 계획과 다름으로 표시</span></label>
         <span class="hint">단위는 g 또는 ml. 모두 비우면 원래 계획으로 돌아갑니다.</span>
       </div>
       <datalist id="ingredient-list"></datalist>
@@ -836,13 +839,14 @@ if(window.supabase){
   try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){ sb=null; }
 }
 const LS_KEY="doyoung_bbf_state";
-let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,ratios:{},ratiosInitialized:false};
+let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,ratios:{},ratiosInitialized:false,changedManual:{}};
 (function loadLocal(){
   try{ Object.assign(State, JSON.parse(localStorage.getItem(LS_KEY))||{}); }catch(e){}
   State.tested=State.tested||{}; State.logs=State.logs||{}; State.overrides=State.overrides||{}; State.customIngredients=State.customIngredients||[];
   State.deletedBuiltin=State.deletedBuiltin||[];
   State.toys=State.toys||[];
   State.ratios=State.ratios||{};
+  State.changedManual=State.changedManual||{};
   try{ const t=JSON.parse(localStorage.getItem('doyoung_tested_ingredients')); if(t&&!Object.keys(State.tested).length) Object.keys(t).forEach(k=>State.tested[k]=t[k]===true?{done:true}:t[k]); }catch(e){}
   try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
 })();
@@ -1032,7 +1036,7 @@ function cellList(items, date, mi, field){
     return `<span class="${cls}" data-iname="${esc(it[0])}">${esc(it[0])} <span class="g">${it[1]}g</span>${cubeLabel(it[0],it[1],'g')}${ratioLabel(date,field,it[0])}</span>`;
   }).join('')+'</div>';
 }
-function cellListFromText(text, planItems, date, mi, field){
+function cellListFromText(text, planItems, date, mi, field, showChanged){
   const parts=parseItemsLocal(text);
   if(!parts.length) return '<span class="empty">·</span>';
   /* 계획은 모두 g 단위 */
@@ -1040,7 +1044,7 @@ function cellListFromText(text, planItems, date, mi, field){
   return '<div class="cell-list">'+parts.map(p=>{
     const plan=planMap.get(p.name);
     /* 변경(파란색)은 오늘·과거에만 — 미래 계획 수정은 변경 표시 없이 값만 */
-    const isChanged = (!plan || plan.g!==p.g || (plan.unit||'g')!==(p.unit||'g')) && !isFutureDate(date);
+    const isChanged = (!plan || plan.g!==p.g || (plan.unit||'g')!==(p.unit||'g')) && !isFutureDate(date) && showChanged!==false;
     /* 처음 등장하는 재료면 '수정(파란색)'보다 '새 재료(노란색)'를 우선 */
     const cls = isFirstAppear(date,mi,field,p.name) ? 'item new-item'
               : (isChanged ? 'item changed-item' : 'item');
@@ -1082,13 +1086,26 @@ function totalText(t){
 function totalSum(t){ return (t.g||0)+(t.ml||0); }
 function getMeals(day){ return day.meals?day.meals:[{base:day.base,top:day.top,total:day.total}]; }
 
+/* 끼니가 계획과 다른지 자동 감지 (베이스·토핑 override가 계획과 다름) */
+function autoChangedForMeal(date,mi){
+  const day=findDay(date); if(!day) return false;
+  const meal=getMeals(day)[mi]; if(!meal) return false;
+  const ovB=State.overrides[`${date}|${mi}|base`], ovT=State.overrides[`${date}|${mi}|top`];
+  return (ovB!=null && ovB!==plainText(meal.base)) || (ovT!=null && ovT!==plainText(meal.top));
+}
+/* '계획과 다름' 표시 여부 — 수동 체크(changedManual)가 있으면 우선, 없으면 자동 */
+function mealChanged(date,mi){
+  const m=(State.changedManual||{})[`${date}|${mi}`];
+  return m!=null ? m : autoChangedForMeal(date,mi);
+}
 function makeCell(items,date,mi,field,mealName){
   const key=`${date}|${mi}|${field}`, dm=`${date}|${mi}`, planTxt=plainText(items);
   const ov=State.overrides[key];
-  const changed = ov!=null && ov!==planTxt;
+  const hasOvDiff = ov!=null && ov!==planTxt;
+  const showChanged = mealChanged(date,mi);
   const eatenOn = !!State.logs[dm+'|eaten'];
-  const inner = changed ? cellListFromText(ov, items, date, mi, field) : cellList(items, date, mi, field);
-  const cls=['mealcell',field,changed?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
+  const inner = hasOvDiff ? cellListFromText(ov, items, date, mi, field, showChanged) : cellList(items, date, mi, field);
+  const cls=['mealcell',field,showChanged?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
 }
 /* 끼니 계획에 들어있는 단위에서 먹은 양에 붙일 단위를 결정 (ml 만 있으면 ml, 그 외 g) */
@@ -1137,15 +1154,16 @@ function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
   const planTxt=plainText(allPlanTop);
   const ov=State.overrides[key];
   const eatenOn=!!State.logs[`${date}|${mi}|eaten`];
+  const showChanged=mealChanged(date,mi);
   const effTop = ov!=null ? parseItemsLocal(ov) : allPlanTop.map(it=>({name:it[0],g:it[1],unit:'g'}));
   const catItems = effTop.filter(it=>filterFn(it.name));
-  const cls=['mealcell','top',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
+  const cls=['mealcell','top',showChanged?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   if(!catItems.length)
     return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><span class="empty">·</span></td>`;
   const planMap=new Map(allPlanTop.map(it=>[it[0],it[1]]));
   const inner='<div class="cell-list">'+catItems.map(it=>{
     const planG=planMap.get(it.name);
-    const isChangedItem=(planG==null||planG!==it.g)&&!isFutureDate(date)&&ov!=null;
+    const isChangedItem=(planG==null||planG!==it.g)&&!isFutureDate(date)&&ov!=null&&showChanged;
     const isFirst=isFirstAppear(date,mi,'top',it.name);
     const isAllergyTest=ALLERGENS.has(it.name)&&isFirst;
     const itemCls=isAllergyTest?'item allergy-item':(isFirst?'item new-item':(isChangedItem?'item changed-item':'item'));
@@ -1460,6 +1478,9 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   renderItemList('meal-top-list',  topItems);
   renderMealRatios(baseItems, date);
   updatePlanTotal();
+  const _auto=autoChangedForMeal(date,mi), _cur=(State.changedManual||{})[`${date}|${mi}`];
+  document.getElementById('meal-changed').checked = _cur!=null ? _cur : _auto;
+  currentMeal._changedAuto=_auto;
   document.getElementById('meal-eaten').value=State.logs[`${date}|${mi}|eaten`]||'';
   document.getElementById('meal-memo').value=State.logs[`${date}|${mi}|memo`]||'';
   document.getElementById('meal-memo-label').innerHTML='메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
@@ -1526,6 +1547,11 @@ function saveMealEdit(){
     const memoV=document.getElementById('meal-memo').value.trim();
     if(memoV) State.logs[`${date}|${mi}|memo`]=memoV;
     else delete State.logs[`${date}|${mi}|memo`];
+    /* '계획과 다름' 수동 체크 — 자동값과 같으면 플래그 제거(자동 모드), 다르면 고정 */
+    State.changedManual=State.changedManual||{};
+    const cb=document.getElementById('meal-changed').checked;
+    if(cb===autoChangedForMeal(date,mi)) delete State.changedManual[`${date}|${mi}`];
+    else State.changedManual[`${date}|${mi}`]=cb;
   }
   save(); closeMealEdit(); renderTables();
 }
