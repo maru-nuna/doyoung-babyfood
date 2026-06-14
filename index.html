@@ -344,6 +344,7 @@
   .row-snack td:not(.rowlabel){background:#fcfaff;}
   .row-base .rowlabel{color:var(--base-ink);} .row-top .rowlabel{color:var(--top-ink);} .row-snack .rowlabel{color:var(--snack-ink);}
   .row-allergy .rowlabel{color:#c0392b;} .row-allergy td:not(.rowlabel){background:#fffafa;}
+  .base-ratio{display:block;margin-top:4px;font-weight:700;font-size:10px;color:var(--base-ink);background:var(--base-tag);border-radius:6px;padding:2px 0;letter-spacing:0;}
   .total{font-weight:700;color:var(--ink);}
   .row-day-total .rowlabel{color:var(--sage);}
   .row-day-total td:not(.rowlabel){background:var(--sage-soft);}
@@ -744,7 +745,7 @@ const NEWSEQ=['고구마',null,'닭고기','밀가루','양파','땅콩','계란
 const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
 /* 알러지 재료 중 병원 접근성을 위해 특정 날짜(월~목)로 시작일 고정 */
 const ALLERGEN_STARTS={'밀가루':'6/22'};
-const CAT={meat:['소고기','닭고기','돼지고기'],veg1:['브로콜리','시금치','청경채','비타민'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
+const CAT={meat:['소고기','닭고기','돼지고기'],veg1:['브로콜리','시금치','청경채'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
   const porridge=['8배죽','7배죽','6배죽','6배죽'];
@@ -752,6 +753,11 @@ function buildTab2(){
   const tab1safe=new Set();
   tab1.forEach(wk=>wk.days.forEach(dy=>[...dy.base,...dy.top].forEach(it=>tab1safe.add(it[0]))));
   const TOPSET=CAT.meat.concat(CAT.veg1,CAT.veg2,CAT.veg3,['두부']);
+  const W2=new Set(['6/19','6/20','6/21','6/22','6/23','6/24','6/25']);
+  /* 채소1(veg1)을 청경채로 통일하고 비타민 제거 */
+  const toCheong=arr=>{ const out=[]; arr.forEach(it=>{ if(it[0]==='비타민')return; const nm=CAT.veg1.includes(it[0])?'청경채':it[0]; if(!out.some(o=>o[0]===nm))out.push([nm,it[1]]); }); return out; };
+  /* 두부·단호박 순서 스왑 (두부 먼저) */
+  const swapTofuPumpkin=arr=>{ const a=arr.map(it=>it.slice()); const pi=a.findIndex(x=>x[0]==='단호박'),ti=a.findIndex(x=>x[0]==='두부'); if(pi>=0&&ti>=0){const t=a[pi];a[pi]=a[ti];a[ti]=t;} return a; };
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     for(let i=0;i<7;i++){
@@ -785,16 +791,15 @@ function buildTab2(){
       const rice = 30;
       const g2 = di < 4 ? 15 : 30;
       const base=[["쌀",rice],[grain2,g2]];
-      /* 특정 날짜 토핑 오버라이드 — 신규 재료는 1끼(am)에서 테스트 */
-      const amOverride={
-        '6/17':t=>t.map(it=>it[0]==='비타민'?['청경채',15]:it.slice()),
-      }[ds];
       const pmOverride={
         '6/21':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
         '6/22':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
         '6/23':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
       }[ds];
-      const amTop = amOverride ? amOverride(top) : top;
+      /* 1끼(오전) 토핑 */
+      let amTop = top.map(it=>it.slice());
+      if(ds==='6/17' || W2.has(ds)) amTop = toCheong(amTop);  /* 채소1 청경채 통일 */
+      if(ds==='7/6') amTop = swapTofuPumpkin(amTop);          /* 두부·단호박 순서 통일 */
       /* 2끼(오후): 신규 재료는 1끼에서만 테스트 → 2끼에선 제외(고기는 기존 고기로 대체) */
       let pmRaw = top.map(it=>it.slice());
       if(newFood && !allergenBlocked && pmRaw.some(it=>it[0]===newFood)){
@@ -807,14 +812,19 @@ function buildTab2(){
           pmRaw = pmRaw.map(it=>it[0]===newFood?(altVeg?[altVeg,15]:null):it).filter(Boolean);
         }
       }
+      if(W2.has(ds)) pmRaw = toCheong(pmRaw);                 /* 채소1 청경채 통일 */
+      if(ds==='7/6') pmRaw = swapTofuPumpkin(pmRaw);
       const pmTop = pmOverride ? pmOverride(pmRaw) : pmRaw;
+      /* 베이스: 6/19~6/25 2끼는 현미 대신 오트밀 */
+      const amBase = base;
+      const pmBase = W2.has(ds) ? base.map(b=>b[0]==='현미'?['오트밀',b[1]]:b.slice()) : base.map(b=>b.slice());
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-        {base:base.map(b=>b.slice()), top:amTop, total:sumg(base,amTop)},
-        {base:base.map(b=>b.slice()), top:pmTop, total:sumg(base,pmTop)},
+        {base:amBase.map(b=>b.slice()), top:amTop, total:sumg(amBase,amTop)},
+        {base:pmBase.map(b=>b.slice()), top:pmTop, total:sumg(pmBase,pmTop)},
       ]});
       d.setDate(d.getDate()+1); dday++; n++; di++;
     }
-    weeks.push({range:s+" ~ "+e+" · "+porridge[w], days});
+    weeks.push({range:s+" ~ "+e, ratioNum:parseInt(porridge[w],10), days});
   }
   return weeks;
 }
@@ -943,9 +953,12 @@ function recomputeRatioChanges(){
   const allDays=[];
   tab1.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
   tab2.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
+  /* State.ratios 에 등장하는 모든 베이스 재료명 (쌀·오트밀·현미 등) */
+  const names=new Set();
+  Object.keys(State.ratios||{}).forEach(k=>{ const p=k.split('|'); if(p[1]) names.add(p[1]); });
   const last={};
   allDays.forEach(day=>{
-    RATIO_GRAINS.forEach(n=>{
+    names.forEach(n=>{
       const r=(State.ratios||{})[`${day.date}|${n}`];
       if(r==null||r==='') return;
       if(last[n]!=null && Number(r)!==Number(last[n])) ratioChangeSet.add(`${day.date}|${n}`);
@@ -994,11 +1007,29 @@ function maybeSeedRatios(){
   State.ratiosInitialized=true;
   save();
 }
+/* 6/19~6/25 1끼 편집기록의 브로콜리·시금치 → 청경채, 비타민 제거 (1회) */
+function migrateW2Veg(){
+  if(State.w2vegMigrated) return;
+  ['6/19','6/20','6/21','6/22','6/23','6/24','6/25'].forEach(d=>{
+    const k=d+'|0|top';
+    const ovv=State.overrides[k];
+    if(ovv==null) return;
+    const out=[];
+    parseItemsLocal(ovv).forEach(it=>{
+      if(it.name==='비타민') return;
+      const nm=['브로콜리','시금치'].includes(it.name)?'청경채':it.name;
+      if(!out.some(o=>o.name===nm)) out.push({name:nm,g:it.g,unit:it.unit});
+    });
+    State.overrides[k]=out.map(o=>`${o.name} ${o.g}${o.unit||'g'}`).join(' · ');
+  });
+  State.w2vegMigrated=true;
+  save();
+}
 function cellList(items, date, mi, field){
   if(!items||!items.length) return '<span class="empty">·</span>';
   return '<div class="cell-list">'+items.map(it=>{
     const cls=isFirstAppear(date,mi,field,it[0])?'item new-item':'item';
-    return `<span class="${cls}">${esc(it[0])} <span class="g">${it[1]}g</span>${cubeLabel(it[0],it[1],'g')}${ratioLabel(date,field,it[0])}</span>`;
+    return `<span class="${cls}" data-iname="${esc(it[0])}">${esc(it[0])} <span class="g">${it[1]}g</span>${cubeLabel(it[0],it[1],'g')}${ratioLabel(date,field,it[0])}</span>`;
   }).join('')+'</div>';
 }
 function cellListFromText(text, planItems, date, mi, field){
@@ -1013,7 +1044,7 @@ function cellListFromText(text, planItems, date, mi, field){
     /* 처음 등장하는 재료면 '수정(파란색)'보다 '새 재료(노란색)'를 우선 */
     const cls = isFirstAppear(date,mi,field,p.name) ? 'item new-item'
               : (isChanged ? 'item changed-item' : 'item');
-    return `<span class="${cls}">${esc(p.name)} <span class="g">${p.g}${p.unit||'g'}</span>${cubeLabel(p.name,p.g,p.unit)}${ratioLabel(date,field,p.name)}</span>`;
+    return `<span class="${cls}" data-iname="${esc(p.name)}">${esc(p.name)} <span class="g">${p.g}${p.unit||'g'}</span>${cubeLabel(p.name,p.g,p.unit)}${ratioLabel(date,field,p.name)}</span>`;
   }).join('')+'</div>';
 }
 function parseItemsLocal(text){
@@ -1097,7 +1128,7 @@ function makeAllergyCell(allPlanTop, date, mi, mealName){
   const attrs=`data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"`;
   if(!items.length) return `<td class="${cls}" ${attrs}><span class="empty">-</span></td>`;
   const inner='<div class="cell-list">'+items.map(it=>
-    `<span class="item allergy-item">${esc(it.name)} <span class="g">${it.g}${it.unit||'g'}</span></span>`
+    `<span class="item allergy-item" data-iname="${esc(it.name)}">${esc(it.name)} <span class="g">${it.g}${it.unit||'g'}</span></span>`
   ).join('')+'</div>';
   return `<td class="${cls}" ${attrs}>${inner}</td>`;
 }
@@ -1120,13 +1151,14 @@ function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
     const itemCls=isAllergyTest?'item allergy-item':(isFirst?'item new-item':(isChangedItem?'item changed-item':'item'));
     const showG=it.g!==defaultG;
     const gHtml=showG?` <span class="g">${it.g}${it.unit||'g'}</span>${cubeLabel(it.name,it.g,it.unit||'g')}`:'';
-    return `<span class="${itemCls}">${esc(it.name)}${gHtml}</span>`;
+    return `<span class="${itemCls}" data-iname="${esc(it.name)}">${esc(it.name)}${gHtml}</span>`;
   }).join('')+'</div>';
   return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
 }
-function mealRows(d,mi,mealName){
+function mealRows(d,mi,mealName,baseRatio){
   let h='';
-  h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
+  const ratioTag = baseRatio ? `<span class="base-ratio">${baseRatio}배죽</span>` : '';
+  h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스'+ratioTag+'</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   h+='<tr class="row-allergy"><td class="rowlabel" colspan="2">알러지</td>'+d.map(x=>makeAllergyCell(getMeals(x)[mi].top,x.date,mi,mealName)).join('')+'</tr>';
   const topCats=[
     {label:'고기', fn:n=>CAT.meat.includes(n), def:10},
@@ -1239,9 +1271,10 @@ function renderWeeks(weeks,withSnack,labels){
     html+='<thead><tr><th class="rowlabel" colspan="2">날짜</th>'+d.map(x=>`<th class="date${x.date===todayMD?' today':''}">${x.date}<span class="wd">(${weekdayOf(x.date)})</span></th>`).join('')+'</tr>';
     html+='<tr><th class="rowlabel" colspan="2"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
     html+='</thead><tbody>';
+    const baseRatio = wk.ratioNum || 10;
     labels.forEach((lab,i)=>{
       if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
-      html+=mealRows(d,i,lab);
+      html+=mealRows(d,i,lab,baseRatio);
     });
     if(labels.length>1) html+=dayTotalRow(d);
     if(labels.length>1) html+=dayEatenRow(d);
@@ -1273,8 +1306,10 @@ function renderNewFoods(){
 function attachCellClick(){
   if(VIEW_ONLY) return;
   document.querySelectorAll('#t1-weeks .mealcell, #t2-weeks .mealcell').forEach(td=>{
-    td.addEventListener('click', ()=>{
-      openMealEdit(td.dataset.date, parseInt(td.dataset.mi,10), td.dataset.mealName, td.classList.contains('eaten')?'eaten':td.classList.contains('memo')?'memo':td.classList.contains('top')?'top':'base');
+    td.addEventListener('click', (e)=>{
+      const itemEl = e.target.closest('.item');
+      const focusName = itemEl ? itemEl.dataset.iname : null;
+      openMealEdit(td.dataset.date, parseInt(td.dataset.mi,10), td.dataset.mealName, td.classList.contains('eaten')?'eaten':td.classList.contains('memo')?'memo':td.classList.contains('top')?'top':'base', focusName);
     });
   });
   document.querySelectorAll('#t2-weeks .snackcell').forEach(td=>{
@@ -1306,6 +1341,7 @@ function markTodayColumn(){
 }
 function renderTables(){
   maybeSeedRatios();
+  migrateW2Veg();
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
@@ -1365,7 +1401,7 @@ function renderItemList(containerId, items){
 function renderMealRatios(baseItems, date){
   const field=document.getElementById('meal-ratio-field');
   const list=document.getElementById('meal-ratio-list');
-  const uniq=[...new Set(baseItems.map(it=>it.name).filter(n=>RATIO_GRAINS.includes(n)))];
+  const uniq=[...new Set(baseItems.map(it=>it.name).filter(n=>n&&n.trim()))];
   if(!uniq.length){ field.style.display='none'; list.innerHTML=''; return; }
   field.style.display='';
   list.innerHTML=uniq.map(n=>{
@@ -1407,7 +1443,7 @@ document.querySelectorAll('.add-item-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>addItemToList(btn.dataset.target));
 });
 
-function openMealEdit(date,mi,mealName,focusField){
+function openMealEdit(date,mi,mealName,focusField,focusName){
   if(VIEW_ONLY) return;
   const day=findDay(date); if(!day) return;
   const meal=getMeals(day)[mi]; if(!meal) return;
@@ -1435,9 +1471,13 @@ function openMealEdit(date,mi,mealName,focusField){
   mOverlay.classList.add('open');
   setTimeout(()=>{
     if(focusField==='base' || focusField==='top'){
-      const rows=document.querySelectorAll('#meal-'+focusField+'-list .item-row');
-      const first=rows[0];
-      if(first) first.querySelector('.item-name').focus();
+      const rows=[...document.querySelectorAll('#meal-'+focusField+'-list .item-row')];
+      let target=rows[0];
+      if(focusName){
+        const match=rows.find(r=>r.querySelector('.item-name').value===focusName);
+        if(match) target=match;
+      }
+      if(target){ const inp=target.querySelector('.item-name'); inp.focus(); inp.select(); }
     } else {
       const map={eaten:'meal-eaten',memo:'meal-memo'};
       const el=document.getElementById(map[focusField]||'meal-eaten');
