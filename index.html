@@ -292,6 +292,7 @@
   .trend-bars{display:flex;align-items:flex-end;gap:12px;overflow-x:auto;padding-bottom:4px;min-height:148px;}
   .trend-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto;justify-content:flex-end;}
   .trend-total{font-size:11px;color:var(--ink);font-weight:700;}
+  .trend-star{font-size:14px;line-height:1;color:#f5b301;}
   .trend-bar{width:26px;border-radius:6px 6px 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;background:var(--sage-soft);}
   .trend-bar .seg{width:100%;}
   .trend-bar .seg1{background:var(--sage);}
@@ -1234,7 +1235,12 @@ function renderAmountTrend(){
       const e1=parseInt(State.logs[`${d.date}|0|eaten`],10);
       const e2=mealsCount>1?parseInt(State.logs[`${d.date}|1|eaten`],10):NaN;
       const m1=isNaN(e1)?0:e1, m2=isNaN(e2)?0:e2;
-      if(m1>0||m2>0) days.push({date:d.date,m1,m2,total:m1+m2});
+      if(m1>0||m2>0){
+        let plan=0;
+        if(m1>0) plan+=totalSum(computedTotal(d,0));
+        if(m2>0) plan+=totalSum(computedTotal(d,1));
+        days.push({date:d.date,m1,m2,total:m1+m2,full:plan>0 && (m1+m2)>=plan});
+      }
     }));
     const legend = mealsCount>1
       ? `<div class="trend-legend"><span class="lg lg1">1끼</span><span class="lg lg2">2끼</span></div>` : '';
@@ -1270,7 +1276,9 @@ function days_bars(days,mealsCount){
       ? `<div class="seg seg2" style="height:${100-r1}%" title="2끼 ${d.m2}g"></div>` : '';
     const seg1 = d.m1>0
       ? `<div class="seg seg1" style="height:${mealsCount>1?r1:100}%" title="1끼 ${d.m1}g"></div>` : '';
+    const star = d.full ? `<div class="trend-star" title="계획량을 다 먹었어요">★</div>` : '';
     return `<div class="trend-col">
+      ${star}
       <div class="trend-total">${d.total}</div>
       <div class="trend-bar" style="height:${h}px">${seg2}${seg1}</div>
       <div class="trend-date">${d.date}</div>
