@@ -361,9 +361,9 @@
   .allergy-item{background:#fdeaea;color:#c0392b;padding:2px 7px;border-radius:7px;border:1px solid #f3b8b3;font-weight:700;}
   .allergy-item .g{color:#c0392b;}
   .allergy-item .cube{color:inherit;opacity:.75;}
-  td.sublabel{width:44px;min-width:44px;font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;white-space:nowrap;padding:8px 4px;text-align:center;position:sticky;left:64px;z-index:1;box-shadow:1px 0 0 var(--line);}
+  td.sublabel{width:54px;min-width:54px;font-size:11px;color:var(--top-ink);font-weight:700;background:#faf6ee;white-space:nowrap;padding:8px 4px;text-align:center;position:sticky;left:54px;z-index:1;box-shadow:1px 0 0 var(--line);}
   td.sublabel .sub-g{display:block;font-weight:400;font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:0;}
-  @media(max-width:600px){td.sublabel{width:36px;min-width:36px;font-size:10px;padding:5px 2px;left:50px;} th.rowlabel[colspan]{width:86px;}}
+  @media(max-width:600px){td.rowlabel{width:43px;} td.sublabel{width:43px;min-width:43px;font-size:10px;padding:5px 2px;left:43px;} th.rowlabel[colspan]{width:86px;}}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
@@ -786,7 +786,8 @@ function buildTab2(){
       vadd(rot(av('veg1'),0)); vadd(veg3av[0]||null); vadd(rot(av('veg2'),0));
       [ safe.has('두부')?'두부':null, veg3av[1]||null, rot(av('veg2'),1), rot(av('veg1'),1) ].forEach(vadd);
       [...safe].forEach(f=>{ if(TOPSET.includes(f)) vadd(f); });
-      const vegs = vl.slice(0,5);
+      /* 6/16(di>=4)부터 애호박 제외 — 앞으로 안 먹임 */
+      const vegs = (di>=4 ? vl.filter(v=>v!=='애호박') : vl).slice(0,5);
       const top = (theMeat?[[theMeat,10]]:[]).concat(vegs.map(v=>[v,15]));
       const topSum = (theMeat?10:0) + vegs.length*15;
       const grain2 = di < 3 ? '오트밀' : '현미';
@@ -809,7 +810,7 @@ function buildTab2(){
           pmRaw = pmRaw.map(it=>it[0]===newFood?(altMeat?[altMeat,10]:null):it).filter(Boolean);
         }else{
           const used=new Set(pmRaw.map(it=>it[0]));
-          const altVeg = TOPSET.filter(f=>safe.has(f)&&!CAT.meat.includes(f)&&!used.has(f)&&f!==newFood)[0];
+          const altVeg = TOPSET.filter(f=>safe.has(f)&&!CAT.meat.includes(f)&&!used.has(f)&&f!==newFood&&!(di>=4&&f==='애호박'))[0];
           pmRaw = pmRaw.map(it=>it[0]===newFood?(altVeg?[altVeg,15]:null):it).filter(Boolean);
         }
       }
@@ -1024,6 +1025,20 @@ function migrateW2Veg(){
     State.overrides[k]=out.map(o=>`${o.name} ${o.g}${o.unit||'g'}`).join(' · ');
   });
   State.w2vegMigrated=true;
+  save();
+}
+/* 6/16 이후 편집기록(override)에서 애호박 제거 (1회) — 앞으로 안 먹임 */
+function migrateRemoveAehobak(){
+  if(State.aehobakRemoved) return;
+  const cut=dateOfMD('6/16');
+  Object.keys(State.overrides).forEach(k=>{
+    if(!k.endsWith('|top')) return;
+    const d=dateOfMD(k.split('|')[0]);
+    if(!d || d<cut) return;
+    const items=parseItemsLocal(State.overrides[k]).filter(it=>it.name!=='애호박');
+    State.overrides[k]=items.map(it=>`${it.name} ${it.g}${it.unit||'g'}`).join(' · ');
+  });
+  State.aehobakRemoved=true;
   save();
 }
 /* 6/19~6/25 = 7배죽, 6/26~7/2 = 6배죽 — 쌀·오트밀·현미 배죽 태그 1회 시드 */
@@ -1366,11 +1381,20 @@ function markTodayColumn(){
       colCells[0].classList.add('tcol-top');
       colCells[colCells.length-1].classList.add('tcol-bot');
     }
+    /* 오늘 컬럼이 고정 좌측(라벨) 바로 옆으로 오도록 가로 스크롤 */
+    const weekEl=table.closest('.week');
+    const sticky=table.querySelector('thead .rowlabel');
+    const todayTh=headCells[col];
+    if(weekEl && sticky && todayTh){
+      const delta=todayTh.getBoundingClientRect().left - weekEl.getBoundingClientRect().left - sticky.offsetWidth;
+      weekEl.scrollLeft += delta;
+    }
   });
 }
 function renderTables(){
   maybeSeedRatios();
   migrateW2Veg();
+  migrateRemoveAehobak();
   seedW2W3Ratios();
   recomputeRatioChanges();
   recomputeFirstAppearances();
