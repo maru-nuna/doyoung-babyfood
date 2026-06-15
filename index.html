@@ -343,7 +343,6 @@
   .row-snack td:not(.rowlabel){background:#fcfaff;}
   .row-base .rowlabel{color:var(--base-ink);} .row-top .rowlabel{color:var(--top-ink);} .row-snack .rowlabel{color:var(--snack-ink);}
   .row-allergy .rowlabel{color:#c0392b;} .row-allergy td:not(.rowlabel){background:#fffafa;}
-  .base-ratio{display:block;margin-top:4px;font-weight:700;font-size:10px;color:var(--sage);background:var(--sage-soft);border-radius:6px;padding:2px 0;letter-spacing:0;}
   .total{font-weight:700;color:var(--ink);}
   .row-day-total .rowlabel{color:var(--sage);}
   .row-day-total td:not(.rowlabel){background:var(--sage-soft);}
@@ -1027,6 +1026,15 @@ function migrateW2Veg(){
   State.w2vegMigrated=true;
   save();
 }
+/* 6/19~6/25 = 7배죽, 6/26~7/2 = 6배죽 — 쌀·오트밀·현미 배죽 태그 1회 시드 */
+function seedW2W3Ratios(){
+  if(State.ratiosW23Seeded) return;
+  const set=(dates,val)=>dates.forEach(d=>['쌀','오트밀','현미'].forEach(n=>{ State.ratios[`${d}|${n}`]=val; }));
+  set(['6/19','6/20','6/21','6/22','6/23','6/24','6/25'],7);
+  set(['6/26','6/27','6/28','6/29','6/30','7/1','7/2'],6);
+  State.ratiosW23Seeded=true;
+  save();
+}
 function cellList(items, date, mi, field){
   if(!items||!items.length) return '<span class="empty">·</span>';
   return '<div class="cell-list">'+items.map(it=>{
@@ -1171,10 +1179,9 @@ function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
   }).join('')+'</div>';
   return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}">${inner}</td>`;
 }
-function mealRows(d,mi,mealName,baseRatio){
+function mealRows(d,mi,mealName){
   let h='';
-  const ratioTag = baseRatio ? `<span class="base-ratio">${baseRatio}배죽</span>` : '';
-  h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스'+ratioTag+'</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
+  h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   h+='<tr class="row-allergy"><td class="rowlabel" colspan="2">알러지</td>'+d.map(x=>makeAllergyCell(getMeals(x)[mi].top,x.date,mi,mealName)).join('')+'</tr>';
   const topCats=[
     {label:'고기', fn:n=>CAT.meat.includes(n), def:10},
@@ -1294,10 +1301,9 @@ function renderWeeks(weeks,withSnack,labels){
     html+='<thead><tr><th class="rowlabel" colspan="2">날짜</th>'+d.map(x=>`<th class="date${x.date===todayMD?' today':''}">${x.date}<span class="wd">(${weekdayOf(x.date)})</span></th>`).join('')+'</tr>';
     html+='<tr><th class="rowlabel" colspan="2"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
     html+='</thead><tbody>';
-    const baseRatio = wk.ratioNum || 10;
     labels.forEach((lab,i)=>{
       if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
-      html+=mealRows(d,i,lab,baseRatio);
+      html+=mealRows(d,i,lab);
     });
     if(labels.length>1) html+=dayTotalRow(d);
     if(labels.length>1) html+=dayEatenRow(d);
@@ -1365,6 +1371,7 @@ function markTodayColumn(){
 function renderTables(){
   maybeSeedRatios();
   migrateW2Veg();
+  seedW2W3Ratios();
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
