@@ -749,6 +749,9 @@ const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
 /* 알러지 재료 중 병원 접근성을 위해 특정 날짜(월~목)로 시작일 고정 */
 const ALLERGEN_STARTS={'밀가루':'6/22'};
 const CAT={meat:['소고기','닭고기','돼지고기'],veg1:['브로콜리','시금치','청경채'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
+/* 토핑 셀 내 재료 표시 순서 — 같은 칸 재료가 날짜마다 뒤바뀌지 않게 고정 (두부는 채소2 맨 앞) */
+const TOPORDER=CAT.meat.concat(CAT.veg1,['두부'],CAT.veg2,CAT.veg3);
+const topOrderIdx=n=>{ const i=TOPORDER.indexOf(n); return i<0?99:i; };
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 function buildTab2(){
   const porridge=['8배죽','7배죽','6배죽','6배죽'];
@@ -759,8 +762,6 @@ function buildTab2(){
   const W2=new Set(['6/19','6/20','6/21','6/22','6/23','6/24','6/25']);
   /* 채소1(veg1)을 청경채로 통일하고 비타민 제거 */
   const toCheong=arr=>{ const out=[]; arr.forEach(it=>{ if(it[0]==='비타민')return; const nm=CAT.veg1.includes(it[0])?'청경채':it[0]; if(!out.some(o=>o[0]===nm))out.push([nm,it[1]]); }); return out; };
-  /* 두부·단호박 순서 스왑 (두부 먼저) */
-  const swapTofuPumpkin=arr=>{ const a=arr.map(it=>it.slice()); const pi=a.findIndex(x=>x[0]==='단호박'),ti=a.findIndex(x=>x[0]==='두부'); if(pi>=0&&ti>=0){const t=a[pi];a[pi]=a[ti];a[ti]=t;} return a; };
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     for(let i=0;i<7;i++){
@@ -802,7 +803,6 @@ function buildTab2(){
       /* 1끼(오전) 토핑 */
       let amTop = top.map(it=>it.slice());
       if(ds==='6/17' || W2.has(ds)) amTop = toCheong(amTop);  /* 채소1 청경채 통일 */
-      if(ds==='7/6') amTop = swapTofuPumpkin(amTop);          /* 두부·단호박 순서 통일 */
       /* 2끼(오후): 신규 재료는 1끼에서만 테스트 → 2끼에선 제외(고기는 기존 고기로 대체) */
       let pmRaw = top.map(it=>it.slice());
       if(newFood && !allergenBlocked && pmRaw.some(it=>it[0]===newFood)){
@@ -816,7 +816,6 @@ function buildTab2(){
         }
       }
       if(W2.has(ds)) pmRaw = toCheong(pmRaw);                 /* 채소1 청경채 통일 */
-      if(ds==='7/6') pmRaw = swapTofuPumpkin(pmRaw);
       const pmTop = pmOverride ? pmOverride(pmRaw) : pmRaw;
       /* 베이스: 6/19~6/25 2끼는 현미 대신 오트밀 */
       const amBase = base;
@@ -1156,7 +1155,7 @@ function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
   const eatenOn=!!State.logs[`${date}|${mi}|eaten`];
   const showChanged=mealChanged(date,mi);
   const effTop = ov!=null ? parseItemsLocal(ov) : allPlanTop.map(it=>({name:it[0],g:it[1],unit:'g'}));
-  const catItems = effTop.filter(it=>filterFn(it.name));
+  const catItems = effTop.filter(it=>filterFn(it.name)).sort((a,b)=>topOrderIdx(a.name)-topOrderIdx(b.name));
   const cls=['mealcell','top',showChanged?'cell-changed':'',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   if(!catItems.length)
     return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><span class="empty">·</span></td>`;
