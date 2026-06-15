@@ -293,6 +293,8 @@
   .trend-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto;justify-content:flex-end;}
   .trend-total{font-size:11px;color:var(--ink);font-weight:700;}
   .trend-star{font-size:14px;line-height:1;color:#f5b301;}
+  .trend-star2{display:inline-flex;}
+  .trend-star2 span:last-child{margin-left:-7px;}
   .trend-bar{width:26px;border-radius:6px 6px 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;background:var(--sage-soft);}
   .trend-bar .seg{width:100%;}
   .trend-bar .seg1{background:var(--sage);}
@@ -1041,6 +1043,13 @@ function migrateRemoveAehobak(){
   State.aehobakRemoved=true;
   save();
 }
+/* 6/17~6/18 = 8배죽 — 쌀·오트밀·현미 배죽 태그 1회 시드 */
+function seed617to18Ratios(){
+  if(State.ratios617Seeded) return;
+  ['6/17','6/18'].forEach(d=>['쌀','오트밀','현미'].forEach(n=>{ State.ratios[`${d}|${n}`]=8; }));
+  State.ratios617Seeded=true;
+  save();
+}
 /* 6/19~6/25 = 7배죽, 6/26~7/2 = 6배죽 — 쌀·오트밀·현미 배죽 태그 1회 시드 */
 function seedW2W3Ratios(){
   if(State.ratiosW23Seeded) return;
@@ -1258,10 +1267,11 @@ function renderAmountTrend(){
       const e2=mealsCount>1?parseInt(State.logs[`${d.date}|1|eaten`],10):NaN;
       const m1=isNaN(e1)?0:e1, m2=isNaN(e2)?0:e2;
       if(m1>0||m2>0){
-        let plan=0;
-        if(m1>0) plan+=totalSum(computedTotal(d,0));
-        if(m2>0) plan+=totalSum(computedTotal(d,1));
-        days.push({date:d.date,m1,m2,total:m1+m2,full:plan>0 && (m1+m2)>=plan});
+        const plan0=totalSum(computedTotal(d,0));
+        const plan1=mealsCount>1?totalSum(computedTotal(d,1)):0;
+        const full0=m1>0&&plan0>0&&m1>=plan0;
+        const full1=m2>0&&plan1>0&&m2>=plan1;
+        days.push({date:d.date,m1,m2,total:m1+m2,stars:(full0?1:0)+(full1?1:0)});
       }
     }));
     const legend = mealsCount>1
@@ -1298,7 +1308,10 @@ function days_bars(days,mealsCount){
       ? `<div class="seg seg2" style="height:${100-r1}%" title="2끼 ${d.m2}g"></div>` : '';
     const seg1 = d.m1>0
       ? `<div class="seg seg1" style="height:${mealsCount>1?r1:100}%" title="1끼 ${d.m1}g"></div>` : '';
-    const star = d.full ? `<div class="trend-star" title="계획량을 다 먹었어요">★</div>` : '';
+    const star = d.stars>=2
+      ? `<div class="trend-star trend-star2" title="두 끼 모두 계획량을 다 먹었어요"><span>★</span><span>★</span></div>`
+      : d.stars===1
+      ? `<div class="trend-star" title="계획량을 다 먹었어요">★</div>` : '';
     return `<div class="trend-col">
       ${star}
       <div class="trend-total">${d.total}</div>
@@ -1395,6 +1408,7 @@ function renderTables(){
   maybeSeedRatios();
   migrateW2Veg();
   migrateRemoveAehobak();
+  seed617to18Ratios();
   seedW2W3Ratios();
   recomputeRatioChanges();
   recomputeFirstAppearances();
