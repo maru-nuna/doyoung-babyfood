@@ -1481,19 +1481,31 @@ function renderItemList(containerId, items){
       arr.splice(idx,1);
       renderItemList(containerId,arr);
       updatePlanTotal();
+      if(containerId==='meal-base-list') refreshMealRatios();
     };
   });
+  if(containerId==='meal-base-list'){
+    c.querySelectorAll('.item-name').forEach(inp=>{ inp.addEventListener('input', refreshMealRatios); });
+  }
 }
 function renderMealRatios(baseItems, date){
   const field=document.getElementById('meal-ratio-field');
   const list=document.getElementById('meal-ratio-list');
+  /* 아직 저장 안 한 입력값 보존 (재료 추가/삭제로 다시 그릴 때) */
+  const typed={};
+  list.querySelectorAll('.ratio-input').forEach(inp=>{ typed[inp.dataset.name]=inp.value; });
   const uniq=[...new Set(baseItems.map(it=>it.name).filter(n=>n&&n.trim()))];
   if(!uniq.length){ field.style.display='none'; list.innerHTML=''; return; }
   field.style.display='';
   list.innerHTML=uniq.map(n=>{
-    const v=(State.ratios||{})[`${date}|${n}`];
+    const v = (n in typed) ? typed[n] : (State.ratios||{})[`${date}|${n}`];
     return `<div class="ratio-row-edit"><span class="ratio-name">${esc(n)}</span><input type="number" class="ratio-input" data-name="${esc(n)}" inputmode="numeric" min="0" step="1" placeholder="예: 10" value="${(v!=null&&v!=='')?v:''}"><span class="ratio-suffix">배죽</span></div>`;
   }).join('');
+}
+/* 베이스 재료가 바뀌면 배죽 입력란을 실시간으로 다시 그린다 */
+function refreshMealRatios(){
+  if(!currentMeal || currentMeal.snack) return;
+  renderMealRatios(readItemList('meal-base-list'), currentMeal.date);
 }
 function readItemList(containerId){
   return Array.from(document.getElementById(containerId).querySelectorAll('.item-row')).map(row=>({
@@ -1519,6 +1531,7 @@ function addItemToList(target){
   arr.push({name:'',g: target==='base'?'':15, unit:'g'});
   renderItemList(containerId,arr);
   updatePlanTotal();
+  if(target==='base') refreshMealRatios();
   setTimeout(()=>{
     const rows=document.querySelectorAll('#'+containerId+' .item-row');
     const last=rows[rows.length-1];
