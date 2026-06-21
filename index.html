@@ -666,6 +666,11 @@
           <div class="item-list" id="meal-top-list"></div>
           <button type="button" class="add-item-btn" data-target="top">+ 토핑 재료 추가</button>
         </div>
+        <div class="field" id="meal-allergy-field">
+          <span class="flabel" style="color:#c0392b;">알러지 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 알러지 테스트 재료 (밀가루·땅콩·계란 등)</span></span>
+          <div class="item-list" id="meal-allergy-list"></div>
+          <button type="button" class="add-item-btn" data-target="allergy">+ 알러지 재료 추가</button>
+        </div>
         <div class="plan-total" id="meal-plan-total"></div>
         <label class="changed-toggle"><input type="checkbox" id="meal-changed"><span>✎ 계획과 다름으로 표시</span></label>
         <span class="hint">단위는 g 또는 ml. 모두 비우면 원래 계획으로 돌아갑니다.</span>
@@ -744,7 +749,8 @@ const tab1 = [
    · 신규: 3일마다 한 종류씩 (고구마 6/12 → 닭고기 6/18 → 밀가루 6/21 …), 하루 한 종류만
    · 현미는 베이스에 고정(6/15~), 오트밀(~6/14) → 현미(6/15~) / 쌀 30g 고정
    · 토핑은 5일마다 순서대로 */
-const NEWSEQ=['고구마',null,'닭고기','밀가루','양파','땅콩','계란 노른자','두부','시금치','청경채','돼지고기','무'];
+/* 밀가루는 자동 편성에서 제외 — 필요 시 알러지 칸에서 직접 추가 */
+const NEWSEQ=['고구마',null,'닭고기',null,'양파','땅콩','계란 노른자','두부','시금치','청경채','돼지고기','무'];
 const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
 /* 알러지 재료 중 병원 접근성을 위해 특정 날짜(월~목)로 시작일 고정 */
 const ALLERGEN_STARTS={'밀가루':'6/22'};
@@ -1182,7 +1188,7 @@ function makeAllergyCell(allPlanTop, date, mi, mealName){
   const eatenOn=!!State.logs[`${date}|${mi}|eaten`];
   const effTop = ov!=null ? parseItemsLocal(ov) : allPlanTop.map(it=>({name:it[0],g:it[1],unit:'g'}));
   const items = effTop.filter(it=>ALLERGENS.has(it.name));
-  const cls=['mealcell','top',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
+  const cls=['mealcell','top','allergy',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   const attrs=`data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"`;
   if(!items.length) return `<td class="${cls}" ${attrs}><span class="empty">-</span></td>`;
   const inner='<div class="cell-list">'+items.map(it=>
@@ -1377,7 +1383,7 @@ function attachCellClick(){
     td.addEventListener('click', (e)=>{
       const itemEl = e.target.closest('.item');
       const focusName = itemEl ? itemEl.dataset.iname : null;
-      openMealEdit(td.dataset.date, parseInt(td.dataset.mi,10), td.dataset.mealName, td.classList.contains('eaten')?'eaten':td.classList.contains('memo')?'memo':td.classList.contains('top')?'top':'base', focusName);
+      openMealEdit(td.dataset.date, parseInt(td.dataset.mi,10), td.dataset.mealName, td.classList.contains('eaten')?'eaten':td.classList.contains('memo')?'memo':td.classList.contains('allergy')?'allergy':td.classList.contains('top')?'top':'base', focusName);
     });
   });
   document.querySelectorAll('#t2-weeks .snackcell').forEach(td=>{
@@ -1501,7 +1507,7 @@ function updatePlanTotal(){
   const el=document.getElementById('meal-plan-total');
   if(!el) return;
   if(!currentMeal || currentMeal.snack){ el.innerHTML=''; return; }
-  const items=readItemList('meal-base-list').concat(readItemList('meal-top-list'));
+  const items=readItemList('meal-base-list').concat(readItemList('meal-top-list'),readItemList('meal-allergy-list'));
   const sums={g:0, ml:0};
   items.forEach(it=>{ const u=it.unit||'g'; sums[u]=(sums[u]||0)+(it.g||0); });
   const parts=[]; if(sums.g>0)parts.push(sums.g+'g'); if(sums.ml>0)parts.push(sums.ml+'ml');
@@ -1510,7 +1516,7 @@ function updatePlanTotal(){
 function addItemToList(target){
   const containerId='meal-'+target+'-list';
   const arr=readItemList(containerId);
-  arr.push({name:'',g: target==='top'?15:'', unit:'g'});
+  arr.push({name:'',g: target==='base'?'':15, unit:'g'});
   renderItemList(containerId,arr);
   updatePlanTotal();
   setTimeout(()=>{
@@ -1528,7 +1534,13 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   const day=findDay(date); if(!day) return;
   const meal=getMeals(day)[mi]; if(!meal) return;
   const planBaseText=plainText(meal.base), planTopText=plainText(meal.top);
-  currentMeal={date,mi,mealName,snack:false,planBaseText,planTopText};
+  /* 토핑+알러지를 분리 편집 후 재조합하면 순서가 (일반→알러지)로 바뀌므로,
+     '변경 없음' 판정 기준도 같은 순서의 계획 텍스트로 맞춘다 */
+  const planTopItems=meal.top.map(it=>({name:it[0],g:it[1],unit:'g'}));
+  const planTopRegroup=itemsToText(
+    planTopItems.filter(it=>!ALLERGENS.has(it.name)).concat(planTopItems.filter(it=>ALLERGENS.has(it.name)))
+  );
+  currentMeal={date,mi,mealName,snack:false,planBaseText,planTopText,planTopRegroup};
   document.getElementById('meal-title').textContent=`${date} · ${mealName||'끼니'}`;
   const planLine=`계획 : ${planBaseText||'-'}${planTopText?' / 토핑 '+planTopText:''}`;
   document.getElementById('meal-sub').textContent=planLine;
@@ -1536,8 +1548,11 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   const ovTop=State.overrides[`${date}|${mi}|top`];
   const baseItems = ovBase!=null ? parseItems(ovBase) : meal.base.map(it=>({name:it[0],g:it[1],unit:'g'}));
   const topItems  = ovTop !=null ? parseItems(ovTop ) : meal.top .map(it=>({name:it[0],g:it[1],unit:'g'}));
+  const allergyItems = topItems.filter(it=>ALLERGENS.has(it.name));
+  const regularTop   = topItems.filter(it=>!ALLERGENS.has(it.name));
   renderItemList('meal-base-list', baseItems);
-  renderItemList('meal-top-list',  topItems);
+  renderItemList('meal-top-list',  regularTop);
+  renderItemList('meal-allergy-list', allergyItems);
   renderMealRatios(baseItems, date);
   updatePlanTotal();
   const _auto=autoChangedForMeal(date,mi), _cur=(State.changedManual||{})[`${date}|${mi}`];
@@ -1548,12 +1563,12 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   document.getElementById('meal-memo-label').innerHTML='메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
   document.getElementById('meal-memo').rows=3;
   document.getElementById('meal-memo').placeholder='입력하기 (반응, 선호도 등)';
-  ['meal-base-field','meal-top-field','meal-eaten-field','meal-memo-field'].forEach(id=>setFieldVisible(id,true));
+  ['meal-base-field','meal-top-field','meal-allergy-field','meal-eaten-field','meal-memo-field'].forEach(id=>setFieldVisible(id,true));
   setFieldVisible('plan-group',true);
   setFieldVisible('actual-group',true);
   mOverlay.classList.add('open');
   setTimeout(()=>{
-    if(focusField==='base' || focusField==='top'){
+    if(focusField==='base' || focusField==='top' || focusField==='allergy'){
       const rows=[...document.querySelectorAll('#meal-'+focusField+'-list .item-row')];
       let target=rows[0];
       if(focusName){
@@ -1574,7 +1589,7 @@ function openSnackEdit(date){
   document.getElementById('meal-title').textContent=`${date} · 간식`;
   document.getElementById('meal-sub').textContent='간식 내용을 자유롭게 적어주세요';
   setFieldVisible('plan-group',false);
-  ['meal-base-field','meal-top-field','meal-eaten-field'].forEach(id=>setFieldVisible(id,false));
+  ['meal-base-field','meal-top-field','meal-allergy-field','meal-eaten-field'].forEach(id=>setFieldVisible(id,false));
   setFieldVisible('actual-group',true);
   setFieldVisible('meal-memo-field',true);
   document.getElementById('meal-memo-label').innerHTML='간식 내용 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
@@ -1595,8 +1610,8 @@ function saveMealEdit(){
     const baseV=itemsToText(readItemList('meal-base-list'));
     if(!baseV || baseV===currentMeal.planBaseText) delete State.overrides[`${date}|${mi}|base`];
     else State.overrides[`${date}|${mi}|base`]=baseV;
-    const topV=itemsToText(readItemList('meal-top-list'));
-    if(!topV || topV===currentMeal.planTopText) delete State.overrides[`${date}|${mi}|top`];
+    const topV=itemsToText(readItemList('meal-top-list').concat(readItemList('meal-allergy-list')));
+    if(!topV || topV===currentMeal.planTopText || topV===currentMeal.planTopRegroup) delete State.overrides[`${date}|${mi}|top`];
     else State.overrides[`${date}|${mi}|top`]=topV;
     State.ratios=State.ratios||{};
     document.querySelectorAll('#meal-ratio-list .ratio-input').forEach(inp=>{
