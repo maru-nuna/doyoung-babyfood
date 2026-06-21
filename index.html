@@ -161,7 +161,7 @@
     .trend-bar{width:22px;}
 
     .week{padding:0 0 4px;margin-bottom:30px;border-radius:12px;}
-    .week-head{font-size:13px;padding:10px 12px;border-radius:12px 12px 0 0;margin-bottom:4px;}
+    .week-head{font-size:13px;padding:10px 12px;border-radius:12px 12px 0 0;margin-bottom:4px;min-width:520px;}
     table{min-width:520px;}
     th,td{padding:6px 4px;font-size:11.5px;}
     td.rowlabel{font-size:11px;width:50px;}
@@ -306,7 +306,7 @@
   .nf-empty{color:var(--muted);font-size:13px;}
 
   .week{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:0 0 6px;margin-bottom:44px;overflow-x:auto;box-shadow:0 6px 22px rgba(120,110,90,.08);}
-  .week-head{font-size:15px;font-weight:700;color:var(--sage);background:var(--sage-soft);border-radius:18px 18px 0 0;border-bottom:1px solid #dde7d7;padding:13px 18px;margin-bottom:6px;}
+  .week-head{font-size:15px;font-weight:700;color:var(--sage);background:var(--sage-soft);border-radius:18px 18px 0 0;border-bottom:1px solid #dde7d7;padding:13px 18px;margin-bottom:6px;min-width:760px;box-sizing:border-box;}
   table{border-collapse:collapse;width:100%;min-width:760px;table-layout:fixed;}
   th,td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13px;vertical-align:middle;}
   th.rowlabel{width:64px;background:#faf6ee;color:var(--muted);font-weight:700;position:sticky;left:0;z-index:2;}
@@ -794,7 +794,7 @@ function buildTab2(){
       const topSum = (theMeat?10:0) + vegs.length*15;
       const grain2 = di < 3 ? '오트밀' : '현미';
       const rice = 30;
-      const g2 = di < 4 ? 15 : 30;
+      const g2 = (di < 4 || di >= 10) ? 15 : 30;  /* 6/22(di10)부터 15g */
       const base=[["쌀",rice],[grain2,g2]];
       const pmOverride={
         '6/21':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
@@ -1054,9 +1054,20 @@ function seed617to18Ratios(){
 function seedW2W3Ratios(){
   if(State.ratiosW23Seeded) return;
   const set=(dates,val)=>dates.forEach(d=>['쌀','오트밀','현미'].forEach(n=>{ State.ratios[`${d}|${n}`]=val; }));
-  set(['6/19','6/20','6/21','6/22','6/23','6/24','6/25'],7);
-  set(['6/26','6/27','6/28','6/29','6/30','7/1','7/2'],6);
+  set(['6/19'],7);
+  /* 6/20 이후는 일단 모두 8배죽 (세정 추후 조정 예정) */
+  set(DATES620ON,8);
   State.ratiosW23Seeded=true;
+  save();
+}
+/* 6/20 ~ 7/9 (현재 식단표 마지막 날) */
+const DATES620ON=['6/20','6/21','6/22','6/23','6/24','6/25','6/26','6/27','6/28','6/29','6/30',
+  '7/1','7/2','7/3','7/4','7/5','7/6','7/7','7/8','7/9'];
+/* 기존 저장분: 6/20 이후 배죽을 8로 일괄 조정 (1회) */
+function migrate620All8(){
+  if(State.ratios620All8v2) return;
+  DATES620ON.forEach(d=>['쌀','오트밀','현미'].forEach(n=>{ State.ratios[`${d}|${n}`]=8; }));
+  State.ratios620All8v2=true;
   save();
 }
 function cellList(items, date, mi, field){
@@ -1410,6 +1421,7 @@ function renderTables(){
   migrateRemoveAehobak();
   seed617to18Ratios();
   seedW2W3Ratios();
+  migrate620All8();
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
