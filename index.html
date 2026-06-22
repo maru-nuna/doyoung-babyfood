@@ -157,6 +157,12 @@
     .new-foods{font-size:12.5px;padding:10px 12px;margin-bottom:12px;border-radius:12px;}
     .nf-chip{font-size:11.5px;padding:2px 8px;}
     .amount-trend{padding:11px 14px 8px;margin-bottom:16px;}
+    .today-card{padding:12px 13px;margin-bottom:16px;}
+    .today-meals{gap:8px;}
+    .today-meal{padding:11px 11px;}
+    .tm-row{font-size:12.5px;gap:8px;margin-bottom:8px;}
+    .tm-cat{font-size:9.5px;width:38px;padding:2px 0;}
+    .tm-item b{font-size:11px;}
     .trend-bars{gap:9px;min-height:138px;}
     .trend-bar{width:22px;}
 
@@ -278,6 +284,28 @@
 
   .new-foods{background:var(--sage-soft);border:1px dashed #cdd9c6;border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:14px;}
   .amount-trend{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px 10px;margin-bottom:22px;box-shadow:0 2px 10px rgba(120,110,90,.04);}
+  /* 오늘의 식단 카드 */
+  .today-card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:22px;box-shadow:0 2px 10px rgba(120,110,90,.04);}
+  .today-head{font-size:15px;font-weight:700;color:var(--sage);margin-bottom:12px;display:flex;align-items:baseline;gap:8px;}
+  .today-date{font-size:12.5px;font-weight:400;color:var(--muted);}
+  .today-meals{display:flex;gap:12px;align-items:stretch;}
+  .today-meal{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:#fbfdfa;cursor:pointer;transition:.15s;}
+  .today-meal:hover{border-color:var(--sage);box-shadow:0 2px 8px rgba(122,148,113,.12);}
+  .today-meal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;gap:6px;padding-bottom:9px;border-bottom:1px solid var(--line);}
+  .tm-label{font-size:14px;font-weight:700;color:var(--peach);}
+  .tm-amt{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+  .tm-plan{font-size:11.5px;font-weight:700;color:var(--muted);background:#f3eee4;border-radius:7px;padding:2px 8px;white-space:nowrap;}
+  .tm-eaten{font-size:11.5px;font-weight:700;color:var(--sage);background:var(--sage-soft);border-radius:7px;padding:2px 8px;white-space:nowrap;}
+  .tm-row{display:flex;gap:10px;font-size:13px;margin-bottom:9px;line-height:1.5;}
+  .tm-row:last-child{margin-bottom:0;}
+  .tm-cat{flex-shrink:0;align-self:flex-start;width:42px;box-sizing:border-box;text-align:center;color:var(--muted);font-weight:700;font-size:10.5px;background:#f3eee4;border-radius:6px;padding:2px 0;margin-top:2px;letter-spacing:.02em;}
+  .tm-cat.tm-allergy{color:#c0392b;background:#fdeaea;}
+  .tm-items{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 13px;}
+  .tm-item{white-space:nowrap;color:var(--ink);font-weight:400;}
+  .tm-item b{font-weight:400;color:var(--muted);font-size:11.5px;margin-left:1px;}
+  .tm-item.al{color:#c0392b;}
+  .tm-ratio{font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;}
+  .tm-empty{color:var(--muted);}
   .trend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
   .trend-comment{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--muted);}
   .trend-comment.up{color:var(--sage);}
@@ -498,11 +526,13 @@
     <section id="t1" class="panel active">
       <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t1-new"></span></div>
       <div class="amount-trend" id="t1-trend"></div>
+      <div class="today-card" id="t1-today"></div>
       <div id="t1-weeks"></div>
     </section>
     <section id="t2" class="panel">
       <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t2-new"></span></div>
       <div class="amount-trend" id="t2-trend"></div>
+      <div class="today-card" id="t2-today"></div>
       <div id="t2-weeks"></div>
     </section>
 
@@ -958,22 +988,35 @@ function isFirstAppear(date,mi,field,name){
 const RATIO_GRAINS=['쌀','오트밀'];
 /* 배죽 값이 직전 값과 달라지는 날(변화) — 노란색 강조 대상 */
 let ratioChangeSet=new Set();
+/* 배죽 값 읽기 — 끼니별(date|mi|name) 우선, 없으면 구버전 날짜단위(date|name)로 폴백 */
+function ratioOf(date, mi, name){
+  const R=State.ratios||{};
+  const k2=`${date}|${mi}|${name}`;
+  if(k2 in R) return R[k2];
+  const k1=`${date}|${name}`;
+  return (k1 in R) ? R[k1] : undefined;
+}
 function recomputeRatioChanges(){
   ratioChangeSet=new Set();
   const allDays=[];
   tab1.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
   tab2.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
-  /* State.ratios 에 등장하는 모든 베이스 재료명 (쌀·오트밀·현미 등) */
+  /* State.ratios 에 등장하는 모든 베이스 재료명 (쌀·오트밀·현미 등) — 신/구 키 모두 */
   const names=new Set();
-  Object.keys(State.ratios||{}).forEach(k=>{ const p=k.split('|'); if(p[1]) names.add(p[1]); });
+  Object.keys(State.ratios||{}).forEach(k=>{ const p=k.split('|'); const nm=p.length>=3?p[2]:p[1]; if(nm) names.add(nm); });
+  /* 끼니 슬롯별로 직전 날짜와 비교 */
   const last={};
   allDays.forEach(day=>{
-    names.forEach(n=>{
-      const r=(State.ratios||{})[`${day.date}|${n}`];
-      if(r==null||r==='') return;
-      if(last[n]!=null && Number(r)!==Number(last[n])) ratioChangeSet.add(`${day.date}|${n}`);
-      last[n]=r;
-    });
+    const nMeals=getMeals(day).length;
+    for(let mi=0; mi<nMeals; mi++){
+      names.forEach(n=>{
+        const r=ratioOf(day.date, mi, n);
+        if(r==null||r==='') return;
+        const slot=`${mi}|${n}`;
+        if(last[slot]!=null && Number(r)!==Number(last[slot])) ratioChangeSet.add(`${day.date}|${mi}|${n}`);
+        last[slot]=r;
+      });
+    }
   });
 }
 /* 식단 날짜의 연도(이 식단표는 2026년) — 요일·미래여부 계산용 */
@@ -992,12 +1035,12 @@ function isFutureDate(md){
   const n=new Date(); const today=new Date(n.getFullYear(), n.getMonth(), n.getDate());
   return dt.getTime() > today.getTime();
 }
-function ratioLabel(date, field, name){
+function ratioLabel(date, mi, field, name){
   if(field!=='base' || date==null) return '';
-  const r=(State.ratios||{})[`${date}|${name}`];
+  const r=ratioOf(date, mi, name);
   if(r==null||r==='') return '';
   /* 변경(노란색)은 오늘·과거에만 — 미래 계획 수정은 표시만 */
-  const changed=ratioChangeSet.has(`${date}|${name}`) && !isFutureDate(date);
+  const changed=ratioChangeSet.has(`${date}|${mi}|${name}`) && !isFutureDate(date);
   return ` <span class="ratio${changed?' ratio-new':''}">${esc(r)}배죽</span>`;
 }
 function cubeSize(){ return 0; }
@@ -1076,11 +1119,21 @@ function migrate620All8(){
   State.ratios620All8v2=true;
   save();
 }
+/* 6/23 2끼부터 이후 쭉 — 현미·오트밀을 7배죽으로 (끼니별 키로 저장, 기존 날짜단위 8 위에 덮어쓰기) */
+function migrate623Grain7(){
+  if(State.ratios623grain7) return;
+  const R=State.ratios=State.ratios||{};
+  ['현미','오트밀'].forEach(n=>{ R[`6/23|1|${n}`]=7; });  /* 6/23은 2끼만 */
+  ['6/24','6/25','6/26','6/27','6/28','6/29','6/30','7/1','7/2','7/3','7/4','7/5','7/6','7/7','7/8','7/9']
+    .forEach(d=>[0,1].forEach(mi=>['현미','오트밀'].forEach(n=>{ R[`${d}|${mi}|${n}`]=7; })));
+  State.ratios623grain7=true;
+  save();
+}
 function cellList(items, date, mi, field){
   if(!items||!items.length) return '<span class="empty">·</span>';
   return '<div class="cell-list">'+items.map(it=>{
     const cls=isFirstAppear(date,mi,field,it[0])?'item new-item':'item';
-    return `<span class="${cls}" data-iname="${esc(it[0])}">${esc(it[0])} <span class="g">${it[1]}g</span>${cubeLabel(it[0],it[1],'g')}${ratioLabel(date,field,it[0])}</span>`;
+    return `<span class="${cls}" data-iname="${esc(it[0])}">${esc(it[0])} <span class="g">${it[1]}g</span>${cubeLabel(it[0],it[1],'g')}${ratioLabel(date,mi,field,it[0])}</span>`;
   }).join('')+'</div>';
 }
 function cellListFromText(text, planItems, date, mi, field, showChanged){
@@ -1095,7 +1148,7 @@ function cellListFromText(text, planItems, date, mi, field, showChanged){
     /* 처음 등장하는 재료면 '수정(파란색)'보다 '새 재료(노란색)'를 우선 */
     const cls = isFirstAppear(date,mi,field,p.name) ? 'item new-item'
               : (isChanged ? 'item changed-item' : 'item');
-    return `<span class="${cls}" data-iname="${esc(p.name)}">${esc(p.name)} <span class="g">${p.g}${p.unit||'g'}</span>${cubeLabel(p.name,p.g,p.unit)}${ratioLabel(date,field,p.name)}</span>`;
+    return `<span class="${cls}" data-iname="${esc(p.name)}">${esc(p.name)} <span class="g">${p.g}${p.unit||'g'}</span>${cubeLabel(p.name,p.g,p.unit)}${ratioLabel(date,mi,field,p.name)}</span>`;
   }).join('')+'</div>';
 }
 function parseItemsLocal(text){
@@ -1301,6 +1354,51 @@ function renderAmountTrend(){
     el.innerHTML=head+trendComment(days)+`<div class="trend-bars">${days_bars(days,mealsCount)}</div>`;
   });
 }
+/* 오늘의 식단 카드 — 추이 바로 밑, 1끼/2끼 가로 배치 */
+function renderTodayMenu(){
+  const _t=new Date(), todayMD=(_t.getMonth()+1)+'/'+_t.getDate();
+  const effItems=(mi,field,planArr)=>{
+    const ov=State.overrides[`${todayMD}|${mi}|${field}`];
+    return ov!=null ? parseItemsLocal(ov) : planArr.map(it=>({name:it[0],g:it[1],unit:'g'}));
+  };
+  const itemSpans=(items,allergy,mi)=>items.length
+    ? items.map(it=>{
+        const r=ratioOf(todayMD, mi, it.name);
+        const rt=(r!=null&&r!=='')?`<span class="tm-ratio">${r}배죽</span>`:'';
+        return `<span class="tm-item${allergy?' al':''}">${esc(it.name)} <b>${it.g}${it.unit||'g'}</b>${rt}</span>`;
+      }).join('')
+    : '<span class="tm-empty">·</span>';
+  [['t1',tab1,['1끼']],['t2',tab2,['1끼','2끼']]].forEach(([k,weeks,labels])=>{
+    const el=document.getElementById(k+'-today');
+    if(!el) return;
+    let today=null;
+    weeks.forEach(wk=>wk.days.forEach(d=>{ if(d.date===todayMD) today=d; }));
+    if(!today){ el.style.display='none'; el.innerHTML=''; return; }
+    el.style.display='';
+    const meals=getMeals(today);
+    const cols=meals.map((m,mi)=>{
+      const base=effItems(mi,'base',m.base);
+      const top=effItems(mi,'top',m.top);
+      const allergy=top.filter(it=>ALLERGENS.has(it.name));
+      const reg=top.filter(it=>!ALLERGENS.has(it.name));
+      const eaten=State.logs[`${todayMD}|${mi}|eaten`];
+      const planTxt=totalText(computedTotal(today,mi))||'-';
+      const eatenHtml=`<span class="tm-amt"><span class="tm-plan">총량 ${planTxt}</span>${eaten?`<span class="tm-eaten">먹은 양 ${esc(eaten)}g</span>`:''}</span>`;
+      return `<div class="today-meal" data-date="${esc(todayMD)}" data-mi="${mi}" data-meal-name="${esc(labels[mi]||'끼니')}">
+        <div class="today-meal-head"><span class="tm-label">${esc(labels[mi]||('끼니'+(mi+1)))}</span>${eatenHtml}</div>
+        <div class="tm-row"><span class="tm-cat">베이스</span><span class="tm-items">${itemSpans(base,false,mi)}</span></div>
+        <div class="tm-row"><span class="tm-cat">토핑</span><span class="tm-items">${itemSpans(reg,false,mi)}</span></div>
+        ${allergy.length?`<div class="tm-row"><span class="tm-cat tm-allergy">알러지</span><span class="tm-items">${itemSpans(allergy,true,mi)}</span></div>`:''}
+      </div>`;
+    }).join('');
+    el.innerHTML=`<div class="today-head">오늘의 식단 <span class="today-date">${esc(todayMD)} (${weekdayOf(todayMD)})</span></div><div class="today-meals">${cols}</div>`;
+  });
+  if(!VIEW_ONLY){
+    document.querySelectorAll('.today-meal').forEach(el=>{
+      el.addEventListener('click',()=>openMealEdit(el.dataset.date,parseInt(el.dataset.mi,10),el.dataset.mealName,'eaten'));
+    });
+  }
+}
 /* 최근 1주일 추이 한 문장 (애플 건강 스타일) */
 function trendComment(days){
   const recent=days.slice(-7);
@@ -1428,11 +1526,12 @@ function renderTables(){
   seed617to18Ratios();
   seedW2W3Ratios();
   migrate620All8();
+  migrate623Grain7();
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
-  attachCellClick(); renderNewFoods(); renderAmountTrend(); markTodayColumn();
+  attachCellClick(); renderNewFoods(); renderAmountTrend(); renderTodayMenu(); markTodayColumn();
 }
 
 /* ============ 끼니 편집 모달 ============ */
@@ -1488,7 +1587,7 @@ function renderItemList(containerId, items){
     c.querySelectorAll('.item-name').forEach(inp=>{ inp.addEventListener('input', refreshMealRatios); });
   }
 }
-function renderMealRatios(baseItems, date){
+function renderMealRatios(baseItems, date, mi){
   const field=document.getElementById('meal-ratio-field');
   const list=document.getElementById('meal-ratio-list');
   /* 아직 저장 안 한 입력값 보존 (재료 추가/삭제로 다시 그릴 때) */
@@ -1498,14 +1597,14 @@ function renderMealRatios(baseItems, date){
   if(!uniq.length){ field.style.display='none'; list.innerHTML=''; return; }
   field.style.display='';
   list.innerHTML=uniq.map(n=>{
-    const v = (n in typed) ? typed[n] : (State.ratios||{})[`${date}|${n}`];
+    const v = (n in typed) ? typed[n] : ratioOf(date, mi, n);
     return `<div class="ratio-row-edit"><span class="ratio-name">${esc(n)}</span><input type="number" class="ratio-input" data-name="${esc(n)}" inputmode="numeric" min="0" step="1" placeholder="예: 10" value="${(v!=null&&v!=='')?v:''}"><span class="ratio-suffix">배죽</span></div>`;
   }).join('');
 }
 /* 베이스 재료가 바뀌면 배죽 입력란을 실시간으로 다시 그린다 */
 function refreshMealRatios(){
   if(!currentMeal || currentMeal.snack) return;
-  renderMealRatios(readItemList('meal-base-list'), currentMeal.date);
+  renderMealRatios(readItemList('meal-base-list'), currentMeal.date, currentMeal.mi);
 }
 function readItemList(containerId){
   return Array.from(document.getElementById(containerId).querySelectorAll('.item-row')).map(row=>({
@@ -1566,7 +1665,7 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   renderItemList('meal-base-list', baseItems);
   renderItemList('meal-top-list',  regularTop);
   renderItemList('meal-allergy-list', allergyItems);
-  renderMealRatios(baseItems, date);
+  renderMealRatios(baseItems, date, mi);
   updatePlanTotal();
   const _auto=autoChangedForMeal(date,mi), _cur=(State.changedManual||{})[`${date}|${mi}`];
   document.getElementById('meal-changed').checked = _cur!=null ? _cur : _auto;
@@ -1628,7 +1727,7 @@ function saveMealEdit(){
     else State.overrides[`${date}|${mi}|top`]=topV;
     State.ratios=State.ratios||{};
     document.querySelectorAll('#meal-ratio-list .ratio-input').forEach(inp=>{
-      const key=`${date}|${inp.dataset.name}`, v=parseInt(inp.value,10);
+      const key=`${date}|${mi}|${inp.dataset.name}`, v=parseInt(inp.value,10);
       if(!isNaN(v)&&v>0) State.ratios[key]=v; else delete State.ratios[key];
     });
     const eatenV=document.getElementById('meal-eaten').value.trim();
