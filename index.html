@@ -157,12 +157,17 @@
     .new-foods{font-size:12.5px;padding:10px 12px;margin-bottom:12px;border-radius:12px;}
     .nf-chip{font-size:11.5px;padding:2px 8px;}
     .amount-trend{padding:11px 14px 8px;margin-bottom:16px;}
-    .today-card{padding:12px 13px;margin-bottom:16px;}
-    .today-meals{gap:8px;}
-    .today-meal{padding:11px 11px;}
-    .tm-row{font-size:12.5px;gap:8px;margin-bottom:8px;}
-    .tm-cat{font-size:9.5px;width:38px;padding:2px 0;}
-    .tm-item b{font-size:11px;}
+    .today-card{padding:14px 14px;margin-bottom:16px;}
+    /* 모바일: 끼니를 세로로 한 장씩 크게 → 가독성 확보 */
+    .today-meals{flex-direction:column;gap:10px;}
+    .today-meal{padding:14px 15px;}
+    .today-meal-head{margin-bottom:12px;padding-bottom:10px;}
+    .tm-label{font-size:15.5px;}
+    .tm-row{font-size:14px;gap:11px;margin-bottom:11px;line-height:1.55;}
+    .tm-cat{font-size:11px;width:48px;padding:3px 0;margin-top:1px;}
+    .tm-item b{font-size:12.5px;}
+    .tm-plan,.tm-eaten{font-size:12px;}
+    .slide-day{font-size:13.5px;}
     .trend-bars{gap:9px;min-height:138px;}
     .trend-bar{width:22px;}
 
@@ -306,6 +311,17 @@
   .tm-item.al{color:#c0392b;}
   .tm-ratio{font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;}
   .tm-empty{color:var(--muted);}
+  /* 오늘의 식단 — 하루 단위 슬라이드 */
+  .today-slider{overflow:hidden;}
+  .today-track{display:flex;transition:transform .28s ease;}
+  .today-slide{flex:0 0 100%;min-width:100%;box-sizing:border-box;padding-top:2px;}
+  .slide-day{display:flex;align-items:center;gap:8px;margin-bottom:11px;font-size:13px;color:var(--muted);font-weight:700;}
+  .slide-tag{font-size:11px;font-weight:700;color:#fff;background:var(--peach);border-radius:7px;padding:2px 9px;}
+  .slide-tag.today{background:var(--sage);}
+  .slide-date{font-weight:400;}
+  .today-dots{display:flex;justify-content:center;gap:7px;margin-top:14px;}
+  .today-dot{width:7px;height:7px;border-radius:50%;background:#dcd6c8;border:none;padding:0;cursor:pointer;transition:.2s;}
+  .today-dot.active{background:var(--sage);width:18px;border-radius:4px;}
   .trend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
   .trend-comment{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--muted);}
   .trend-comment.up{color:var(--sage);}
@@ -317,6 +333,7 @@
   .trend-legend .lg::before{content:"";width:10px;height:10px;border-radius:3px;}
   .trend-legend .lg1::before{background:var(--sage);}
   .trend-legend .lg2::before{background:var(--peach);}
+  .trend-legend .lg3::before{background:#cdb4db;}
   .trend-bars{display:flex;align-items:flex-end;gap:12px;overflow-x:auto;padding-bottom:4px;min-height:148px;}
   .trend-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto;justify-content:flex-end;}
   .trend-total{font-size:11px;color:var(--ink);font-weight:700;}
@@ -327,6 +344,7 @@
   .trend-bar .seg{width:100%;}
   .trend-bar .seg1{background:var(--sage);}
   .trend-bar .seg2{background:var(--peach);}
+  .trend-bar .seg3{background:#cdb4db;}
   .trend-date{font-size:10px;color:var(--muted);white-space:nowrap;}
   .trend-empty{color:var(--muted);font-size:13px;text-align:center;padding:28px 0;}
   .new-foods b{color:var(--sage);}
@@ -334,7 +352,9 @@
   .nf-empty{color:var(--muted);font-size:13px;}
 
   .week{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:0 0 6px;margin-bottom:44px;overflow-x:auto;box-shadow:0 6px 22px rgba(120,110,90,.08);}
-  .week-head{font-size:15px;font-weight:700;color:var(--sage);background:var(--sage-soft);border-radius:18px 18px 0 0;border-bottom:1px solid #dde7d7;padding:13px 18px;margin-bottom:6px;min-width:760px;box-sizing:border-box;}
+  .week-head{font-size:15px;font-weight:700;color:var(--sage);background:var(--sage-soft);border-radius:18px 18px 0 0;border-bottom:1px solid #dde7d7;padding:13px 18px;margin-bottom:6px;min-width:760px;box-sizing:border-box;position:sticky;left:0;}
+  /* 가로 스크롤 시 초록 띠가 끊겨 보이지 않도록, 화면에 보이는 폭만큼 항상 초록색으로 덮는다 */
+  .week-head>span{position:sticky;left:18px;}
   table{border-collapse:collapse;width:100%;min-width:760px;table-layout:fixed;}
   th,td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13px;vertical-align:middle;}
   th.rowlabel{width:64px;background:#faf6ee;color:var(--muted);font-weight:700;position:sticky;left:0;z-index:2;}
@@ -521,6 +541,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="t1">1~28일</button>
       <button class="tab" data-tab="t2">29~56일</button>
+      <button class="tab" data-tab="t3">57~84일</button>
     </div>
 
     <section id="t1" class="panel active">
@@ -534,6 +555,12 @@
       <div class="amount-trend" id="t2-trend"></div>
       <div class="today-card" id="t2-today"></div>
       <div id="t2-weeks"></div>
+    </section>
+    <section id="t3" class="panel">
+      <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t3-new"></span></div>
+      <div class="amount-trend" id="t3-trend"></div>
+      <div class="today-card" id="t3-today"></div>
+      <div id="t3-weeks"></div>
     </section>
 
     <div class="foot" style="text-align:left;">
@@ -868,6 +895,26 @@ function buildTab2(){
   return weeks;
 }
 const tab2 = buildTab2();
+/* 후기 이유식 — 3끼, 7/10부터. 식단은 빈 칸으로 시작(세정이 직접 입력) */
+function buildTab3(){
+  const weeks=[]; let d=new Date(2025,6,10); let dday=241,n=57;
+  for(let w=0; w<4; w++){
+    const days=[]; let s,e;
+    for(let i=0;i<7;i++){
+      const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
+      if(i===0)s=ds; if(i===6)e=ds;
+      days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
+        {base:[],top:[],total:0},
+        {base:[],top:[],total:0},
+        {base:[],top:[],total:0},
+      ]});
+      d.setDate(d.getDate()+1); dday++; n++;
+    }
+    weeks.push({range:s+" ~ "+e, ratioNum:0, days});
+  }
+  return weeks;
+}
+const tab3 = buildTab3();
 
 /* ============ 저장소 (로컬 + Supabase) ============ */
 let sb=null;
@@ -967,6 +1014,7 @@ function recomputeFirstAppearances(){
   const allDays=[];
   tab1.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
   tab2.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
+  tab3.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
   allDays.forEach(day=>{
     getMeals(day).forEach((m,mi)=>{
       ['base','top'].forEach(field=>{
@@ -1328,24 +1376,27 @@ function dayRatio(day){
 }
 /* 일자별 먹은 양 추이 (기록 있는 날만, 1끼/2끼 누적 막대) */
 function renderAmountTrend(){
-  [['t1',tab1,1],['t2',tab2,2]].forEach(([k,weeks,mealsCount])=>{
+  [['t1',tab1,1],['t2',tab2,2],['t3',tab3,3]].forEach(([k,weeks,mealsCount])=>{
     const el=document.getElementById(k+'-trend');
     if(!el) return;
     const days=[];
     weeks.forEach(wk=>wk.days.forEach(d=>{
-      const e1=parseInt(State.logs[`${d.date}|0|eaten`],10);
-      const e2=mealsCount>1?parseInt(State.logs[`${d.date}|1|eaten`],10):NaN;
-      const m1=isNaN(e1)?0:e1, m2=isNaN(e2)?0:e2;
-      if(m1>0||m2>0){
-        const plan0=totalSum(computedTotal(d,0));
-        const plan1=mealsCount>1?totalSum(computedTotal(d,1)):0;
-        const full0=m1>0&&plan0>0&&m1>=plan0;
-        const full1=m2>0&&plan1>0&&m2>=plan1;
-        days.push({date:d.date,m1,m2,total:m1+m2,stars:(full0?1:0)+(full1?1:0)});
+      const ms=[], stars0=[];
+      for(let mi=0;mi<mealsCount;mi++){
+        const e=parseInt(State.logs[`${d.date}|${mi}|eaten`],10);
+        const m=isNaN(e)?0:e;
+        ms.push(m);
+        const plan=totalSum(computedTotal(d,mi));
+        stars0.push(m>0&&plan>0&&m>=plan?1:0);
+      }
+      const total=ms.reduce((a,b)=>a+b,0);
+      if(total>0){
+        days.push({date:d.date,ms,total,stars:stars0.reduce((a,b)=>a+b,0)});
       }
     }));
+    const legLabels=['1끼','2끼','3끼'];
     const legend = mealsCount>1
-      ? `<div class="trend-legend"><span class="lg lg1">1끼</span><span class="lg lg2">2끼</span></div>` : '';
+      ? `<div class="trend-legend">${legLabels.slice(0,mealsCount).map((l,i)=>`<span class="lg lg${i+1}">${l}</span>`).join('')}</div>` : '';
     const head=`<div class="trend-head"><span class="trend-title">먹은 양 추이 <span class="trend-unit">(g)</span></span>${legend}</div>`;
     if(!days.length){
       el.innerHTML=head+`<div class="trend-empty">아직 먹은 양 기록이 없어요</div>`;
@@ -1354,50 +1405,83 @@ function renderAmountTrend(){
     el.innerHTML=head+trendComment(days)+`<div class="trend-bars">${days_bars(days,mealsCount)}</div>`;
   });
 }
-/* 오늘의 식단 카드 — 추이 바로 밑, 1끼/2끼 가로 배치 */
+/* 오늘의 식단 — 하루 단위 슬라이드(오늘·내일·모레), 우측 스와이프로 다음날 이동(루핑) */
+const todaySlideIdx={t1:0,t2:0,t3:0};
+let suppressTodayClick=false;
 function renderTodayMenu(){
   const _t=new Date(), todayMD=(_t.getMonth()+1)+'/'+_t.getDate();
-  const effItems=(mi,field,planArr)=>{
-    const ov=State.overrides[`${todayMD}|${mi}|${field}`];
+  const effItems=(date,mi,field,planArr)=>{
+    const ov=State.overrides[`${date}|${mi}|${field}`];
     return ov!=null ? parseItemsLocal(ov) : planArr.map(it=>({name:it[0],g:it[1],unit:'g'}));
   };
-  const itemSpans=(items,allergy,mi)=>items.length
+  const itemSpans=(date,items,allergy,mi)=>items.length
     ? items.map(it=>{
-        const r=ratioOf(todayMD, mi, it.name);
+        const r=ratioOf(date, mi, it.name);
         const rt=(r!=null&&r!=='')?`<span class="tm-ratio">${r}배죽</span>`:'';
         return `<span class="tm-item${allergy?' al':''}">${esc(it.name)} <b>${it.g}${it.unit||'g'}</b>${rt}</span>`;
       }).join('')
     : '<span class="tm-empty">·</span>';
-  [['t1',tab1,['1끼']],['t2',tab2,['1끼','2끼']]].forEach(([k,weeks,labels])=>{
-    const el=document.getElementById(k+'-today');
-    if(!el) return;
-    let today=null;
-    weeks.forEach(wk=>wk.days.forEach(d=>{ if(d.date===todayMD) today=d; }));
-    if(!today){ el.style.display='none'; el.innerHTML=''; return; }
-    el.style.display='';
-    const meals=getMeals(today);
-    const cols=meals.map((m,mi)=>{
-      const base=effItems(mi,'base',m.base);
-      const top=effItems(mi,'top',m.top);
+  const groups=[['t1',tab1,['1끼']],['t2',tab2,['1끼','2끼']],['t3',tab3,['1끼','2끼','3끼']]];
+  const order=[];
+  groups.forEach(([k,weeks,labels])=>weeks.forEach(wk=>wk.days.forEach(d=>order.push({k,d,labels}))));
+  const ti=order.findIndex(o=>o.d.date===todayMD);
+  const tagOf=i=>i===0?'오늘':i===1?'내일':'모레';
+  const renderSlide=(o,i)=>{
+    const day=o.d, labels=o.labels, date=day.date;
+    const meals=getMeals(day).map((m,mi)=>{
+      const base=effItems(date,mi,'base',m.base);
+      const top=effItems(date,mi,'top',m.top);
       const allergy=top.filter(it=>ALLERGENS.has(it.name));
       const reg=top.filter(it=>!ALLERGENS.has(it.name));
-      const eaten=State.logs[`${todayMD}|${mi}|eaten`];
-      const planTxt=totalText(computedTotal(today,mi))||'-';
+      const eaten=State.logs[`${date}|${mi}|eaten`];
+      const planTxt=totalText(computedTotal(day,mi))||'-';
       const eatenHtml=`<span class="tm-amt"><span class="tm-plan">총량 ${planTxt}</span>${eaten?`<span class="tm-eaten">먹은 양 ${esc(eaten)}g</span>`:''}</span>`;
-      return `<div class="today-meal" data-date="${esc(todayMD)}" data-mi="${mi}" data-meal-name="${esc(labels[mi]||'끼니')}">
+      return `<div class="today-meal" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(labels[mi]||'끼니')}">
         <div class="today-meal-head"><span class="tm-label">${esc(labels[mi]||('끼니'+(mi+1)))}</span>${eatenHtml}</div>
-        <div class="tm-row"><span class="tm-cat">베이스</span><span class="tm-items">${itemSpans(base,false,mi)}</span></div>
-        <div class="tm-row"><span class="tm-cat">토핑</span><span class="tm-items">${itemSpans(reg,false,mi)}</span></div>
-        ${allergy.length?`<div class="tm-row"><span class="tm-cat tm-allergy">알러지</span><span class="tm-items">${itemSpans(allergy,true,mi)}</span></div>`:''}
+        <div class="tm-row"><span class="tm-cat">베이스</span><span class="tm-items">${itemSpans(date,base,false,mi)}</span></div>
+        <div class="tm-row"><span class="tm-cat">토핑</span><span class="tm-items">${itemSpans(date,reg,false,mi)}</span></div>
+        ${allergy.length?`<div class="tm-row"><span class="tm-cat tm-allergy">알러지</span><span class="tm-items">${itemSpans(date,allergy,true,mi)}</span></div>`:''}
       </div>`;
     }).join('');
-    el.innerHTML=`<div class="today-head">오늘의 식단 <span class="today-date">${esc(todayMD)} (${weekdayOf(todayMD)})</span></div><div class="today-meals">${cols}</div>`;
+    return `<div class="today-slide"><div class="slide-day"><span class="slide-tag${i===0?' today':''}">${tagOf(i)}</span><span class="slide-date">${esc(date)} (${weekdayOf(date)})</span></div><div class="today-meals">${meals}</div></div>`;
+  };
+  groups.forEach(([k])=>{
+    const el=document.getElementById(k+'-today');
+    if(!el) return;
+    if(ti<0 || order[ti].k!==k){ el.style.display='none'; el.innerHTML=''; return; }
+    el.style.display='';
+    const win=[order[ti],order[ti+1],order[ti+2]].filter(Boolean);
+    let idx=todaySlideIdx[k]||0; if(idx>=win.length) idx=0; todaySlideIdx[k]=idx;
+    const slides=win.map(renderSlide).join('');
+    const dots=win.length>1 ? `<div class="today-dots">${win.map((_,i)=>`<button class="today-dot${i===idx?' active':''}" data-i="${i}" aria-label="${tagOf(i)}"></button>`).join('')}</div>` : '';
+    el.innerHTML=`<div class="today-head">오늘의 식단</div>
+      <div class="today-slider"><div class="today-track" style="transform:translateX(-${idx*100}%)">${slides}</div></div>${dots}`;
+    setupTodaySwipe(el,k,win.length);
   });
   if(!VIEW_ONLY){
     document.querySelectorAll('.today-meal').forEach(el=>{
-      el.addEventListener('click',()=>openMealEdit(el.dataset.date,parseInt(el.dataset.mi,10),el.dataset.mealName,'eaten'));
+      el.addEventListener('click',()=>{ if(suppressTodayClick) return; openMealEdit(el.dataset.date,parseInt(el.dataset.mi,10),el.dataset.mealName,'eaten'); });
     });
   }
+}
+function setTodaySlide(el,k,len,idx){
+  idx=((idx%len)+len)%len; todaySlideIdx[k]=idx;
+  const track=el.querySelector('.today-track'); if(track) track.style.transform=`translateX(-${idx*100}%)`;
+  el.querySelectorAll('.today-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+}
+function setupTodaySwipe(el,k,len){
+  if(len<2) return;
+  const slider=el.querySelector('.today-slider'); if(!slider) return;
+  el.querySelectorAll('.today-dot').forEach(d=>d.onclick=()=>setTodaySlide(el,k,len,parseInt(d.dataset.i,10)));
+  let sx=0,sy=0;
+  slider.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;},{passive:true});
+  slider.addEventListener('touchend',e=>{
+    const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Math.abs(dx)<40 || Math.abs(dx)<Math.abs(dy)) return; /* 탭이거나 세로 스크롤이면 무시 */
+    suppressTodayClick=true; setTimeout(()=>suppressTodayClick=false,400);
+    if(dx>0) setTodaySlide(el,k,len,(todaySlideIdx[k]||0)+1); /* 우측 스와이프 → 다음날(루핑) */
+    /* 좌측 스와이프(dx<0)는 무감 처리 */
+  },{passive:true});
 }
 /* 최근 1주일 추이 한 문장 (애플 건강 스타일) */
 function trendComment(days){
@@ -1416,21 +1500,21 @@ function trendComment(days){
 function days_bars(days,mealsCount){
   const max=Math.max(...days.map(d=>d.total));
   const H=120;
+  const labels=['1끼','2끼','3끼'];
   return days.map(d=>{
     const h=Math.max(6, Math.round(d.total/max*H));
-    const r1=d.total?Math.round(d.m1/d.total*100):0;
-    const seg2 = (mealsCount>1 && d.m2>0)
-      ? `<div class="seg seg2" style="height:${100-r1}%" title="2끼 ${d.m2}g"></div>` : '';
-    const seg1 = d.m1>0
-      ? `<div class="seg seg1" style="height:${mealsCount>1?r1:100}%" title="1끼 ${d.m1}g"></div>` : '';
-    const star = d.stars>=2
-      ? `<div class="trend-star trend-star2" title="두 끼 모두 계획량을 다 먹었어요"><span>★</span><span>★</span></div>`
-      : d.stars===1
-      ? `<div class="trend-star" title="계획량을 다 먹었어요">★</div>` : '';
+    /* 끼니별 누적 막대 — 위에서부터 마지막 끼니가 쌓이도록 역순 출력 */
+    const segs = mealsCount>1
+      ? d.ms.map((m,i)=> m>0 ? `<div class="seg seg${i+1}" style="height:${Math.round(m/d.total*100)}%" title="${labels[i]} ${m}g"></div>` : '').reverse().join('')
+      : (d.ms[0]>0 ? `<div class="seg seg1" style="height:100%" title="1끼 ${d.ms[0]}g"></div>` : '');
+    const star = d.stars>=mealsCount && mealsCount>1
+      ? `<div class="trend-star trend-star2" title="모든 끼니의 계획량을 다 먹었어요">${'★'.repeat(mealsCount).split('').map(s=>`<span>${s}</span>`).join('')}</div>`
+      : d.stars>=1
+      ? `<div class="trend-star" title="계획량을 다 먹은 끼니가 있어요">★</div>` : '';
     return `<div class="trend-col">
       ${star}
       <div class="trend-total">${d.total}</div>
-      <div class="trend-bar" style="height:${h}px">${seg2}${seg1}</div>
+      <div class="trend-bar" style="height:${h}px">${segs}</div>
       <div class="trend-date">${d.date}</div>
     </div>`;
   }).join('');
@@ -1460,15 +1544,16 @@ function renderWeeks(weeks,withSnack,labels){
    firstAppearSet 은 override까지 반영한 첫 등장이라, 수정으로 빠진 재료는 자동 제외됨 */
 function renderNewFoods(){
   const t1Dates=new Set(); tab1.forEach(wk=>wk.days.forEach(d=>t1Dates.add(d.date)));
-  const out={t1:[],t2:[]}, seen={t1:new Set(),t2:new Set()};
+  const t3Dates=new Set(); tab3.forEach(wk=>wk.days.forEach(d=>t3Dates.add(d.date)));
+  const out={t1:[],t2:[],t3:[]}, seen={t1:new Set(),t2:new Set(),t3:new Set()};
   firstAppearSet.forEach(key=>{
     const p=key.split('|'); const date=p[0], mi=p[1], name=p[3];
     if(!State.logs[`${date}|${mi}|eaten`]) return;
-    const k = t1Dates.has(date) ? 't1' : 't2';
+    const k = t1Dates.has(date) ? 't1' : (t3Dates.has(date) ? 't3' : 't2');
     if(seen[k].has(name)) return;
     seen[k].add(name); out[k].push(name);
   });
-  [['t1','t1-new'],['t2','t2-new']].forEach(([k,id])=>{
+  [['t1','t1-new'],['t2','t2-new'],['t3','t3-new']].forEach(([k,id])=>{
     const el=document.getElementById(id);
     el.innerHTML = out[k].length ? out[k].map(n=>`<span class="nf-chip">${esc(n)}</span>`).join('')
                                  : '<span class="nf-empty">· 아직 없음 — 먹은 양을 입력하면 추가돼요</span>';
@@ -1477,7 +1562,7 @@ function renderNewFoods(){
 
 function attachCellClick(){
   if(VIEW_ONLY) return;
-  document.querySelectorAll('#t1-weeks .mealcell, #t2-weeks .mealcell').forEach(td=>{
+  document.querySelectorAll('#t1-weeks .mealcell, #t2-weeks .mealcell, #t3-weeks .mealcell').forEach(td=>{
     td.addEventListener('click', (e)=>{
       const itemEl = e.target.closest('.item');
       const focusName = itemEl ? itemEl.dataset.iname : null;
@@ -1490,7 +1575,7 @@ function attachCellClick(){
 }
 /* 오늘 날짜 열 전체를 한 박스로 감싸는 테두리 표시 (날짜~메모, 내부 가로줄 제외) */
 function markTodayColumn(){
-  document.querySelectorAll('#t1-weeks table, #t2-weeks table').forEach(table=>{
+  document.querySelectorAll('#t1-weeks table, #t2-weeks table, #t3-weeks table').forEach(table=>{
     const headCells=[...table.querySelector('thead tr').children];
     let col=-1;
     headCells.forEach((th,i)=>{ if(th.classList.contains('date') && th.classList.contains('today')) col=i; });
@@ -1531,6 +1616,7 @@ function renderTables(){
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
+  document.getElementById('t3-weeks').innerHTML=renderWeeks(tab3,true,["1끼 · 아침","2끼 · 점심","3끼 · 저녁"]);
   attachCellClick(); renderNewFoods(); renderAmountTrend(); renderTodayMenu(); markTodayColumn();
 }
 
@@ -1540,6 +1626,7 @@ let currentMeal=null;
 function findDay(date){
   for(const wk of tab1) for(const d of wk.days) if(d.date===date) return d;
   for(const wk of tab2) for(const d of wk.days) if(d.date===date) return d;
+  for(const wk of tab3) for(const d of wk.days) if(d.date===date) return d;
   return null;
 }
 function setFieldVisible(id,vis){ document.getElementById(id).style.display=vis?'':'none'; }
@@ -1931,10 +2018,11 @@ document.querySelectorAll('.tab').forEach(btn=>{
 });
 /* 29일차(두 번째 탭) 시작일이 되면 기본 탭을 두 번째(29~56일)로 — 시작일은 tab2 데이터에서 자동 추적 */
 function applyDefaultSubTab(){
-  const first = tab2[0] && tab2[0].days[0] && tab2[0].days[0].date;
-  const cut = dateOfMD(first); if(!cut) return;
   const n=new Date(), today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
-  if(today.getTime() >= cut.getTime()) selectSubTab('t2');
+  const cut2d=tab2[0]&&tab2[0].days[0]&&dateOfMD(tab2[0].days[0].date);
+  const cut3d=tab3[0]&&tab3[0].days[0]&&dateOfMD(tab3[0].days[0].date);
+  if(cut3d && today.getTime() >= cut3d.getTime()) selectSubTab('t3');
+  else if(cut2d && today.getTime() >= cut2d.getTime()) selectSubTab('t2');
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
   if(toyOverlay.classList.contains('open'))closeToyEdit();
