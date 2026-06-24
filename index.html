@@ -310,6 +310,10 @@
   .tm-item{white-space:nowrap;color:var(--ink);font-weight:400;}
   .tm-item b{font-weight:400;color:var(--muted);font-size:11.5px;margin-left:1px;}
   .tm-item.al{color:#c0392b;}
+  .tm-item.tm-new{background:#fff3cd;color:#9a6b00;border:1px solid #ffe08a;border-radius:7px;padding:1px 6px;font-weight:700;}
+  .tm-item.tm-new b{color:#9a6b00;}
+  .tm-item.tm-chg{background:var(--changed-soft);color:var(--changed);border:1px solid #c5d6ea;border-radius:7px;padding:1px 6px;font-weight:700;}
+  .tm-item.tm-chg b{color:var(--changed);}
   .tm-ratio{font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;}
   .tm-empty{color:var(--muted);}
   .tm-memo{flex:1;min-width:0;color:var(--ink);font-weight:400;white-space:pre-wrap;word-break:break-word;}
@@ -1431,11 +1435,22 @@ function renderTodayMenu(){
     const ov=State.overrides[`${date}|${mi}|${field}`];
     return ov!=null ? parseItemsLocal(ov) : planArr.map(it=>({name:it[0],g:it[1],unit:'g'}));
   };
-  const itemSpans=(date,items,allergy,mi)=>items.length
+  const itemSpans=(date,items,allergy,mi,field,planArr)=>items.length
     ? items.map(it=>{
         const r=ratioOf(date, mi, it.name);
         const rt=(r!=null&&r!=='')?`<span class="tm-ratio">${r}배죽</span>`:'';
-        return `<span class="tm-item${allergy?' al':''}">${esc(it.name)} <b>${it.g}${it.unit||'g'}</b>${rt}</span>`;
+        let tag='';
+        if(!allergy){
+          /* 신규(노란색) 우선, 아니면 계획과 다름(파란색) */
+          if(isFirstAppear(date,mi,field,it.name)) tag=' tm-new';
+          else{
+            const ov=State.overrides[`${date}|${mi}|${field}`];
+            const plan=(planArr||[]).find(p=>p[0]===it.name);
+            const isChanged=ov!=null && (!plan || plan[1]!==it.g) && !isFutureDate(date) && mealChanged(date,mi);
+            if(isChanged) tag=' tm-chg';
+          }
+        }
+        return `<span class="tm-item${allergy?' al':''}${tag}">${esc(it.name)} <b>${it.g}${it.unit||'g'}</b>${rt}</span>`;
       }).join('')
     : '<span class="tm-empty">·</span>';
   const groups=[['t1',tab1,['1끼']],['t2',tab2,['1끼','2끼']],['t3',tab3,['1끼','2끼','3끼']]];
@@ -1456,9 +1471,9 @@ function renderTodayMenu(){
       const eatenHtml=`<span class="tm-amt"><span class="tm-plan">총량 ${planTxt}</span>${eaten?`<span class="tm-eaten">먹은 양 ${esc(eaten)}g</span>`:''}</span>`;
       return `<div class="today-meal" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(labels[mi]||'끼니')}">
         <div class="today-meal-head"><span class="tm-label">${esc(labels[mi]||('끼니'+(mi+1)))}</span>${eatenHtml}</div>
-        <div class="tm-row"><span class="tm-cat">베이스</span><span class="tm-items">${itemSpans(date,base,false,mi)}</span></div>
-        <div class="tm-row"><span class="tm-cat">토핑</span><span class="tm-items">${itemSpans(date,reg,false,mi)}</span></div>
-        ${allergy.length?`<div class="tm-row"><span class="tm-cat tm-allergy">알러지</span><span class="tm-items">${itemSpans(date,allergy,true,mi)}</span></div>`:''}
+        <div class="tm-row"><span class="tm-cat">베이스</span><span class="tm-items">${itemSpans(date,base,false,mi,'base',m.base)}</span></div>
+        <div class="tm-row"><span class="tm-cat">토핑</span><span class="tm-items">${itemSpans(date,reg,false,mi,'top',m.top)}</span></div>
+        ${allergy.length?`<div class="tm-row"><span class="tm-cat tm-allergy">알러지</span><span class="tm-items">${itemSpans(date,allergy,true,mi,'top',m.top)}</span></div>`:''}
         ${memo?`<div class="tm-row"><span class="tm-cat tm-memo-cat">메모</span><span class="tm-memo">${esc(memo)}</span></div>`:''}
       </div>`;
     }).join('');
