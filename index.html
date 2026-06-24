@@ -862,6 +862,7 @@ function buildTab2(){
       const rice = 30;
       const g2 = (di < 4 || di >= 10) ? 15 : 30;  /* 6/22(di10)부터 15g */
       const base=[["쌀",rice],[grain2,g2]];
+      if(di>=14) base.push(['오트밀',15]);  /* 6/26~7/9 오트밀 15g 추가 (7배죽) */
       const pmOverride={
         '6/21':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
         '6/22':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
