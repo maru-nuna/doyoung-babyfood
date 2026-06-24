@@ -863,14 +863,17 @@ function buildTab2(){
       const g2 = (di < 4 || di >= 10) ? 15 : 30;  /* 6/22(di10)부터 15g */
       const base=[["쌀",rice],[grain2,g2]];
       if(di>=14) base.push(['오트밀',15]);  /* 6/26~7/9 오트밀 15g 추가 (7배죽) */
-      const pmOverride={
-        '6/21':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
-        '6/22':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
-        '6/23':t=>t.map(it=>CAT.meat.includes(it[0])?['소고기',10]:it.slice()),
-      }[ds];
+      const toMeat=name=>t=>t.map(it=>CAT.meat.includes(it[0])?[name,10]:it.slice());
+      /* 2끼 고기를 소고기로 통일하는 날 (6/21~23, 6/27~7/9) */
+      const PM_BEEF=new Set(['6/21','6/22','6/23','6/27','6/28','6/29','6/30','7/1','7/2','7/3','7/4','7/5','7/6','7/7','7/8','7/9']);
+      const pmOverride = PM_BEEF.has(ds) ? toMeat('소고기') : null;
+      /* 1끼 고기를 닭고기로 바꾸는 날 (7/3~7/9) */
+      const AM_CHICKEN=new Set(['7/3','7/4','7/5','7/6','7/7','7/8','7/9']);
+      const amOverride = AM_CHICKEN.has(ds) ? toMeat('닭고기') : null;
       /* 1끼(오전) 토핑 */
       let amTop = top.map(it=>it.slice());
       if(ds==='6/17' || W2.has(ds)) amTop = toCheong(amTop);  /* 채소1 청경채 통일 */
+      if(amOverride) amTop = amOverride(amTop);               /* 1끼 고기 → 닭고기 (7/3~7/9) */
       /* 2끼(오후): 신규 재료는 1끼에서만 테스트 → 2끼에선 제외(고기는 기존 고기로 대체) */
       let pmRaw = top.map(it=>it.slice());
       if(newFood && !allergenBlocked && pmRaw.some(it=>it[0]===newFood)){
