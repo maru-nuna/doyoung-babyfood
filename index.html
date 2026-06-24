@@ -185,6 +185,7 @@
     .log-text:empty::before{font-size:10px;}
     .eaten-pct{font-size:9px;margin-top:2px;}
     .meal-band td,.snack-band td{font-size:11px;padding:5px 10px;}
+    .meal-band .band-label,.snack-band .band-label{left:10px;}
 
     .foot{font-size:11px;margin-top:22px;}
 
@@ -312,7 +313,7 @@
   .tm-ratio{font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;}
   .tm-empty{color:var(--muted);}
   /* 오늘의 식단 — 하루 단위 슬라이드 */
-  .today-slider{overflow:hidden;}
+  .today-slider{overflow:hidden;touch-action:pan-y;}
   .today-track{display:flex;transition:transform .28s ease;}
   .today-slide{flex:0 0 100%;min-width:100%;box-sizing:border-box;padding-top:2px;}
   .slide-day{display:flex;align-items:center;gap:8px;margin-bottom:11px;font-size:13px;color:var(--muted);font-weight:700;}
@@ -416,6 +417,8 @@
   @media(max-width:600px){td.rowlabel{width:43px;} td.sublabel{width:43px;min-width:43px;font-size:10px;padding:5px 2px;left:43px;} th.rowlabel[colspan]{width:86px;}}
   .meal-band td{background:var(--peach-soft);color:var(--peach);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
   .snack-band td{background:var(--snack-tag);color:var(--snack-ink);font-weight:700;font-size:12px;text-align:left;padding:6px 14px;letter-spacing:.5px;}
+  /* 끼니/간식 띠 라벨 — 가로 스크롤해도 좌측에 고정 */
+  .meal-band .band-label,.snack-band .band-label{position:sticky;left:14px;display:inline-block;}
   .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
 
   .overlay{display:none;position:fixed;inset:0;background:rgba(61,58,52,.45);backdrop-filter:blur(3px);z-index:50;align-items:center;justify-content:center;padding:20px;}
@@ -1357,7 +1360,7 @@ function dayEatenRow(d){
   }).join('')+'</tr>';
 }
 function snackRow(d){
-  let h='<tr class="snack-band"><td colspan="'+(d.length+2)+'">간식</td></tr>';
+  let h='<tr class="snack-band"><td colspan="'+(d.length+2)+'"><span class="band-label">간식</span></td></tr>';
   h+='<tr class="row-snack"><td class="rowlabel" colspan="2">간식</td>'+d.map(x=>{
     const key=`${x.date}|s|snack`;
     return `<td class="snackcell" data-date="${esc(x.date)}"><div class="log-text">${esc(State.logs[key]||'')}</div></td>`;
@@ -1477,10 +1480,11 @@ function setupTodaySwipe(el,k,len){
   slider.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;},{passive:true});
   slider.addEventListener('touchend',e=>{
     const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
-    if(Math.abs(dx)<40 || Math.abs(dx)<Math.abs(dy)) return; /* 탭이거나 세로 스크롤이면 무시 */
+    if(Math.abs(dx)<36 || Math.abs(dx)<Math.abs(dy)) return; /* 탭이거나 세로 스크롤이면 무시 */
     suppressTodayClick=true; setTimeout(()=>suppressTodayClick=false,400);
-    if(dx>0) setTodaySlide(el,k,len,(todaySlideIdx[k]||0)+1); /* 우측 스와이프 → 다음날(루핑) */
-    /* 좌측 스와이프(dx<0)는 무감 처리 */
+    const cur=todaySlideIdx[k]||0;
+    if(dx<0){ setTodaySlide(el,k,len,cur+1); }      /* 왼쪽으로 밀기 → 다음날(모레에서 오늘로 루핑) */
+    else if(cur>0){ setTodaySlide(el,k,len,cur-1); } /* 오른쪽으로 밀기 → 이전날, 오늘에서는 무감 */
   },{passive:true});
 }
 /* 최근 1주일 추이 한 문장 (애플 건강 스타일) */
@@ -1529,12 +1533,16 @@ function renderWeeks(weeks,withSnack,labels){
     html+='<tr><th class="rowlabel" colspan="2"></th>'+d.map(x=>`<th class="dday">${x.dday}<br>${x.n}</th>`).join('')+'</tr>';
     html+='</thead><tbody>';
     labels.forEach((lab,i)=>{
-      if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}">${lab}</td></tr>`;
+      if(labels.length>1) html+=`<tr class="meal-band"><td colspan="${span}"><span class="band-label">${lab}</span></td></tr>`;
       html+=mealRows(d,i,lab);
     });
     if(labels.length>1) html+=dayTotalRow(d);
     if(labels.length>1) html+=dayEatenRow(d);
-    if(withSnack) html+=snackRow(d);
+    /* 6/18까지의 주차(마지막 날이 6/18 이하)에는 간식 행을 넣지 않음 */
+    if(withSnack){
+      const cut=dateOfMD('6/18'), last=dateOfMD(d[d.length-1].date);
+      if(!cut||!last||last.getTime()>cut.getTime()) html+=snackRow(d);
+    }
     html+='</tbody></table></div>';
     return html;
   }).join('');
