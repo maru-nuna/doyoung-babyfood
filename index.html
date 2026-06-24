@@ -312,8 +312,18 @@
   .tm-item.al{color:#c0392b;}
   .tm-ratio{font-size:10px;color:var(--sage);background:#eef3ea;border:1px solid #d7e3cf;border-radius:6px;padding:0 5px;margin-left:3px;font-weight:700;}
   .tm-empty{color:var(--muted);}
+  .tm-memo{flex:1;min-width:0;color:var(--ink);font-weight:400;white-space:pre-wrap;word-break:break-word;}
+  .tm-cat.tm-memo-cat{color:var(--sage);background:var(--sage-soft);}
   /* 오늘의 식단 — 하루 단위 슬라이드 */
-  .today-slider{overflow:hidden;touch-action:pan-y;}
+  /* 슬라이더 + 양옆 화살표 (화살표는 내용 바깥 칸에 배치 — 내용을 가리지 않음) */
+  .today-slidewrap{display:flex;align-items:center;gap:4px;}
+  /* 화살표는 상단 날짜 헤더(약 24px)만큼 아래로 내려 식단 카드 중앙에 맞춤 */
+  .today-arrow{margin-top:24px;}
+  .today-slider{overflow:hidden;touch-action:pan-y;flex:1;min-width:0;}
+  /* PC용 좌우 이동 화살표 (터치 기기에서는 숨김 — 스와이프 사용) */
+  .today-arrow{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--sage);font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(120,110,90,.1);transition:.15s;padding:0;}
+  .today-arrow:hover{border-color:var(--sage);box-shadow:0 2px 8px rgba(122,148,113,.2);}
+  @media (hover:none){ .today-arrow{display:none;} }
   .today-track{display:flex;transition:transform .28s ease;}
   .today-slide{flex:0 0 100%;min-width:100%;box-sizing:border-box;padding-top:2px;}
   .slide-day{display:flex;align-items:center;gap:8px;margin-bottom:11px;font-size:13px;color:var(--muted);font-weight:700;}
@@ -1441,6 +1451,7 @@ function renderTodayMenu(){
       const allergy=top.filter(it=>ALLERGENS.has(it.name));
       const reg=top.filter(it=>!ALLERGENS.has(it.name));
       const eaten=State.logs[`${date}|${mi}|eaten`];
+      const memo=State.logs[`${date}|${mi}|memo`];
       const planTxt=totalText(computedTotal(day,mi))||'-';
       const eatenHtml=`<span class="tm-amt"><span class="tm-plan">총량 ${planTxt}</span>${eaten?`<span class="tm-eaten">먹은 양 ${esc(eaten)}g</span>`:''}</span>`;
       return `<div class="today-meal" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(labels[mi]||'끼니')}">
@@ -1448,6 +1459,7 @@ function renderTodayMenu(){
         <div class="tm-row"><span class="tm-cat">베이스</span><span class="tm-items">${itemSpans(date,base,false,mi)}</span></div>
         <div class="tm-row"><span class="tm-cat">토핑</span><span class="tm-items">${itemSpans(date,reg,false,mi)}</span></div>
         ${allergy.length?`<div class="tm-row"><span class="tm-cat tm-allergy">알러지</span><span class="tm-items">${itemSpans(date,allergy,true,mi)}</span></div>`:''}
+        ${memo?`<div class="tm-row"><span class="tm-cat tm-memo-cat">메모</span><span class="tm-memo">${esc(memo)}</span></div>`:''}
       </div>`;
     }).join('');
     return `<div class="today-slide"><div class="slide-day"><span class="slide-tag${i===0?' today':''}">${tagOf(i)}</span><span class="slide-date">${esc(date)} (${weekdayOf(date)})</span></div><div class="today-meals">${meals}</div></div>`;
@@ -1462,8 +1474,11 @@ function renderTodayMenu(){
     /* 마지막에서 다음으로 넘어갈 때 되감기 없이 자연스럽게 오늘로 이어지도록 첫 슬라이드 복제본을 끝에 둠 */
     const slides=win.map(renderSlide).join('') + (win.length>1?renderSlide(win[0],0):'');
     const dots=win.length>1 ? `<div class="today-dots">${win.map((_,i)=>`<button class="today-dot${i===idx?' active':''}" data-i="${i}" aria-label="${tagOf(i)}"></button>`).join('')}</div>` : '';
-    el.innerHTML=`<div class="today-head">오늘의 식단</div>
-      <div class="today-slider"><div class="today-track" style="transform:translateX(-${idx*100}%)">${slides}</div></div>${dots}`;
+    const slider=`<div class="today-slider"><div class="today-track" style="transform:translateX(-${idx*100}%)">${slides}</div></div>`;
+    const wrap=win.length>1
+      ? `<div class="today-slidewrap"><button class="today-arrow prev" aria-label="이전날">‹</button>${slider}<button class="today-arrow next" aria-label="다음날">›</button></div>`
+      : slider;
+    el.innerHTML=`<div class="today-head">오늘의 식단</div>${wrap}${dots}`;
     setupTodaySwipe(el,k,win.length);
   });
   if(!VIEW_ONLY){
@@ -1494,6 +1509,10 @@ function setupTodaySwipe(el,k,len){
   if(len<2) return;
   const slider=el.querySelector('.today-slider'); if(!slider) return;
   el.querySelectorAll('.today-dot').forEach(d=>d.onclick=()=>todayGoto(el,k,len,parseInt(d.dataset.i,10)));
+  const arrowGuard=()=>{ suppressTodayClick=true; setTimeout(()=>suppressTodayClick=false,400); };
+  const pa=el.querySelector('.today-arrow.prev'), na=el.querySelector('.today-arrow.next');
+  if(pa) pa.onclick=()=>{ arrowGuard(); todayPrev(el,k,len); };
+  if(na) na.onclick=()=>{ arrowGuard(); todayNext(el,k,len); };
   let sx=0,sy=0;
   slider.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;},{passive:true});
   slider.addEventListener('touchend',e=>{
