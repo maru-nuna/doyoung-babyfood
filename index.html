@@ -1455,7 +1455,8 @@ function renderTodayMenu(){
     el.style.display='';
     const win=[order[ti],order[ti+1],order[ti+2]].filter(Boolean);
     let idx=todaySlideIdx[k]||0; if(idx>=win.length) idx=0; todaySlideIdx[k]=idx;
-    const slides=win.map(renderSlide).join('');
+    /* 마지막에서 다음으로 넘어갈 때 되감기 없이 자연스럽게 오늘로 이어지도록 첫 슬라이드 복제본을 끝에 둠 */
+    const slides=win.map(renderSlide).join('') + (win.length>1?renderSlide(win[0],0):'');
     const dots=win.length>1 ? `<div class="today-dots">${win.map((_,i)=>`<button class="today-dot${i===idx?' active':''}" data-i="${i}" aria-label="${tagOf(i)}"></button>`).join('')}</div>` : '';
     el.innerHTML=`<div class="today-head">오늘의 식단</div>
       <div class="today-slider"><div class="today-track" style="transform:translateX(-${idx*100}%)">${slides}</div></div>${dots}`;
@@ -1467,24 +1468,36 @@ function renderTodayMenu(){
     });
   }
 }
-function setTodaySlide(el,k,len,idx){
-  idx=((idx%len)+len)%len; todaySlideIdx[k]=idx;
-  const track=el.querySelector('.today-track'); if(track) track.style.transform=`translateX(-${idx*100}%)`;
-  el.querySelectorAll('.today-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+/* pos: 트랙 위치(0..len, len은 복제본). animate=false면 전환 없이 즉시 스냅 */
+function setTrack(el,pos,animate){
+  const track=el.querySelector('.today-track'); if(!track) return;
+  if(animate){ track.style.transition=''; track.style.transform=`translateX(-${pos*100}%)`; }
+  else { track.style.transition='none'; track.style.transform=`translateX(-${pos*100}%)`; void track.offsetWidth; track.style.transition=''; }
 }
+function updateDots(el,idx){ el.querySelectorAll('.today-dot').forEach((d,i)=>d.classList.toggle('active',i===idx)); }
+function todayGoto(el,k,len,idx){ todaySlideIdx[k]=idx; setTrack(el,idx,true); updateDots(el,idx); }
+function todayNext(el,k,len){
+  const cur=todaySlideIdx[k]||0;
+  if(cur<len-1){ todayGoto(el,k,len,cur+1); return; }
+  /* 마지막 → 복제본(오늘)으로 자연스럽게 전진한 뒤, 보이지 않게 실제 첫 슬라이드로 스냅 */
+  todaySlideIdx[k]=0; updateDots(el,0); setTrack(el,len,true);
+  const track=el.querySelector('.today-track');
+  const onEnd=()=>{ track.removeEventListener('transitionend',onEnd); setTrack(el,0,false); };
+  track.addEventListener('transitionend',onEnd);
+}
+function todayPrev(el,k,len){ const cur=todaySlideIdx[k]||0; if(cur>0) todayGoto(el,k,len,cur-1); }
 function setupTodaySwipe(el,k,len){
   if(len<2) return;
   const slider=el.querySelector('.today-slider'); if(!slider) return;
-  el.querySelectorAll('.today-dot').forEach(d=>d.onclick=()=>setTodaySlide(el,k,len,parseInt(d.dataset.i,10)));
+  el.querySelectorAll('.today-dot').forEach(d=>d.onclick=()=>todayGoto(el,k,len,parseInt(d.dataset.i,10)));
   let sx=0,sy=0;
   slider.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;},{passive:true});
   slider.addEventListener('touchend',e=>{
     const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
     if(Math.abs(dx)<36 || Math.abs(dx)<Math.abs(dy)) return; /* 탭이거나 세로 스크롤이면 무시 */
     suppressTodayClick=true; setTimeout(()=>suppressTodayClick=false,400);
-    const cur=todaySlideIdx[k]||0;
-    if(dx<0){ setTodaySlide(el,k,len,cur+1); }      /* 왼쪽으로 밀기 → 다음날(모레에서 오늘로 루핑) */
-    else if(cur>0){ setTodaySlide(el,k,len,cur-1); } /* 오른쪽으로 밀기 → 이전날, 오늘에서는 무감 */
+    if(dx<0) todayNext(el,k,len);   /* 왼쪽으로 밀기 → 다음날(모레에서 오늘로 자연스럽게 루핑) */
+    else todayPrev(el,k,len);       /* 오른쪽으로 밀기 → 이전날, 오늘에서는 무감 */
   },{passive:true});
 }
 /* 최근 1주일 추이 한 문장 (애플 건강 스타일) */
