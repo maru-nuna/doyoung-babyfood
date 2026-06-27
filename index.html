@@ -341,6 +341,8 @@
   .trend-comment{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--muted);}
   .trend-comment.up{color:var(--sage);}
   .trend-comment.down{color:var(--peach);}
+  .trend-new{font-size:12.5px;font-weight:600;color:var(--sage);line-height:1.6;margin:-8px 0 12px;}
+  .trend-new:last-of-type{margin-bottom:14px;}
   .trend-title{font-size:14px;font-weight:700;color:var(--ink);}
   .trend-unit{color:var(--muted);font-weight:400;font-size:11px;}
   .trend-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);}
@@ -559,6 +561,7 @@
       <button class="tab active" data-tab="t1">1~28일</button>
       <button class="tab" data-tab="t2">29~56일</button>
       <button class="tab" data-tab="t3">57~84일</button>
+      <button class="tab" data-tab="t4">85~112일</button>
     </div>
 
     <section id="t1" class="panel active">
@@ -578,6 +581,12 @@
       <div class="amount-trend" id="t3-trend"></div>
       <div class="today-card" id="t3-today"></div>
       <div id="t3-weeks"></div>
+    </section>
+    <section id="t4" class="panel">
+      <div class="new-foods"><b>새롭게 먹은 재료</b> <span id="t4-new"></span></div>
+      <div class="amount-trend" id="t4-trend"></div>
+      <div class="today-card" id="t4-today"></div>
+      <div id="t4-weeks"></div>
     </section>
 
     <div class="foot" style="text-align:left;">
@@ -916,9 +925,28 @@ function buildTab2(){
   return weeks;
 }
 const tab2 = buildTab2();
-/* 후기 이유식 — 3끼, 7/10부터. 식단은 빈 칸으로 시작(세정이 직접 입력) */
+/* 후기 이유식 1 — 2끼, 7/10부터. 식단은 빈 칸으로 시작(세정이 직접 입력) */
 function buildTab3(){
   const weeks=[]; let d=new Date(2025,6,10); let dday=241,n=57;
+  for(let w=0; w<4; w++){
+    const days=[]; let s,e;
+    for(let i=0;i<7;i++){
+      const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
+      if(i===0)s=ds; if(i===6)e=ds;
+      days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
+        {base:[],top:[],total:0},
+        {base:[],top:[],total:0},
+      ]});
+      d.setDate(d.getDate()+1); dday++; n++;
+    }
+    weeks.push({range:s+" ~ "+e, ratioNum:0, days});
+  }
+  return weeks;
+}
+const tab3 = buildTab3();
+/* 후기 이유식 2 — 3끼, 8/7부터(85~112일). 식단은 빈 칸으로 시작(세정이 직접 입력) */
+function buildTab4(){
+  const weeks=[]; let d=new Date(2025,7,7); let dday=269,n=85;
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     for(let i=0;i<7;i++){
@@ -935,7 +963,7 @@ function buildTab3(){
   }
   return weeks;
 }
-const tab3 = buildTab3();
+const tab4 = buildTab4();
 
 /* ============ 저장소 (로컬 + Supabase) ============ */
 let sb=null;
@@ -1036,6 +1064,7 @@ function recomputeFirstAppearances(){
   tab1.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
   tab2.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
   tab3.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
+  tab4.forEach(wk=>wk.days.forEach(d=>allDays.push(d)));
   allDays.forEach(day=>{
     getMeals(day).forEach((m,mi)=>{
       ['base','top'].forEach(field=>{
@@ -1397,7 +1426,7 @@ function dayRatio(day){
 }
 /* 일자별 먹은 양 추이 (기록 있는 날만, 1끼/2끼 누적 막대) */
 function renderAmountTrend(){
-  [['t1',tab1,1],['t2',tab2,2],['t3',tab3,3]].forEach(([k,weeks,mealsCount])=>{
+  [['t1',tab1,1],['t2',tab2,2],['t3',tab3,2],['t4',tab4,3]].forEach(([k,weeks,mealsCount])=>{
     const el=document.getElementById(k+'-trend');
     if(!el) return;
     const days=[];
@@ -1412,7 +1441,7 @@ function renderAmountTrend(){
       }
       const total=ms.reduce((a,b)=>a+b,0);
       if(total>0){
-        days.push({date:d.date,ms,total,stars:stars0.reduce((a,b)=>a+b,0)});
+        days.push({date:d.date,ms,total,stars:stars0.reduce((a,b)=>a+b,0),day:d});
       }
     }));
     const legLabels=['1끼','2끼','3끼'];
@@ -1423,11 +1452,11 @@ function renderAmountTrend(){
       el.innerHTML=head+`<div class="trend-empty">아직 먹은 양 기록이 없어요</div>`;
       return;
     }
-    el.innerHTML=head+trendComment(days)+`<div class="trend-bars">${days_bars(days,mealsCount)}</div>`;
+    el.innerHTML=head+trendComment(days,mealsCount)+`<div class="trend-bars">${days_bars(days,mealsCount)}</div>`;
   });
 }
 /* 오늘의 식단 — 하루 단위 슬라이드(오늘·내일·모레), 우측 스와이프로 다음날 이동(루핑) */
-const todaySlideIdx={t1:0,t2:0,t3:0};
+const todaySlideIdx={t1:0,t2:0,t3:0,t4:0};
 let suppressTodayClick=false;
 function renderTodayMenu(){
   const _t=new Date(), todayMD=(_t.getMonth()+1)+'/'+_t.getDate();
@@ -1453,7 +1482,7 @@ function renderTodayMenu(){
         return `<span class="tm-item${allergy?' al':''}${tag}">${esc(it.name)} <b>${it.g}${it.unit||'g'}</b>${rt}</span>`;
       }).join('')
     : '<span class="tm-empty">·</span>';
-  const groups=[['t1',tab1,['1끼']],['t2',tab2,['1끼','2끼']],['t3',tab3,['1끼','2끼','3끼']]];
+  const groups=[['t1',tab1,['1끼']],['t2',tab2,['1끼','2끼']],['t3',tab3,['1끼','2끼']],['t4',tab4,['1끼','2끼','3끼']]];
   const order=[];
   groups.forEach(([k,weeks,labels])=>weeks.forEach(wk=>wk.days.forEach(d=>order.push({k,d,labels}))));
   const ti=order.findIndex(o=>o.d.date===todayMD);
@@ -1538,19 +1567,51 @@ function setupTodaySwipe(el,k,len){
     else todayPrev(el,k,len);       /* 오른쪽으로 밀기 → 이전날, 오늘에서는 무감 */
   },{passive:true});
 }
-/* 최근 1주일 추이 한 문장 (애플 건강 스타일) */
-function trendComment(days){
+/* 받침 유무에 따라 조사 선택 (을/를 등) */
+function josa(word,withBat,without){
+  const c=word.charCodeAt(word.length-1);
+  if(isNaN(c)||c<0xAC00||c>0xD7A3) return without;
+  return (c-0xAC00)%28 ? withBat : without;
+}
+/* 최근 1주일 추이 한 문장 (애플 건강 스타일) — 변화량(g·%) + 새로 먹은 재료 */
+function trendComment(days,mealsCount){
   const recent=days.slice(-7);
-  if(recent.length<2) return '';
-  const half=Math.floor(recent.length/2);
-  const avg=a=>a.reduce((s,d)=>s+d.total,0)/a.length;
-  const early=avg(recent.slice(0,half)), late=avg(recent.slice(half));
-  const diff=late-early, pct=early?Math.abs(diff/early):0;
-  let word, cls;
-  if(pct<0.05){ word='비슷한 수준을 유지하고 있어요'; cls='flat'; }
-  else if(diff>0){ word='늘어나는 추세예요'; cls='up'; }
-  else{ word='줄어드는 추세예요'; cls='down'; }
-  return `<div class="trend-comment ${cls}">최근 ${recent.length}일간 먹은 양이 ${word}</div>`;
+  let html='';
+  if(recent.length>=2){
+    const half=Math.floor(recent.length/2);
+    const avg=a=>a.reduce((s,d)=>s+d.total,0)/a.length;
+    const early=avg(recent.slice(0,half)), late=avg(recent.slice(half));
+    const diff=late-early, pct=early?Math.abs(diff/early):0;
+    const g=Math.round(Math.abs(diff)), p=Math.round(pct*100);
+    let word, cls;
+    if(pct<0.05){ word='먹은 양이 비슷한 수준을 유지하고 있어요'; cls='flat'; }
+    else if(diff>0){ word=`먹은 양이 하루 평균 ${g}g 늘었어요 (${p}%↑)`; cls='up'; }
+    else{ word=`먹은 양이 하루 평균 ${g}g 줄었어요 (${p}%↓)`; cls='down'; }
+    html=`<div class="trend-comment ${cls}">최근 ${recent.length}일간 ${word}</div>`;
+  }
+  /* 최근 기간에 처음 먹은 재료를 날짜별로 모아 한 줄씩 출력 */
+  const byDate=new Map();
+  recent.forEach(rd=>{
+    if(!rd.day) return;
+    getMeals(rd.day).forEach((m,mi)=>{
+      if(mi>=mealsCount) return;
+      const ov=State.overrides[`${rd.date}|${mi}|top`];
+      const items = ov!=null ? parseItemsLocal(ov) : (m.top||[]).map(it=>({name:it[0]}));
+      items.forEach(it=>{
+        if(isFirstAppear(rd.date,mi,'top',it.name)){
+          if(!byDate.has(rd.date)) byDate.set(rd.date,[]);
+          const arr=byDate.get(rd.date);
+          if(!arr.includes(it.name)) arr.push(it.name);
+        }
+      });
+    });
+  });
+  byDate.forEach((names,date)=>{
+    const [mo,da]=date.split('/');
+    const list=names.join('·');
+    html+=`<div class="trend-new">🌱 ${mo}월 ${da}일에 ${list}${josa(list,'을','를')} 새로 먹었어요</div>`;
+  });
+  return html;
 }
 function days_bars(days,mealsCount){
   const max=Math.max(...days.map(d=>d.total));
@@ -1604,15 +1665,16 @@ function renderWeeks(weeks,withSnack,labels){
 function renderNewFoods(){
   const t1Dates=new Set(); tab1.forEach(wk=>wk.days.forEach(d=>t1Dates.add(d.date)));
   const t3Dates=new Set(); tab3.forEach(wk=>wk.days.forEach(d=>t3Dates.add(d.date)));
-  const out={t1:[],t2:[],t3:[]}, seen={t1:new Set(),t2:new Set(),t3:new Set()};
+  const t4Dates=new Set(); tab4.forEach(wk=>wk.days.forEach(d=>t4Dates.add(d.date)));
+  const out={t1:[],t2:[],t3:[],t4:[]}, seen={t1:new Set(),t2:new Set(),t3:new Set(),t4:new Set()};
   firstAppearSet.forEach(key=>{
     const p=key.split('|'); const date=p[0], mi=p[1], name=p[3];
     if(!State.logs[`${date}|${mi}|eaten`]) return;
-    const k = t1Dates.has(date) ? 't1' : (t3Dates.has(date) ? 't3' : 't2');
+    const k = t1Dates.has(date) ? 't1' : (t4Dates.has(date) ? 't4' : (t3Dates.has(date) ? 't3' : 't2'));
     if(seen[k].has(name)) return;
     seen[k].add(name); out[k].push(name);
   });
-  [['t1','t1-new'],['t2','t2-new'],['t3','t3-new']].forEach(([k,id])=>{
+  [['t1','t1-new'],['t2','t2-new'],['t3','t3-new'],['t4','t4-new']].forEach(([k,id])=>{
     const el=document.getElementById(id);
     el.innerHTML = out[k].length ? out[k].map(n=>`<span class="nf-chip">${esc(n)}</span>`).join('')
                                  : '<span class="nf-empty">· 아직 없음 — 먹은 양을 입력하면 추가돼요</span>';
@@ -1621,7 +1683,7 @@ function renderNewFoods(){
 
 function attachCellClick(){
   if(VIEW_ONLY) return;
-  document.querySelectorAll('#t1-weeks .mealcell, #t2-weeks .mealcell, #t3-weeks .mealcell').forEach(td=>{
+  document.querySelectorAll('#t1-weeks .mealcell, #t2-weeks .mealcell, #t3-weeks .mealcell, #t4-weeks .mealcell').forEach(td=>{
     td.addEventListener('click', (e)=>{
       const itemEl = e.target.closest('.item');
       const focusName = itemEl ? itemEl.dataset.iname : null;
@@ -1634,7 +1696,7 @@ function attachCellClick(){
 }
 /* 오늘 날짜 열 전체를 한 박스로 감싸는 테두리 표시 (날짜~메모, 내부 가로줄 제외) */
 function markTodayColumn(){
-  document.querySelectorAll('#t1-weeks table, #t2-weeks table, #t3-weeks table').forEach(table=>{
+  document.querySelectorAll('#t1-weeks table, #t2-weeks table, #t3-weeks table, #t4-weeks table').forEach(table=>{
     const headCells=[...table.querySelector('thead tr').children];
     let col=-1;
     headCells.forEach((th,i)=>{ if(th.classList.contains('date') && th.classList.contains('today')) col=i; });
@@ -1675,7 +1737,8 @@ function renderTables(){
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
-  document.getElementById('t3-weeks').innerHTML=renderWeeks(tab3,true,["1끼 · 아침","2끼 · 점심","3끼 · 저녁"]);
+  document.getElementById('t3-weeks').innerHTML=renderWeeks(tab3,true,["1끼 · 아침","2끼 · 저녁"]);
+  document.getElementById('t4-weeks').innerHTML=renderWeeks(tab4,true,["1끼 · 아침","2끼 · 점심","3끼 · 저녁"]);
   attachCellClick(); renderNewFoods(); renderAmountTrend(); renderTodayMenu(); markTodayColumn();
 }
 
@@ -1686,6 +1749,7 @@ function findDay(date){
   for(const wk of tab1) for(const d of wk.days) if(d.date===date) return d;
   for(const wk of tab2) for(const d of wk.days) if(d.date===date) return d;
   for(const wk of tab3) for(const d of wk.days) if(d.date===date) return d;
+  for(const wk of tab4) for(const d of wk.days) if(d.date===date) return d;
   return null;
 }
 function setFieldVisible(id,vis){ document.getElementById(id).style.display=vis?'':'none'; }
@@ -2080,7 +2144,9 @@ function applyDefaultSubTab(){
   const n=new Date(), today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
   const cut2d=tab2[0]&&tab2[0].days[0]&&dateOfMD(tab2[0].days[0].date);
   const cut3d=tab3[0]&&tab3[0].days[0]&&dateOfMD(tab3[0].days[0].date);
-  if(cut3d && today.getTime() >= cut3d.getTime()) selectSubTab('t3');
+  const cut4d=tab4[0]&&tab4[0].days[0]&&dateOfMD(tab4[0].days[0].date);
+  if(cut4d && today.getTime() >= cut4d.getTime()) selectSubTab('t4');
+  else if(cut3d && today.getTime() >= cut3d.getTime()) selectSubTab('t3');
   else if(cut2d && today.getTime() >= cut2d.getTime()) selectSubTab('t2');
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
