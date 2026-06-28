@@ -1227,6 +1227,15 @@ function migrate623Grain7(){
   State.ratios623grain7=true;
   save();
 }
+/* 6/29 1끼부터 7/9까지 — 쌀 7배죽 · 오트밀 6배죽 (끼니별 키, 기존 값 위에 덮어쓰기) */
+function migrate629Rice7Oat6(){
+  if(State.ratios629rice7oat6) return;
+  const R=State.ratios=State.ratios||{};
+  ['6/29','6/30','7/1','7/2','7/3','7/4','7/5','7/6','7/7','7/8','7/9']
+    .forEach(d=>[0,1].forEach(mi=>{ R[`${d}|${mi}|쌀`]=7; R[`${d}|${mi}|오트밀`]=6; }));
+  State.ratios629rice7oat6=true;
+  save();
+}
 function cellList(items, date, mi, field){
   if(!items||!items.length) return '<span class="empty">·</span>';
   return '<div class="cell-list">'+items.map(it=>{
@@ -1733,6 +1742,7 @@ function renderTables(){
   seedW2W3Ratios();
   migrate620All8();
   migrate623Grain7();
+  migrate629Rice7Oat6();
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
