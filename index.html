@@ -883,9 +883,9 @@ function buildTab2(){
       const topSum = (theMeat?10:0) + vegs.length*15;
       const grain2 = di < 3 ? '오트밀' : '현미';
       const rice = 30;
-      const g2 = (di < 4 || di >= 10) ? 15 : 30;  /* 6/22(di10)부터 15g */
+      const g2 = di>=21 ? 30 : ((di < 4 || di >= 10) ? 15 : 30);  /* 6/22(di10)부터 15g, 7/3(di21)부터 30g */
       const base=[["쌀",rice],[grain2,g2]];
-      if(di>=14) base.push(['오트밀',15]);  /* 6/26~7/9 오트밀 15g 추가 (7배죽) */
+      if(di>=14) base.push(['오트밀', di>=21 ? 30 : 15]);  /* 6/26~7/2 오트밀 15g, 7/3~7/9 30g */
       const toMeat=name=>t=>t.map(it=>CAT.meat.includes(it[0])?[name,10]:it.slice());
       /* 2끼 고기를 소고기로 통일하는 날 (6/21~23, 6/27~7/9) */
       const PM_BEEF=new Set(['6/21','6/22','6/23','6/27','6/28','6/29','6/30','7/1','7/2','7/3','7/4','7/5','7/6','7/7','7/8','7/9']);
@@ -1234,6 +1234,15 @@ function migrate629Rice7Oat6(){
   ['6/29','6/30','7/1','7/2','7/3','7/4','7/5','7/6','7/7','7/8','7/9']
     .forEach(d=>[0,1].forEach(mi=>{ R[`${d}|${mi}|쌀`]=7; R[`${d}|${mi}|오트밀`]=6; }));
   State.ratios629rice7oat6=true;
+  save();
+}
+/* 7/3 1끼부터 7/9까지 — 쌀 5배죽 · 현미 6배죽 · 오트밀 5배죽 (끼니별 키, 기존 값 위에 덮어쓰기) */
+function migrate703Ratios(){
+  if(State.ratios703) return;
+  const R=State.ratios=State.ratios||{};
+  ['7/3','7/4','7/5','7/6','7/7','7/8','7/9']
+    .forEach(d=>[0,1].forEach(mi=>{ R[`${d}|${mi}|쌀`]=5; R[`${d}|${mi}|현미`]=6; R[`${d}|${mi}|오트밀`]=5; }));
+  State.ratios703=true;
   save();
 }
 function cellList(items, date, mi, field){
@@ -1743,6 +1752,7 @@ function renderTables(){
   migrate620All8();
   migrate623Grain7();
   migrate629Rice7Oat6();
+  migrate703Ratios();
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
