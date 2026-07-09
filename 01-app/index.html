@@ -559,9 +559,9 @@
 
     <div class="tabs">
       <button class="tab active" data-tab="t1">1~28일</button>
-      <button class="tab" data-tab="t2">29~56일</button>
-      <button class="tab" data-tab="t3">57~84일</button>
-      <button class="tab" data-tab="t4">85~112일</button>
+      <button class="tab" data-tab="t2">29~59일</button>
+      <button class="tab" data-tab="t3">60~87일</button>
+      <button class="tab" data-tab="t4">88~115일</button>
     </div>
 
     <section id="t1" class="panel active">
@@ -922,12 +922,24 @@ function buildTab2(){
     }
     weeks.push({range:s+" ~ "+e, ratioNum:parseInt(porridge[w],10), days});
   }
+  /* 7/10~7/12 — 아직 2끼라 29~56일 탭에 같이 둠(3일치, 식단은 빈 칸으로 시작) */
+  const days5=[]; let s5,e5;
+  for(let i=0;i<3;i++){
+    const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
+    if(i===0)s5=ds; if(i===2)e5=ds;
+    days5.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
+      {base:[],top:[],total:0},
+      {base:[],top:[],total:0},
+    ]});
+    d.setDate(d.getDate()+1); dday++; n++;
+  }
+  weeks.push({range:s5+" ~ "+e5, ratioNum:0, days:days5});
   return weeks;
 }
 const tab2 = buildTab2();
-/* 후기 이유식 1 — 2끼, 7/10부터. 식단은 빈 칸으로 시작(세정이 직접 입력) */
+/* 후기 이유식 1 — 2끼, 7/13부터(7/10~7/12는 29~56일 탭에 포함). 식단은 빈 칸으로 시작(세정이 직접 입력) */
 function buildTab3(){
-  const weeks=[]; let d=new Date(2025,6,10); let dday=241,n=57;
+  const weeks=[]; let d=new Date(2025,6,13); let dday=244,n=60;
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     for(let i=0;i<7;i++){
@@ -944,9 +956,9 @@ function buildTab3(){
   return weeks;
 }
 const tab3 = buildTab3();
-/* 후기 이유식 2 — 3끼, 8/7부터(85~112일). 식단은 빈 칸으로 시작(세정이 직접 입력) */
+/* 후기 이유식 2 — 3끼, 8/10부터(88~115일). 식단은 빈 칸으로 시작(세정이 직접 입력) */
 function buildTab4(){
-  const weeks=[]; let d=new Date(2025,7,7); let dday=269,n=85;
+  const weeks=[]; let d=new Date(2025,7,10); let dday=272,n=88;
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     for(let i=0;i<7;i++){
