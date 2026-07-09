@@ -922,32 +922,76 @@ function buildTab2(){
     }
     weeks.push({range:s+" ~ "+e, ratioNum:parseInt(porridge[w],10), days});
   }
-  /* 7/10~7/12 — 아직 2끼라 29~56일 탭에 같이 둠(3일치, 식단은 빈 칸으로 시작) */
+  /* 7/10~7/12 — 아직 2끼라 29~56일 탭에 같이 둠(3일치, 메뉴는 7/9와 동일) */
+  const lastWeekDays=weeks[weeks.length-1].days;
+  const jul9=lastWeekDays[lastWeekDays.length-1];
   const days5=[]; let s5,e5;
   for(let i=0;i<3;i++){
     const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
     if(i===0)s5=ds; if(i===2)e5=ds;
-    days5.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-      {base:[],top:[],total:0},
-      {base:[],top:[],total:0},
-    ]});
+    days5.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:jul9.meals.map(mm=>({
+      base:mm.base.map(b=>b.slice()), top:mm.top.map(t=>t.slice()), total:mm.total
+    }))});
     d.setDate(d.getDate()+1); dday++; n++;
   }
-  weeks.push({range:s5+" ~ "+e5, ratioNum:0, days:days5});
+  weeks.push({range:s5+" ~ "+e5, ratioNum:parseInt(porridge[3],10), days:days5});
   return weeks;
 }
 const tab2 = buildTab2();
-/* 후기 이유식 1 — 2끼, 7/13부터(7/10~7/12는 29~56일 탭에 포함). 식단은 빈 칸으로 시작(세정이 직접 입력) */
+/* 후기 이유식 1 — 2끼, 7/13부터(7/10~7/12는 29~56일 탭에 포함).
+   · 돼지고기는 아직 안 넣음(세정 요청) — 소고기·닭고기만 기존 안전 재료, 흰살생선은 신규(고기)
+   · 신규 재료(계란 포함)는 서로 3일 이상 간격을 두고 평일에만 도입 — 당근(7/13)→흰살생선(7/16, 고기)→계란노른자 알러지테스트(7/20)→새송이버섯(7/23)→토마토(7/27)→무(7/30)→검은콩·베이스(8/3)
+   · 신규 재료는 도입일에 1끼(아침)에만 넣고 2끼(저녁)는 원래 로테이션 재료로 대체 — 다음날부터는 양쪽 끼니 로테이션에 정식 합류
+   · 고기·채소 모두 매일 바꾸지 않고 1주일 단위로 고정, 신규 재료가 안전해지면 다음 주부터 로테이션에 합류하며 주별로 조합이 바뀜
+   · 검은콩 도입(8/3) 이후 베이스 셋째 곡물은 현미·검은콩 격일 교대. 퀴노아(8/6)는 대체가 아니라 넷째 베이스로 추가 — 그만큼 총량이 늘어남
+   · 총량 기준: 베이스 75g(쌀30+오트밀30+현미/검은콩15) + 채소 6종×15g(90g) + 고기(1끼20g·2끼10g)
+     = 1끼 185g · 2끼 175g — 기존 실제 식사량(175g)에 맞춰 채소를 3종→6종으로 늘림(세정 확정)
+     퀴노아 합류 이후(8/7~)는 베이스가 90g이 되어 1끼 200g·2끼 190g로 15g씩 늘어남(세정에게 안내 완료) */
+const T3_VEG_BASE=['브로콜리','시금치','단호박','양파','감자','고구마','두부'];
+const T3_VEG_NEW={'7/13':'당근','7/23':'새송이버섯','7/27':'토마토','7/30':'무'};
+const T3_MEAT_BASE=['소고기','닭고기'];
+const T3_MEAT_NEW={'7/16':'흰살생선'};
+const T3_BEAN_START='8/3';
+const T3_QUINOA_START='8/6';
+const T3_EGG_TEST='7/20';
+const T3_VEG_COUNT=6;
 function buildTab3(){
   const weeks=[]; let d=new Date(2025,6,13); let dday=244,n=60;
+  const vegAvail=T3_VEG_BASE.slice(), meatAvail=T3_MEAT_BASE.slice();
+  let vegPtr=0, grainPtr=0, beanStarted=false, quinoaStarted=false;
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
+    /* 이번 주 시작 시점의 안전한 재료 목록으로 1끼·2끼 고기, 채소 구성을 한 주 내내 고정(매일 안 바꿈) */
+    const weekMeats = meatAvail.slice();
+    const weekAmMeat = weekMeats[w%weekMeats.length];
+    const weekPmMeat = weekMeats[(w+1)%weekMeats.length];
+    const weekVegs=[]; for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c)) weekVegs.push(c); }
+    vegPtr+=T3_VEG_COUNT;
     for(let i=0;i<7;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===6)e=ds;
+      const forcedVeg=T3_VEG_NEW[ds]||null, forcedMeat=T3_MEAT_NEW[ds]||null, isBeanStart=(ds===T3_BEAN_START), isQuinoaStart=(ds===T3_QUINOA_START);
+      if(forcedVeg) vegAvail.push(forcedVeg);
+      if(forcedMeat) meatAvail.push(forcedMeat);
+      if(isBeanStart) beanStarted=true;
+      if(isQuinoaStart) quinoaStarted=true;
+      const amMeat = forcedMeat || weekAmMeat;
+      const pmMeat = weekPmMeat;
+      const amVegs = forcedVeg ? [forcedVeg, ...weekVegs.filter(v=>v!==forcedVeg)].slice(0,T3_VEG_COUNT) : weekVegs;
+      const pmVegs = weekVegs;
+      const grainVal = beanStarted ? ((grainPtr++)%2?'검은콩':'현미') : '현미';
+      const amGrain = isBeanStart ? '검은콩' : grainVal;
+      const pmGrain = isBeanStart ? '현미' : grainVal;
+      const amBase=[["쌀",30],["오트밀",30],[amGrain,15]];
+      const pmBase=[["쌀",30],["오트밀",30],[pmGrain,15]];
+      if(quinoaStarted) amBase.push(["퀴노아",15]);
+      if(quinoaStarted && !isQuinoaStart) pmBase.push(["퀴노아",15]);
+      const amTop=[[amMeat,20]].concat(amVegs.map(v=>[v,15]));
+      const pmTop=[[pmMeat,10]].concat(pmVegs.map(v=>[v,15]));
+      if(ds===T3_EGG_TEST) amTop.push(["계란 노른자",5]);
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-        {base:[],top:[],total:0},
-        {base:[],top:[],total:0},
+        {base:amBase, top:amTop, total:sumg(amBase,amTop)},
+        {base:pmBase, top:pmTop, total:sumg(pmBase,pmTop)},
       ]});
       d.setDate(d.getDate()+1); dday++; n++;
     }
@@ -1248,13 +1292,23 @@ function migrate629Rice7Oat6(){
   State.ratios629rice7oat6=true;
   save();
 }
-/* 7/3 1끼부터 7/9까지 — 쌀 5배죽 · 현미 6배죽 · 오트밀 5배죽 (끼니별 키, 기존 값 위에 덮어쓰기) */
+/* 7/3 1끼부터 7/12까지 — 쌀 5배죽 · 현미 6배죽 · 오트밀 5배죽 (7/10~7/12는 7/9와 동일 메뉴라 같이 포함) */
 function migrate703Ratios(){
   if(State.ratios703) return;
   const R=State.ratios=State.ratios||{};
-  ['7/3','7/4','7/5','7/6','7/7','7/8','7/9']
+  ['7/3','7/4','7/5','7/6','7/7','7/8','7/9','7/10','7/11','7/12']
     .forEach(d=>[0,1].forEach(mi=>{ R[`${d}|${mi}|쌀`]=5; R[`${d}|${mi}|현미`]=6; R[`${d}|${mi}|오트밀`]=5; }));
   State.ratios703=true;
+  save();
+}
+/* 7/13~8/9 — 쌀·현미·오트밀 5배죽 통일 (끼니별 키) */
+function migrate713Ratios5(){
+  if(State.ratios713) return;
+  const R=State.ratios=State.ratios||{};
+  tab3.forEach(wk=>wk.days.forEach(day=>{
+    [0,1].forEach(mi=>['쌀','현미','오트밀'].forEach(n=>{ R[`${day.date}|${mi}|${n}`]=5; }));
+  }));
+  State.ratios713=true;
   save();
 }
 function cellList(items, date, mi, field){
@@ -1765,6 +1819,7 @@ function renderTables(){
   migrate623Grain7();
   migrate629Rice7Oat6();
   migrate703Ratios();
+  migrate713Ratios5();
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
