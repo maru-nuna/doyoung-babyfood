@@ -943,38 +943,37 @@ const tab2 = buildTab2();
    · 신규 재료(계란 포함)는 서로 3일 이상 간격을 두고 평일에만 도입 — 당근(7/13)→흰살생선(7/16, 고기)→계란노른자 알러지테스트(7/20)→새송이버섯(7/23)→토마토(7/27)→무(7/30)→검은콩·베이스(8/3)
    · 신규 재료는 도입일에 1끼(아침)에만 넣고 2끼(저녁)는 원래 로테이션 재료로 대체 — 다음날부터는 양쪽 끼니 로테이션에 정식 합류
    · 고기·채소 모두 매일 바꾸지 않고 1주일 단위로 고정, 신규 재료가 안전해지면 다음 주부터 로테이션에 합류하며 주별로 조합이 바뀜
-   · 검은콩 도입(8/3) 이후 베이스 셋째 곡물은 현미·검은콩 격일 교대. 퀴노아(8/6)는 대체가 아니라 넷째 베이스로 추가 — 그만큼 총량이 늘어남
-   · 총량 기준: 베이스 75g(쌀30+오트밀30+현미/검은콩15) + 채소 6종×15g(90g) + 고기(1끼20g·2끼10g)
-     = 1끼 185g · 2끼 175g — 기존 실제 식사량(175g)에 맞춰 채소를 3종→6종으로 늘림(세정 확정)
-     퀴노아 합류 이후(8/7~)는 베이스가 90g이 되어 1끼 200g·2끼 190g로 15g씩 늘어남(세정에게 안내 완료) */
+   · 검은콩 도입(8/3) 이후 베이스 셋째 곡물은 현미·검은콩 격일 교대.
+   · 퀴노아는 7/7(tab2 구간)에 이미 먹어본 재료라 격리 테스트 없이 7/13부터 바로 넷째 베이스로 상시 포함 — 대체가 아니라 추가라서 그만큼 총량이 늘어남
+   · 당근은 7/13 하루만 격리 테스트하는 대신, 1주차(7/13~19) 내내 채소 목록에 포함(세정 요청 — 한 번 확인되면 그 주는 계속 먹임)
+   · 총량 기준: 베이스 75g(쌀30+오트밀30+현미/검은콩15) + 채소 6종×15g(90g) + 고기(1끼20g·2끼10g) = 1끼 185g·2끼 175g(기존 실제 식사량 175g 기준)
+     여기에 퀴노아(+15g)가 7/13부터 상시 포함돼 실제로는 1끼 200g·2끼 190g (세정에게 안내 완료) */
 const T3_VEG_BASE=['브로콜리','시금치','단호박','양파','감자','고구마','두부'];
 const T3_VEG_NEW={'7/13':'당근','7/23':'새송이버섯','7/27':'토마토','7/30':'무'};
 const T3_MEAT_BASE=['소고기','닭고기'];
 const T3_MEAT_NEW={'7/16':'흰살생선'};
 const T3_BEAN_START='8/3';
-const T3_QUINOA_START='8/6';
 const T3_EGG_TEST='7/20';
 const T3_VEG_COUNT=6;
 function buildTab3(){
   const weeks=[]; let d=new Date(2025,6,13); let dday=244,n=60;
   const vegAvail=T3_VEG_BASE.slice(), meatAvail=T3_MEAT_BASE.slice();
-  let vegPtr=0, grainPtr=0, beanStarted=false, quinoaStarted=false;
+  let vegPtr=0, grainPtr=0, beanStarted=false;
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     /* 이번 주 시작 시점의 안전한 재료 목록으로 1끼·2끼 고기, 채소 구성을 한 주 내내 고정(매일 안 바꿈) */
     const weekMeats = meatAvail.slice();
     const weekAmMeat = weekMeats[w%weekMeats.length];
     const weekPmMeat = weekMeats[(w+1)%weekMeats.length];
-    const weekVegs=[]; for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c)) weekVegs.push(c); }
+    const weekVegs=[]; if(w===0) weekVegs.push('당근'); for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c)) weekVegs.push(c); }
     vegPtr+=T3_VEG_COUNT;
     for(let i=0;i<7;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===6)e=ds;
-      const forcedVeg=T3_VEG_NEW[ds]||null, forcedMeat=T3_MEAT_NEW[ds]||null, isBeanStart=(ds===T3_BEAN_START), isQuinoaStart=(ds===T3_QUINOA_START);
+      const forcedVeg=T3_VEG_NEW[ds]||null, forcedMeat=T3_MEAT_NEW[ds]||null, isBeanStart=(ds===T3_BEAN_START);
       if(forcedVeg) vegAvail.push(forcedVeg);
       if(forcedMeat) meatAvail.push(forcedMeat);
       if(isBeanStart) beanStarted=true;
-      if(isQuinoaStart) quinoaStarted=true;
       const amMeat = forcedMeat || weekAmMeat;
       const pmMeat = weekPmMeat;
       const amVegs = forcedVeg ? [forcedVeg, ...weekVegs.filter(v=>v!==forcedVeg)].slice(0,T3_VEG_COUNT) : weekVegs;
@@ -982,10 +981,8 @@ function buildTab3(){
       const grainVal = beanStarted ? ((grainPtr++)%2?'검은콩':'현미') : '현미';
       const amGrain = isBeanStart ? '검은콩' : grainVal;
       const pmGrain = isBeanStart ? '현미' : grainVal;
-      const amBase=[["쌀",30],["오트밀",30],[amGrain,15]];
-      const pmBase=[["쌀",30],["오트밀",30],[pmGrain,15]];
-      if(quinoaStarted) amBase.push(["퀴노아",15]);
-      if(quinoaStarted && !isQuinoaStart) pmBase.push(["퀴노아",15]);
+      const amBase=[["쌀",30],["오트밀",30],[amGrain,15],["퀴노아",15]];
+      const pmBase=[["쌀",30],["오트밀",30],[pmGrain,15],["퀴노아",15]];
       const amTop=[[amMeat,20]].concat(amVegs.map(v=>[v,15]));
       const pmTop=[[pmMeat,10]].concat(pmVegs.map(v=>[v,15]));
       if(ds===T3_EGG_TEST) amTop.push(["계란 노른자",5]);
@@ -1537,6 +1534,9 @@ function renderAmountTrend(){
       return;
     }
     el.innerHTML=head+trendComment(days,mealsCount)+`<div class="trend-bars">${days_bars(days,mealsCount)}</div>`;
+    /* 그래프는 항상 최신 기간이 보이게 오른쪽 끝으로 스크롤(모바일에서 매번 직접 넘길 필요 없게) */
+    const barsEl=el.querySelector('.trend-bars');
+    if(barsEl) barsEl.scrollLeft=barsEl.scrollWidth;
   });
 }
 /* 오늘의 식단 — 하루 단위 슬라이드(오늘·내일·모레), 우측 스와이프로 다음날 이동(루핑) */
@@ -1823,7 +1823,7 @@ function renderTables(){
   recomputeRatioChanges();
   recomputeFirstAppearances();
   document.getElementById('t1-weeks').innerHTML=renderWeeks(tab1,false,["1끼"]);
-  document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,true,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
+  document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,false,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
   document.getElementById('t3-weeks').innerHTML=renderWeeks(tab3,true,["1끼 · 아침","2끼 · 저녁"]);
   document.getElementById('t4-weeks').innerHTML=renderWeeks(tab4,true,["1끼 · 아침","2끼 · 점심","3끼 · 저녁"]);
   attachCellClick(); renderNewFoods(); renderAmountTrend(); renderTodayMenu(); markTodayColumn();
