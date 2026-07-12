@@ -945,7 +945,7 @@ const tab2 = buildTab2();
    · 고기·채소 모두 매일 바꾸지 않고 1주일 단위로 고정, 신규 재료가 안전해지면 다음 주부터 로테이션에 합류하며 주별로 조합이 바뀜
    · 검은콩 도입(8/3) 이후 베이스 셋째 곡물은 현미·검은콩 격일 교대. 1주차(7/13~19)는 현미를 아예 안 씀(세정 요청)
    · 퀴노아는 7/7(tab2 구간)에 이미 먹어본 재료라 격리 테스트 없이 7/13부터 바로 넷째 베이스로 상시 포함 — 대체가 아니라 추가라서 그만큼 총량이 늘어남
-   · 당근·고구마는 1주차(7/13~19) 내내 채소 목록에 상시 포함(세정 요청 — 한 번 확인되면 그 주는 계속 먹임). 현미 제거로 줄어든 15g만큼 총량이 다시 맞춰짐
+   · 당근·고구마·감자는 1주차(7/13~19) 내내 채소 목록에 상시 포함(세정 요청 — 한 번 확인되면 그 주는 계속 먹임). 현미 제거로 줄어든 15g만큼 총량이 다시 맞춰짐
    · 총량 기준: 베이스 75g(쌀30+오트밀30+현미/검은콩15) + 채소 6종×15g(90g) + 고기(1끼20g·2끼10g) = 1끼 185g·2끼 175g(기존 실제 식사량 175g 기준)
      여기에 퀴노아(+15g)가 7/13부터 상시 포함돼 실제로는 1끼 200g·2끼 190g (세정에게 안내 완료). 단 1주차는 현미(-15g)가 빠져서 다시 185/175g */
 const T3_VEG_BASE=['브로콜리','시금치','단호박','양파','감자','고구마','두부'];
@@ -965,7 +965,7 @@ function buildTab3(){
     const weekMeats = meatAvail.slice();
     const weekAmMeat = weekMeats[w%weekMeats.length];
     const weekPmMeat = weekMeats[(w+1)%weekMeats.length];
-    const weekVegs=[]; if(w===0){ weekVegs.push('당근'); weekVegs.push('고구마'); } for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c)) weekVegs.push(c); }
+    const weekVegs=[]; if(w===0){ weekVegs.push('당근'); weekVegs.push('고구마'); weekVegs.push('감자'); } for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c)) weekVegs.push(c); }
     vegPtr+=T3_VEG_COUNT;
     for(let i=0;i<7;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
