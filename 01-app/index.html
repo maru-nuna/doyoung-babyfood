@@ -837,7 +837,7 @@ const NEWSEQ=['고구마',null,'닭고기',null,'양파','땅콩','계란 노른
 const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자']);
 /* 알러지 재료 중 병원 접근성을 위해 특정 날짜(월~목)로 시작일 고정 */
 const ALLERGEN_STARTS={'밀가루':'6/22'};
-const CAT={meat:['소고기','닭고기','돼지고기'],veg1:['브로콜리','시금치','청경채'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
+const CAT={meat:['소고기','닭고기','돼지고기','흰살생선'],veg1:['브로콜리','시금치','청경채'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
 /* 토핑 셀 내 재료 표시 순서 — 같은 칸 재료가 날짜마다 뒤바뀌지 않게 고정 (두부는 채소2 맨 앞) */
 const TOPORDER=CAT.meat.concat(CAT.veg1,['두부'],CAT.veg2,CAT.veg3);
 const topOrderIdx=n=>{ const i=TOPORDER.indexOf(n); return i<0?99:i; };
@@ -946,6 +946,7 @@ const tab2 = buildTab2();
    · 검은콩 도입(8/3) 이후 베이스 셋째 곡물은 현미·검은콩 격일 교대. 1주차(7/13~19)는 현미를 아예 안 씀(세정 요청)
    · 퀴노아는 7/7(tab2 구간)에 이미 먹어본 재료라 격리 테스트 없이 7/13부터 바로 넷째 베이스로 상시 포함 — 대체가 아니라 추가라서 그만큼 총량이 늘어남
    · 당근·고구마·감자는 1주차(7/13~19) 내내 채소 목록에 상시 포함(세정 요청 — 한 번 확인되면 그 주는 계속 먹임). 현미 제거로 줄어든 15g만큼 총량이 다시 맞춰짐
+   · 2주차(7/20~26)는 두부를 빼고 고구마를 포함, 2끼에 소고기 10g을 추가 배치(세정 요청 — 그만큼 2끼 총량이 늘어남)
    · 총량 기준: 베이스 75g(쌀30+오트밀30+현미/검은콩15) + 채소 6종×15g(90g) + 고기(1끼20g·2끼10g) = 1끼 185g·2끼 175g(기존 실제 식사량 175g 기준)
      여기에 퀴노아(+15g)가 7/13부터 상시 포함돼 실제로는 1끼 200g·2끼 190g (세정에게 안내 완료). 단 1주차는 현미(-15g)가 빠져서 다시 185/175g */
 const T3_VEG_BASE=['브로콜리','시금치','단호박','양파','감자','고구마','두부'];
@@ -965,7 +966,7 @@ function buildTab3(){
     const weekMeats = meatAvail.slice();
     const weekAmMeat = weekMeats[w%weekMeats.length];
     const weekPmMeat = weekMeats[(w+1)%weekMeats.length];
-    const weekVegs=[]; if(w===0){ weekVegs.push('당근'); weekVegs.push('고구마'); weekVegs.push('감자'); } for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c)) weekVegs.push(c); }
+    const weekVegs=[]; if(w===0){ weekVegs.push('당근'); weekVegs.push('고구마'); weekVegs.push('감자'); } if(w===1){ weekVegs.push('고구마'); } for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c) && !(w===1 && c==='두부')) weekVegs.push(c); }
     vegPtr+=T3_VEG_COUNT;
     for(let i=0;i<7;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
@@ -983,8 +984,9 @@ function buildTab3(){
       const pmGrain = isBeanStart ? '현미' : grainVal;
       const amBase=[["쌀",30],["오트밀",30]]; if(w!==0) amBase.push([amGrain,15]); amBase.push(["퀴노아",15]);
       const pmBase=[["쌀",30],["오트밀",30]]; if(w!==0) pmBase.push([pmGrain,15]); pmBase.push(["퀴노아",15]);
+      const pmMeatItems = (w===1 && pmMeat!=='소고기') ? [[pmMeat,10],['소고기',10]] : [[pmMeat,10]];
       const amTop=[[amMeat,20]].concat(amVegs.map(v=>[v,15]));
-      const pmTop=[[pmMeat,10]].concat(pmVegs.map(v=>[v,15]));
+      const pmTop=pmMeatItems.concat(pmVegs.map(v=>[v,15]));
       if(ds===T3_EGG_TEST) amTop.push(["계란 노른자",5]);
       days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
         {base:amBase, top:amTop, total:sumg(amBase,amTop)},
