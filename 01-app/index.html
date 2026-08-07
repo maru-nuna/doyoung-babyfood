@@ -528,7 +528,7 @@
     <div class="topbar">
       <div>
         <h1 class="title">도영이 기록</h1>
-        <div class="sub">이유식 식단 + 장난감 후기</div>
+        <div class="sub">이유식 식단 + 장난감 · 책 후기</div>
       </div>
       <div class="actions">
         <div class="sync"><span id="sync-dot" class="dot"></span><span id="sync-text">로컬 저장</span></div>
@@ -539,6 +539,7 @@
   <div class="main-tabs">
     <button class="main-tab active" data-main="m1">🥣 이유식</button>
     <button class="main-tab" data-main="m2">🧸 장난감</button>
+    <button class="main-tab" data-main="m3">📚 책</button>
   </div>
 
   <section id="m1" class="main-panel active">
@@ -553,8 +554,8 @@
     <div class="tabs">
       <button class="tab active" data-tab="t1">1~28일</button>
       <button class="tab" data-tab="t2">29~59일</button>
-      <button class="tab" data-tab="t3">60~87일</button>
-      <button class="tab" data-tab="t4">88~115일</button>
+      <button class="tab" data-tab="t3">60~120일</button>
+      <button class="tab" data-tab="t4">121~148일</button>
     </div>
 
     <section id="t1" class="panel active">
@@ -608,6 +609,28 @@
         <tbody id="toy-tbody"></tbody>
       </table>
       <div id="toy-empty" class="toy-empty" style="display:none">아직 등록한 장난감이 없어요. <b>+ 장난감 추가</b> 버튼으로 시작해보세요.</div>
+    </div>
+  </section>
+
+  <section id="m3" class="main-panel">
+    <div class="toy-head">
+      <div class="toy-sub">개월수별 책과 후기 · 행을 누르면 편집</div>
+      <button id="add-book" class="check-btn">+ 책 추가</button>
+    </div>
+    <div class="toy-table-wrap">
+      <table class="toy-table">
+        <thead>
+          <tr>
+            <th class="th-month">개월수</th>
+            <th class="th-photo">사진</th>
+            <th class="th-name">책</th>
+            <th class="th-rating">추천</th>
+            <th class="th-review">후기</th>
+          </tr>
+        </thead>
+        <tbody id="book-tbody"></tbody>
+      </table>
+      <div id="book-empty" class="toy-empty" style="display:none">아직 등록한 책이 없어요. <b>+ 책 추가</b> 버튼으로 시작해보세요.</div>
     </div>
   </section>
 </div>
@@ -709,6 +732,61 @@
       <div style="display:flex;gap:8px;">
         <button id="toy-cancel" class="reset-btn">취소</button>
         <button id="toy-save" class="check-btn done-btn">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 책 편집 -->
+<div id="book-overlay" class="overlay detail-overlay">
+  <div class="modal toy-modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="book-title">책 추가</div>
+        <div class="modal-sub">사진·제목·개월수·별점·후기 입력</div>
+      </div>
+      <button id="book-close" class="close-x">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="field">
+        <span class="flabel">사진 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 한 장 (자동 압축) · 복사한 사진은 Ctrl/⌘+V</span></span>
+        <div class="toy-photo-area">
+          <div id="book-photo-preview" class="toy-photo-preview">사진 없음</div>
+          <div class="toy-photo-buttons">
+            <label class="toy-photo-pick">
+              사진 선택
+              <input type="file" id="book-photo-input" accept="image/*" hidden>
+            </label>
+            <button type="button" id="book-photo-remove" class="reset-btn" style="display:none">제거</button>
+          </div>
+        </div>
+      </div>
+      <label class="field">
+        <span class="flabel">책 제목</span>
+        <input type="text" id="book-name" placeholder="예: 사과가 쿵!">
+      </label>
+      <div class="field">
+        <span class="flabel">개월수 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 여러 개 선택 가능</span></span>
+        <div id="book-months" class="toy-month-pick"></div>
+      </div>
+      <div class="field">
+        <span class="flabel">추천 별점 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 별을 클릭하면 0.5 단위로 설정</span></span>
+        <div class="toy-rating-edit">
+          <div id="book-rating-stars" class="rating-stars"></div>
+          <span id="book-rating-label" class="rating-num">—</span>
+          <button type="button" id="book-rating-clear" class="reset-btn" style="padding:4px 10px;font-size:11px;">초기화</button>
+        </div>
+      </div>
+      <div class="field" id="book-reviews-field">
+        <span class="flabel">후기 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 선택한 개월수마다 따로</span></span>
+        <div id="book-reviews"></div>
+      </div>
+    </div>
+    <div class="modal-foot detail-foot">
+      <button id="book-delete" class="reset-btn" style="color:#cf6b5a;border-color:#e5c4be;">삭제</button>
+      <div style="display:flex;gap:8px;">
+        <button id="book-cancel" class="reset-btn">취소</button>
+        <button id="book-save" class="check-btn done-btn">저장</button>
       </div>
     </div>
   </div>
@@ -952,42 +1030,57 @@ const T3_MEAT_NEW={'7/16':'흰살생선'};
 const T3_BEAN_START='8/3';
 const T3_EGG_TEST='7/20';
 const T3_VEG_COUNT=6;
+/* 8/8~9/11은 세정 요청으로 매일 동일한 끼니 고정(9/12부터 3끼 전환 전까지 2끼 유지) — 8/8 원래 자동생성 식단 기준, 소고기만 20→15g */
+const FIXED_MEAL_START=new Date(2025,7,8);
+const FIXED_MEAL_END=new Date(2025,8,11);
+const FIXED_MEAL_AM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["소고기",15],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
+const FIXED_MEAL_PM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["닭고기",10],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
 function buildTab3(){
   const weeks=[]; let d=new Date(2025,6,13); let dday=244,n=60;
   const vegAvail=T3_VEG_BASE.slice(), meatAvail=T3_MEAT_BASE.slice();
   let vegPtr=0, grainPtr=0, beanStarted=false;
-  for(let w=0; w<4; w++){
+  for(let w=0; w<9; w++){
     const days=[]; let s,e;
+    const daysInWeek = w===8 ? 5 : 7;
     /* 이번 주 시작 시점의 안전한 재료 목록으로 1끼·2끼 고기, 채소 구성을 한 주 내내 고정(매일 안 바꿈) */
     const weekMeats = meatAvail.slice();
     const weekAmMeat = weekMeats[w%weekMeats.length];
     const weekPmMeat = weekMeats[(w+1)%weekMeats.length];
     const weekVegs=[]; if(w===0){ weekVegs.push('당근'); weekVegs.push('고구마'); weekVegs.push('감자'); } if(w===1){ weekVegs.push('고구마'); } for(let vi=vegPtr; weekVegs.length<T3_VEG_COUNT; vi++){ const c=vegAvail[vi%vegAvail.length]; if(!weekVegs.includes(c) && !(w===1 && c==='두부')) weekVegs.push(c); }
     vegPtr+=T3_VEG_COUNT;
-    for(let i=0;i<7;i++){
+    for(let i=0;i<daysInWeek;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
-      if(i===0)s=ds; if(i===6)e=ds;
+      if(i===0)s=ds; if(i===daysInWeek-1)e=ds;
       const forcedVegs=T3_VEG_NEW[ds]||[], forcedMeat=T3_MEAT_NEW[ds]||null, isBeanStart=(ds===T3_BEAN_START);
       forcedVegs.forEach(v=>vegAvail.push(v));
       if(forcedMeat) meatAvail.push(forcedMeat);
       if(isBeanStart) beanStarted=true;
-      const amMeat = forcedMeat || weekAmMeat;
-      const pmMeat = weekPmMeat;
-      const amVegs = forcedVegs.length ? [...forcedVegs, ...weekVegs.filter(v=>!forcedVegs.includes(v))].slice(0,T3_VEG_COUNT) : weekVegs;
-      const pmVegs = weekVegs;
-      const grainVal = beanStarted ? ((grainPtr++)%2?'검은콩':'현미') : '현미';
-      const amGrain = isBeanStart ? '검은콩' : grainVal;
-      const pmGrain = isBeanStart ? '현미' : grainVal;
-      const amBase=[["쌀",30],["오트밀",30]]; if(w!==0) amBase.push([amGrain,15]); amBase.push(["퀴노아",15]);
-      const pmBase=[["쌀",30],["오트밀",30]]; if(w!==0) pmBase.push([pmGrain,15]); pmBase.push(["퀴노아",15]);
-      const pmMeatItems = (w===1 && pmMeat!=='소고기') ? [[pmMeat,10],['소고기',10]] : [[pmMeat,10]];
-      const amTop=[[amMeat,20]].concat(amVegs.map(v=>[v,15]));
-      const pmTop=pmMeatItems.concat(pmVegs.map(v=>[v,15]));
-      if(ds===T3_EGG_TEST) amTop.push(["계란 노른자",5]);
-      days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-        {base:amBase, top:amTop, total:sumg(amBase,amTop)},
-        {base:pmBase, top:pmTop, total:sumg(pmBase,pmTop)},
-      ]});
+      if(d>=FIXED_MEAL_START && d<=FIXED_MEAL_END){
+        const amBase=FIXED_MEAL_AM.base.map(b=>b.slice()), amTop=FIXED_MEAL_AM.top.map(t=>t.slice());
+        const pmBase=FIXED_MEAL_PM.base.map(b=>b.slice()), pmTop=FIXED_MEAL_PM.top.map(t=>t.slice());
+        days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
+          {base:amBase, top:amTop, total:sumg(amBase,amTop)},
+          {base:pmBase, top:pmTop, total:sumg(pmBase,pmTop)},
+        ]});
+      }else{
+        const amMeat = forcedMeat || weekAmMeat;
+        const pmMeat = weekPmMeat;
+        const amVegs = forcedVegs.length ? [...forcedVegs, ...weekVegs.filter(v=>!forcedVegs.includes(v))].slice(0,T3_VEG_COUNT) : weekVegs;
+        const pmVegs = weekVegs;
+        const grainVal = beanStarted ? ((grainPtr++)%2?'검은콩':'현미') : '현미';
+        const amGrain = isBeanStart ? '검은콩' : grainVal;
+        const pmGrain = isBeanStart ? '현미' : grainVal;
+        const amBase=[["쌀",30],["오트밀",30]]; if(w!==0) amBase.push([amGrain,15]); amBase.push(["퀴노아",15]);
+        const pmBase=[["쌀",30],["오트밀",30]]; if(w!==0) pmBase.push([pmGrain,15]); pmBase.push(["퀴노아",15]);
+        const pmMeatItems = (w===1 && pmMeat!=='소고기') ? [[pmMeat,10],['소고기',10]] : [[pmMeat,10]];
+        const amTop=[[amMeat,20]].concat(amVegs.map(v=>[v,15]));
+        const pmTop=pmMeatItems.concat(pmVegs.map(v=>[v,15]));
+        if(ds===T3_EGG_TEST) amTop.push(["계란 노른자",5]);
+        days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
+          {base:amBase, top:amTop, total:sumg(amBase,amTop)},
+          {base:pmBase, top:pmTop, total:sumg(pmBase,pmTop)},
+        ]});
+      }
       d.setDate(d.getDate()+1); dday++; n++;
     }
     weeks.push({range:s+" ~ "+e, ratioNum:0, days});
@@ -995,9 +1088,9 @@ function buildTab3(){
   return weeks;
 }
 const tab3 = buildTab3();
-/* 후기 이유식 2 — 3끼, 8/10부터(88~115일). 식단은 빈 칸으로 시작(세정이 직접 입력) */
+/* 후기 이유식 2 — 3끼, 9/12부터(121~148일). 8/10 예정이었으나 세정 요청으로 9/12로 연기(그 전까지는 2끼 고정 식단 유지). 식단은 빈 칸으로 시작(세정이 직접 입력) */
 function buildTab4(){
-  const weeks=[]; let d=new Date(2025,7,10); let dday=272,n=88;
+  const weeks=[]; let d=new Date(2025,8,12); let dday=305,n=121;
   for(let w=0; w<4; w++){
     const days=[]; let s,e;
     for(let i=0;i<7;i++){
@@ -1022,12 +1115,13 @@ if(window.supabase){
   try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){ sb=null; }
 }
 const LS_KEY="doyoung_bbf_state";
-let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,ratios:{},ratiosInitialized:false};
+let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,books:[],booksInitialized:false,ratios:{},ratiosInitialized:false};
 (function loadLocal(){
   try{ Object.assign(State, JSON.parse(localStorage.getItem(LS_KEY))||{}); }catch(e){}
   State.tested=State.tested||{}; State.logs=State.logs||{}; State.overrides=State.overrides||{}; State.customIngredients=State.customIngredients||[];
   State.deletedBuiltin=State.deletedBuiltin||[];
   State.toys=State.toys||[];
+  State.books=State.books||[];
   State.ratios=State.ratios||{};
   try{ const t=JSON.parse(localStorage.getItem('doyoung_tested_ingredients')); if(t&&!Object.keys(State.tested).length) Object.keys(t).forEach(k=>State.tested[k]=t[k]===true?{done:true}:t[k]); }catch(e){}
   try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
@@ -1042,7 +1136,8 @@ function stateRichness(s){
        + (Object.keys(s.tested||{}).length)
        + ((s.customIngredients||[]).length)
        + ((s.deletedBuiltin||[]).length)
-       + ((s.toys||[]).filter(t=>t.photo||t.rating>0||(t.reviews||[]).some(r=>r.text&&r.text.trim())).length);
+       + ((s.toys||[]).filter(t=>t.photo||t.rating>0||(t.reviews||[]).some(r=>r.text&&r.text.trim())).length)
+       + ((s.books||[]).filter(t=>t.photo||t.rating>0||(t.reviews||[]).some(r=>r.text&&r.text.trim())).length);
 }
 function save(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(State)); }catch(e){}
@@ -1067,10 +1162,11 @@ async function syncDown(){
     const {data,error}=await sb.from('bbf_state').select('data').eq('id','doyoung').maybeSingle();
     if(error){ setSync('err'); return; }
     if(data&&data.data){
-      const remote=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,ratios:{},ratiosInitialized:false},data.data);
+      const remote=Object.assign({tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,books:[],booksInitialized:false,ratios:{},ratiosInitialized:false},data.data);
       remote.customIngredients=remote.customIngredients||[];
       remote.deletedBuiltin=remote.deletedBuiltin||[];
       remote.toys=remote.toys||[];
+      remote.books=remote.books||[];
       remote.ratios=remote.ratios||{};
       /* 보호 규칙: 로컬이 클라우드보다 명백히 풍부하면 덮어쓰지 않고 로컬을 push */
       const localRichness=stateRichness(State);
@@ -1084,7 +1180,7 @@ async function syncDown(){
       }
       State=remote;
       try{ localStorage.setItem(LS_KEY,JSON.stringify(State)); }catch(e){}
-      renderTables(); renderChecklist(); renderToys(); setSync('ok');
+      renderTables(); renderChecklist(); renderToys(); renderBooks(); setSync('ok');
     }else{ await syncUp(); }
   }catch(e){ setSync('err'); }
   finally{ syncDownInFlight=false; }
@@ -1247,6 +1343,21 @@ function migrateRemoveAehobak(){
     State.overrides[k]=items.map(it=>`${it.name} ${it.g}${it.unit||'g'}`).join(' · ');
   });
   State.aehobakRemoved=true;
+  save();
+}
+/* 장난감·책 개월수 범위 라벨(1~3개월 등)을 개별 월로 이동 (1회) — 범위의 첫 달만 남김(세정 요청) */
+function migrateMonthLabels(){
+  if(State.monthsSplitToSingle) return;
+  const rename=m=>OLD_MONTH_RANGE_TO_FIRST[m]||m;
+  [State.toys, State.books].forEach(list=>{
+    (list||[]).forEach(item=>{
+      const seen=new Set();
+      item.months=(item.months||[]).map(rename).filter(m=>{ if(seen.has(m))return false; seen.add(m); return true; });
+      const seenR=new Set();
+      item.reviews=(item.reviews||[]).map(r=>({...r,month:rename(r.month)})).filter(r=>{ if(seenR.has(r.month))return false; seenR.add(r.month); return true; });
+    });
+  });
+  State.monthsSplitToSingle=true;
   save();
 }
 /* 6/17~6/18 = 8배죽 — 쌀·오트밀·현미 배죽 태그 1회 시드 */
@@ -1785,6 +1896,7 @@ function renderTables(){
   maybeSeedRatios();
   migrateW2Veg();
   migrateRemoveAehobak();
+  migrateMonthLabels();
   seed617to18Ratios();
   seedW2W3Ratios();
   migrate620All8();
@@ -2192,22 +2304,25 @@ function applyDefaultSubTab(){
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
   if(toyOverlay.classList.contains('open'))closeToyEdit();
+  else if(bookOverlay.classList.contains('open'))closeBookEdit();
   else if(mOverlay.classList.contains('open'))closeMealEdit();
   else if(dOverlay.classList.contains('open'))closeDetail();
   else overlay.classList.remove('open');
 }});
 
 /* ============ 장난감 ============ */
-const TOY_MONTHS=["0개월","1~3개월","4~5개월","6개월","7~9개월","10~12개월","13~18개월","19~24개월"];
-const TOY_MONTH_CLASS={"0개월":"m-0","1~3개월":"m-1","4~5개월":"m-2","6개월":"m-3","7~9개월":"m-4","10~12개월":"m-5","13~18개월":"m-6","19~24개월":"m-7"};
+const TOY_MONTHS=Array.from({length:25},(_,i)=>i+"개월");
+const TOY_MONTH_CLASS=Object.fromEntries(TOY_MONTHS.map((m,i)=>[m,"m-"+(i%8)]));
+/* 예전 범위 라벨(1~3개월 등)로 저장된 기존 데이터를 개별 월로 옮길 때 쓰는 매핑 — 범위의 첫 달만 남김(세정 요청) */
+const OLD_MONTH_RANGE_TO_FIRST={"1~3개월":"1개월","4~5개월":"4개월","7~9개월":"7개월","10~12개월":"10개월","13~18개월":"13개월","19~24개월":"19개월"};
 const INITIAL_TOYS=[
   {name:"초점책",months:["0개월"],rating:0,reviews:[{month:"0개월",text:"잘 본 것 같음"}]},
   {name:"타이니러브 모빌",months:["0개월"],rating:0,reviews:[{month:"0개월",text:"조금 보여주다가 안 보여주기 시작함"}]},
-  {name:"오볼",months:["1~3개월","4~5개월"],rating:0,reviews:[{month:"1~3개월",text:"진짜 잘 씀. 지금까지 씀"},{month:"4~5개월",text:"고리를 몇 개 끼워주니 더 잘 씀"}]},
-  {name:"아기 병풍",months:["1~3개월","4~5개월"],rating:0,reviews:[{month:"1~3개월",text:"엄청 잘 보진 않음"},{month:"4~5개월",text:"잘 보기 시작"}]},
-  {name:"까꿍책",months:["1~3개월"],rating:0,reviews:[{month:"1~3개월",text:"집중해서 잘 봄"}]},
-  {name:"치발기",months:["4~5개월"],rating:0,reviews:[{month:"4~5개월",text:"치즈, 손바닥, 당근, 초코바나나 등 다양하게 잘 씀"}]},
-  {name:"여러 책들",months:["4~5개월"],rating:0,reviews:[{month:"4~5개월",text:"샘플로 받은 책들 읽어주면 집중해서 봄"}]},
+  {name:"오볼",months:["1개월","4개월"],rating:0,reviews:[{month:"1개월",text:"진짜 잘 씀. 지금까지 씀"},{month:"4개월",text:"고리를 몇 개 끼워주니 더 잘 씀"}]},
+  {name:"아기 병풍",months:["1개월","4개월"],rating:0,reviews:[{month:"1개월",text:"엄청 잘 보진 않음"},{month:"4개월",text:"잘 보기 시작"}]},
+  {name:"까꿍책",months:["1개월"],rating:0,reviews:[{month:"1개월",text:"집중해서 잘 봄"}]},
+  {name:"치발기",months:["4개월"],rating:0,reviews:[{month:"4개월",text:"치즈, 손바닥, 당근, 초코바나나 등 다양하게 잘 씀"}]},
+  {name:"여러 책들",months:["4개월"],rating:0,reviews:[{month:"4개월",text:"샘플로 받은 책들 읽어주면 집중해서 봄"}]},
   {name:"컵쌓기",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"컵을 무너뜨리는 것을 즐김"}]},
   {name:"링(도넛모양) 쌓기",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"아직 원리를 이해하진 못하나, 맨 위에 꺼 빼서 씀"}]},
   {name:"에듀테이블",months:["6개월"],rating:0,reviews:[{month:"6개월",text:"맨 위에 있는 걸 뱅글뱅글 돌리면 홀린 듯이 봄"}]},
@@ -2413,14 +2528,16 @@ async function applyClipboardImageFile(file){
   try{ editingPhoto = await resizePhoto(file); renderToyPhotoPreview(); return true; }
   catch(err){ alert('붙여넣은 사진을 처리할 수 없어요'); return false; }
 }
-/* Ctrl/⌘+V — 장난감 편집이 열려 있을 때만 동작 */
+/* Ctrl/⌘+V — 장난감·책 편집이 열려 있을 때만 동작 */
 document.addEventListener('paste', e=>{
-  if(!toyOverlay.classList.contains('open')) return;
+  const target = toyOverlay.classList.contains('open') ? 'toy'
+    : bookOverlay.classList.contains('open') ? 'book' : null;
+  if(!target) return;
   const items=(e.clipboardData||window.clipboardData||{}).items||[];
   for(const it of items){
     if(it.type && it.type.indexOf('image')===0){
       const file=it.getAsFile();
-      if(file){ e.preventDefault(); applyClipboardImageFile(file); }
+      if(file){ e.preventDefault(); target==='toy'?applyClipboardImageFile(file):applyClipboardImageFileBook(file); }
       return;
     }
   }
@@ -2453,7 +2570,188 @@ document.getElementById('toy-delete').onclick=()=>{
 };
 document.getElementById('add-toy').onclick=()=>openToyEdit(null);
 
-/* ============ 상위 탭 (이유식 / 장난감) ============ */
+/* ============ 책 ============ */
+function sortedBooks(){
+  return State.books.slice().sort((a,b)=>{
+    const am=Math.min(...(a.months||[]).map(toyMonthOrder).filter(n=>n>=0).concat([99]));
+    const bm=Math.min(...(b.months||[]).map(toyMonthOrder).filter(n=>n>=0).concat([99]));
+    if(am!==bm) return am-bm;
+    return (a.name||'').localeCompare(b.name||'','ko');
+  });
+}
+function renderBooks(){
+  const tbody=document.getElementById('book-tbody');
+  const empty=document.getElementById('book-empty');
+  const books=sortedBooks();
+  if(!books.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=books.map(t=>{
+    const monthChips=(t.months||[]).slice().sort((a,b)=>toyMonthOrder(a)-toyMonthOrder(b))
+      .map(m=>`<span class="month-chip ${TOY_MONTH_CLASS[m]||''}">${esc(m)}</span>`).join('');
+    const photoHtml = t.photo
+      ? `<img class="toy-photo-thumb" src="${t.photo}" alt="">`
+      : `<div class="toy-photo-thumb placeholder">사진<br>없음</div>`;
+    const reviews=(t.reviews||[]).filter(r=>r.text && r.text.trim());
+    const reviewsHtml = reviews.length
+      ? '<div class="toy-reviews-stack">'+reviews.map(r=>`<div class="toy-review-item"><span class="month-chip ${TOY_MONTH_CLASS[r.month]||''}">${esc(r.month)}</span><span class="rv-text">${esc(r.text)}</span></div>`).join('')+'</div>'
+      : '<span style="color:var(--muted);font-size:12px;">—</span>';
+    return `<tr class="toy-row" data-id="${esc(t.id)}">
+      <td><div class="toy-months-stack">${monthChips||'<span style="color:var(--muted);font-size:12px;">미지정</span>'}</div></td>
+      <td>${photoHtml}</td>
+      <td class="toy-name">${esc(t.name||'(이름 없음)')}</td>
+      <td>${staticStarsHTML(t.rating||0)}</td>
+      <td>${reviewsHtml}</td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('.toy-row').forEach(tr=>{
+    tr.addEventListener('click',()=>openBookEdit(tr.dataset.id));
+  });
+}
+
+/* 책 편집 모달 */
+const bookOverlay=document.getElementById('book-overlay');
+let currentBook=null;
+let editingBookPhoto=null;
+let editingBookMonths=new Set();
+let editingBookRating=0;
+
+function openBookEdit(id){
+  if(VIEW_ONLY) return;
+  const isNew=!id;
+  currentBook = isNew ? {id:'book_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:'',months:[],rating:0,reviews:[],photo:null} : State.books.find(t=>t.id===id);
+  if(!currentBook) return;
+  document.getElementById('book-title').textContent = isNew ? '책 추가' : '책 편집';
+  document.getElementById('book-name').value = currentBook.name || '';
+  editingBookPhoto = currentBook.photo || null;
+  editingBookRating = currentBook.rating || 0;
+  editingBookMonths = new Set(currentBook.months || []);
+  renderBookPhotoPreview();
+  renderBookMonthPick();
+  renderBookRatingStars();
+  renderBookReviewInputs();
+  document.getElementById('book-delete').style.display = isNew ? 'none' : 'inline-block';
+  bookOverlay.classList.add('open');
+  setTimeout(()=>document.getElementById('book-name').focus(),60);
+}
+function closeBookEdit(){ bookOverlay.classList.remove('open'); currentBook=null; }
+
+function renderBookPhotoPreview(){
+  const el=document.getElementById('book-photo-preview');
+  const rm=document.getElementById('book-photo-remove');
+  if(editingBookPhoto){ el.innerHTML=`<img src="${editingBookPhoto}" alt="">`; rm.style.display='inline-block'; }
+  else { el.textContent='사진 없음'; rm.style.display='none'; }
+}
+function renderBookMonthPick(){
+  const el=document.getElementById('book-months');
+  el.innerHTML=TOY_MONTHS.map(m=>{
+    const on=editingBookMonths.has(m);
+    return `<button type="button" class="month-pick-chip ${TOY_MONTH_CLASS[m]||''} ${on?'on':''}" data-month="${esc(m)}">${esc(m)}</button>`;
+  }).join('');
+  el.querySelectorAll('.month-pick-chip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const m=btn.dataset.month;
+      if(editingBookMonths.has(m)) editingBookMonths.delete(m);
+      else editingBookMonths.add(m);
+      renderBookMonthPick();
+      renderBookReviewInputs();
+    });
+  });
+}
+function renderBookRatingStars(){
+  const wrap=document.getElementById('book-rating-stars');
+  wrap.innerHTML='';
+  for(let i=0;i<5;i++){
+    const s=document.createElement('span'); s.className='star';
+    const f=document.createElement('span'); f.className='fill';
+    s.appendChild(f); wrap.appendChild(s);
+  }
+  paintBookStars(editingBookRating);
+  function valFromEvent(ev){
+    const stars=wrap.querySelectorAll('.star');
+    for(let i=0;i<stars.length;i++){
+      const rect=stars[i].getBoundingClientRect();
+      if(ev.clientX<=rect.right){
+        const half = ev.clientX < rect.left + rect.width/2;
+        return i + (half?0.5:1);
+      }
+    }
+    return 5;
+  }
+  wrap.onmousemove=e=>paintBookStars(valFromEvent(e));
+  wrap.onmouseleave=()=>paintBookStars(editingBookRating);
+  wrap.onclick=e=>{ editingBookRating=valFromEvent(e); paintBookStars(editingBookRating); };
+  document.getElementById('book-rating-clear').onclick=()=>{ editingBookRating=0; paintBookStars(0); };
+}
+function paintBookStars(val){
+  const wrap=document.getElementById('book-rating-stars');
+  wrap.querySelectorAll('.star').forEach((st,i)=>{
+    const pct=Math.max(0,Math.min(1,val-i))*100;
+    st.querySelector('.fill').style.width=pct+'%';
+  });
+  document.getElementById('book-rating-label').textContent = val>0 ? val.toFixed(1) : '—';
+}
+function renderBookReviewInputs(){
+  const wrap=document.getElementById('book-reviews');
+  const sortedMonths=[...editingBookMonths].sort((a,b)=>toyMonthOrder(a)-toyMonthOrder(b));
+  if(!sortedMonths.length){
+    wrap.innerHTML='<div class="toy-reviews-empty">개월수를 먼저 선택하세요</div>';
+    return;
+  }
+  const cache={};
+  wrap.querySelectorAll('.toy-review-input textarea').forEach(t=>{ cache[t.dataset.month]=t.value; });
+  (currentBook.reviews||[]).forEach(r=>{ if(cache[r.month]==null) cache[r.month]=r.text||''; });
+  wrap.innerHTML=sortedMonths.map(m=>`
+    <div class="toy-review-input">
+      <div class="rv-head"><span class="month-chip ${TOY_MONTH_CLASS[m]||''}">${esc(m)}</span></div>
+      <textarea data-month="${esc(m)}" placeholder="이 개월수에 어땠는지 자유롭게">${esc(cache[m]||'')}</textarea>
+    </div>
+  `).join('');
+}
+
+document.getElementById('book-photo-input').addEventListener('change', async (e)=>{
+  const file=e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    editingBookPhoto = await resizePhoto(file);
+    renderBookPhotoPreview();
+  }catch(err){ alert('사진을 처리할 수 없어요'); }
+  e.target.value='';
+});
+document.getElementById('book-photo-remove').onclick=()=>{ editingBookPhoto=null; renderBookPhotoPreview(); };
+async function applyClipboardImageFileBook(file){
+  if(!file) return false;
+  try{ editingBookPhoto = await resizePhoto(file); renderBookPhotoPreview(); return true; }
+  catch(err){ alert('붙여넣은 사진을 처리할 수 없어요'); return false; }
+}
+document.getElementById('book-close').onclick=closeBookEdit;
+document.getElementById('book-cancel').onclick=closeBookEdit;
+bookOverlay.addEventListener('click',e=>{ if(e.target===bookOverlay) closeBookEdit(); });
+
+document.getElementById('book-save').onclick=()=>{
+  if(!currentBook) return;
+  const name=document.getElementById('book-name').value.trim();
+  if(!name){ alert('책 제목을 입력해주세요'); document.getElementById('book-name').focus(); return; }
+  const months=[...editingBookMonths].sort((a,b)=>toyMonthOrder(a)-toyMonthOrder(b));
+  const reviews=[];
+  document.querySelectorAll('#book-reviews textarea').forEach(t=>{
+    const text=t.value.trim();
+    if(text) reviews.push({month:t.dataset.month, text});
+  });
+  const updated={id:currentBook.id, name, months, rating:editingBookRating, reviews, photo:editingBookPhoto||null};
+  const idx=State.books.findIndex(t=>t.id===currentBook.id);
+  if(idx>=0) State.books[idx]=updated;
+  else State.books.push(updated);
+  save(); renderBooks(); closeBookEdit();
+};
+document.getElementById('book-delete').onclick=()=>{
+  if(!currentBook) return;
+  if(!confirm('"'+(currentBook.name||'이 책')+'"을(를) 삭제할까요?')) return;
+  State.books=State.books.filter(t=>t.id!==currentBook.id);
+  save(); renderBooks(); closeBookEdit();
+};
+document.getElementById('add-book').onclick=()=>openBookEdit(null);
+
+/* ============ 상위 탭 (이유식 / 장난감 / 책) ============ */
 document.querySelectorAll('.main-tab').forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
@@ -2478,7 +2776,7 @@ function applyViewOnly(){
 /* ============ 시작 ============ */
 applyViewOnly();
 applyDefaultSubTab();
-renderTables(); renderChecklist(); renderToys(); setSync(sb?'ok':'local');
+renderTables(); renderChecklist(); renderToys(); renderBooks(); setSync(sb?'ok':'local');
 if(sb) syncDown();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
 </script>
