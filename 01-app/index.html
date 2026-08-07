@@ -915,6 +915,8 @@ const CAT={meat:['소고기','닭고기','돼지고기','흰살생선'],veg1:['�
 const TOPORDER=CAT.meat.concat(CAT.veg1,['두부'],CAT.veg2,CAT.veg3);
 const topOrderIdx=n=>{ const i=TOPORDER.indexOf(n); return i<0?99:i; };
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
+/* 식단 날짜의 연도(이 식단표는 2026년) — 요일·미래여부 계산용. 날짜 생성 로직(new Date(2025,...))보다 먼저 필요해서 앞에 둠 */
+const SCHEDULE_YEAR=2026;
 function buildTab2(){
   const porridge=['8배죽','7배죽','6배죽','6배죽'];
   const weeks=[]; let d=new Date(2025,5,12); let dday=213,n=29,di=0;
@@ -1035,6 +1037,9 @@ const FIXED_MEAL_START=new Date(2025,7,8);
 const FIXED_MEAL_END=new Date(2025,8,11);
 const FIXED_MEAL_AM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["소고기",15],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
 const FIXED_MEAL_PM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["닭고기",10],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
+/* 8/10~8/16: 세정 요청으로 두부 제외 + 화/목/토 저녁에 흰살생선 10g 추가(기존 닭고기 유지) */
+const W0810_START=new Date(2025,7,10), W0810_END=new Date(2025,7,16);
+const FISH_WEEKDAYS=new Set([2,4,6]);
 function buildTab3(){
   const weeks=[]; let d=new Date(2025,6,13); let dday=244,n=60;
   const vegAvail=T3_VEG_BASE.slice(), meatAvail=T3_MEAT_BASE.slice();
@@ -1056,8 +1061,17 @@ function buildTab3(){
       if(forcedMeat) meatAvail.push(forcedMeat);
       if(isBeanStart) beanStarted=true;
       if(d>=FIXED_MEAL_START && d<=FIXED_MEAL_END){
-        const amBase=FIXED_MEAL_AM.base.map(b=>b.slice()), amTop=FIXED_MEAL_AM.top.map(t=>t.slice());
-        const pmBase=FIXED_MEAL_PM.base.map(b=>b.slice()), pmTop=FIXED_MEAL_PM.top.map(t=>t.slice());
+        const amBase=FIXED_MEAL_AM.base.map(b=>b.slice());
+        const pmBase=FIXED_MEAL_PM.base.map(b=>b.slice());
+        let amTop=FIXED_MEAL_AM.top.map(t=>t.slice());
+        let pmTop=FIXED_MEAL_PM.top.map(t=>t.slice());
+        if(d>=W0810_START && d<=W0810_END){
+          amTop=amTop.filter(it=>it[0]!=='두부');
+          pmTop=pmTop.filter(it=>it[0]!=='두부');
+          /* 요일은 실제 달력 연도(SCHEDULE_YEAR) 기준 — d는 날짜 계산용 임시 연도(2025)라 요일이 다름 */
+          const realWeekday=new Date(SCHEDULE_YEAR, d.getMonth(), d.getDate()).getDay();
+          if(FISH_WEEKDAYS.has(realWeekday)) pmTop=pmTop.concat([["흰살생선",10]]);
+        }
         days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
           {base:amBase, top:amTop, total:sumg(amBase,amTop)},
           {base:pmBase, top:pmTop, total:sumg(pmBase,pmTop)},
@@ -1263,8 +1277,6 @@ function recomputeRatioChanges(){
     }
   });
 }
-/* 식단 날짜의 연도(이 식단표는 2026년) — 요일·미래여부 계산용 */
-const SCHEDULE_YEAR=2026;
 const WEEKDAYS=['일','월','화','수','목','금','토'];
 function dateOfMD(md){
   if(!md) return null;
