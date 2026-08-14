@@ -1040,6 +1040,8 @@ const FIXED_MEAL_PM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노
 /* 8/10~8/16: 세정 요청으로 두부 제외 + 화/목/토 저녁에 흰살생선 10g 추가(기존 닭고기 유지) */
 const W0810_START=new Date(2025,7,10), W0810_END=new Date(2025,7,16);
 const FISH_WEEKDAYS=new Set([2,4,6]);
+/* 8/18~8/23: 세정 요청으로 검은콩 제외(대체 없이 그만큼 총량 감소) */
+const W0818_START=new Date(2025,7,18), W0818_END=new Date(2025,7,23);
 function buildTab3(){
   const weeks=[]; let d=new Date(2025,6,13); let dday=244,n=60;
   const vegAvail=T3_VEG_BASE.slice(), meatAvail=T3_MEAT_BASE.slice();
@@ -1061,8 +1063,8 @@ function buildTab3(){
       if(forcedMeat) meatAvail.push(forcedMeat);
       if(isBeanStart) beanStarted=true;
       if(d>=FIXED_MEAL_START && d<=FIXED_MEAL_END){
-        const amBase=FIXED_MEAL_AM.base.map(b=>b.slice());
-        const pmBase=FIXED_MEAL_PM.base.map(b=>b.slice());
+        let amBase=FIXED_MEAL_AM.base.map(b=>b.slice());
+        let pmBase=FIXED_MEAL_PM.base.map(b=>b.slice());
         let amTop=FIXED_MEAL_AM.top.map(t=>t.slice());
         let pmTop=FIXED_MEAL_PM.top.map(t=>t.slice());
         if(d>=W0810_START && d<=W0810_END){
@@ -1071,6 +1073,10 @@ function buildTab3(){
           /* 요일은 실제 달력 연도(SCHEDULE_YEAR) 기준 — d는 날짜 계산용 임시 연도(2025)라 요일이 다름 */
           const realWeekday=new Date(SCHEDULE_YEAR, d.getMonth(), d.getDate()).getDay();
           if(FISH_WEEKDAYS.has(realWeekday)) pmTop=pmTop.concat([["흰살생선",10]]);
+        }
+        if(d>=W0818_START && d<=W0818_END){
+          amBase=amBase.filter(it=>it[0]!=='검은콩');
+          pmBase=pmBase.filter(it=>it[0]!=='검은콩');
         }
         days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
           {base:amBase, top:amTop, total:sumg(amBase,amTop)},
