@@ -554,8 +554,8 @@
     <div class="tabs">
       <button class="tab active" data-tab="t1">1~28일</button>
       <button class="tab" data-tab="t2">29~59일</button>
-      <button class="tab" data-tab="t3">60~120일</button>
-      <button class="tab" data-tab="t4">121~148일</button>
+      <button class="tab" data-tab="t3">60~93일</button>
+      <button class="tab" data-tab="t4">94~148일</button>
     </div>
 
     <section id="t1" class="panel active">
@@ -1032,23 +1032,21 @@ const T3_MEAT_NEW={'7/16':'흰살생선'};
 const T3_BEAN_START='8/3';
 const T3_EGG_TEST='7/20';
 const T3_VEG_COUNT=6;
-/* 8/8~9/11은 세정 요청으로 매일 동일한 끼니 고정(9/12부터 3끼 전환 전까지 2끼 유지) — 8/8 원래 자동생성 식단 기준, 소고기만 20→15g */
+/* 8/8~8/15는 세정 요청으로 매일 동일한 끼니 고정(8/16부터 3끼 전환) — 8/8 원래 자동생성 식단 기준, 소고기만 20→15g */
 const FIXED_MEAL_START=new Date(2025,7,8);
-const FIXED_MEAL_END=new Date(2025,8,11);
+const FIXED_MEAL_END=new Date(2025,7,15);
 const FIXED_MEAL_AM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["소고기",15],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
 const FIXED_MEAL_PM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["닭고기",10],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
-/* 8/10~8/16: 세정 요청으로 두부 제외 + 화/목/토 저녁에 흰살생선 10g 추가(기존 닭고기 유지) */
-const W0810_START=new Date(2025,7,10), W0810_END=new Date(2025,7,16);
+/* 8/10~8/15: 세정 요청으로 두부 제외 + 화/목/토 저녁에 흰살생선 10g 추가(기존 닭고기 유지). 원래 8/16까지였으나 8/16부터 3끼로 넘어가며 자연히 8/15까지만 적용됨 */
+const W0810_START=new Date(2025,7,10), W0810_END=new Date(2025,7,15);
 const FISH_WEEKDAYS=new Set([2,4,6]);
-/* 8/18~8/23: 세정 요청으로 검은콩 제외(대체 없이 그만큼 총량 감소) */
-const W0818_START=new Date(2025,7,18), W0818_END=new Date(2025,7,23);
 function buildTab3(){
   const weeks=[]; let d=new Date(2025,6,13); let dday=244,n=60;
   const vegAvail=T3_VEG_BASE.slice(), meatAvail=T3_MEAT_BASE.slice();
   let vegPtr=0, grainPtr=0, beanStarted=false;
-  for(let w=0; w<9; w++){
+  for(let w=0; w<5; w++){
     const days=[]; let s,e;
-    const daysInWeek = w===8 ? 5 : 7;
+    const daysInWeek = w===4 ? 6 : 7;
     /* 이번 주 시작 시점의 안전한 재료 목록으로 1끼·2끼 고기, 채소 구성을 한 주 내내 고정(매일 안 바꿈) */
     const weekMeats = meatAvail.slice();
     const weekAmMeat = weekMeats[w%weekMeats.length];
@@ -1063,8 +1061,8 @@ function buildTab3(){
       if(forcedMeat) meatAvail.push(forcedMeat);
       if(isBeanStart) beanStarted=true;
       if(d>=FIXED_MEAL_START && d<=FIXED_MEAL_END){
-        let amBase=FIXED_MEAL_AM.base.map(b=>b.slice());
-        let pmBase=FIXED_MEAL_PM.base.map(b=>b.slice());
+        const amBase=FIXED_MEAL_AM.base.map(b=>b.slice());
+        const pmBase=FIXED_MEAL_PM.base.map(b=>b.slice());
         let amTop=FIXED_MEAL_AM.top.map(t=>t.slice());
         let pmTop=FIXED_MEAL_PM.top.map(t=>t.slice());
         if(d>=W0810_START && d<=W0810_END){
@@ -1073,10 +1071,6 @@ function buildTab3(){
           /* 요일은 실제 달력 연도(SCHEDULE_YEAR) 기준 — d는 날짜 계산용 임시 연도(2025)라 요일이 다름 */
           const realWeekday=new Date(SCHEDULE_YEAR, d.getMonth(), d.getDate()).getDay();
           if(FISH_WEEKDAYS.has(realWeekday)) pmTop=pmTop.concat([["흰살생선",10]]);
-        }
-        if(d>=W0818_START && d<=W0818_END){
-          amBase=amBase.filter(it=>it[0]!=='검은콩');
-          pmBase=pmBase.filter(it=>it[0]!=='검은콩');
         }
         days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
           {base:amBase, top:amTop, total:sumg(amBase,amTop)},
@@ -1108,19 +1102,47 @@ function buildTab3(){
   return weeks;
 }
 const tab3 = buildTab3();
-/* 후기 이유식 2 — 3끼, 9/12부터(121~148일). 8/10 예정이었으나 세정 요청으로 9/12로 연기(그 전까지는 2끼 고정 식단 유지). 식단은 빈 칸으로 시작(세정이 직접 입력) */
+/* 후기 이유식 2 — 3끼, 8/16(일)부터(원래 9/12 예정이었으나 세정 요청으로 8/16으로 앞당김, 8/8~8/15 고정 2끼 식단 뒤에 바로 이어짐).
+   · 세정 요청 새 식단(8/16~8/30만 우선 채움, 8/31 이후는 빈 칸으로 세정이 직접 입력):
+     베이스 90g(쌀30+오트밀30+퀴노아30, 3끼 공통) + 채소 5종×20g(100g, 3끼 공통) + 단백질 10g(끼니별로 다름) = 끼니당 200g
+     1끼 소고기10g · 2끼 돼지고기10g · 3끼 닭고기10g(수·토는 흰살생선10g으로 대체)
+   · 채소 로테이션은 8/15까지 이미 안전 확인된 재료만 사용(케일 8/11, 돼지고기 8/13 테스트 완료 — Supabase 실제 override 기록 기준), 3일 간격으로 두 세트 교대
+   · 신규 재료(가장 큰 원칙: 하루 1개만·1끼(아침)에만·이전 신규 재료와 3일 이상 간격)는 도입일 1끼에서만 그날 세트의 채소 하나를 대신해 들어가고, 2·3끼는 그날 세트 그대로 유지 —
+     8/17 연근(세정이 override로 이미 계획해둔 날짜 유지) → 8/20 양배추 → 8/23 완두콩 → 8/26 콜리플라워 → 8/29 아스파라거스 */
+const T4_BASE=[["쌀",30],["오트밀",30],["퀴노아",30]];
+const T4_VEG_SET1=['당근','새송이버섯','오이','무','양파'];
+const T4_VEG_SET2=['시금치','브로콜리','단호박','감자','고구마'];
+const T4_NEW_ING={'8/17':'연근','8/20':'양배추','8/23':'완두콩','8/26':'콜리플라워','8/29':'아스파라거스'};
+const T4_MEAL_FILL_START=new Date(2025,7,16), T4_MEAL_FILL_END=new Date(2025,7,30);
+const T4_FISH_WEEKDAYS=new Set([3,6]); /* 수·토(SCHEDULE_YEAR 기준 실제 요일) */
 function buildTab4(){
-  const weeks=[]; let d=new Date(2025,8,12); let dday=305,n=121;
-  for(let w=0; w<4; w++){
+  const weeks=[]; let d=new Date(2025,7,16); let dday=278,n=94;
+  for(let w=0; w<8; w++){
     const days=[]; let s,e;
-    for(let i=0;i<7;i++){
+    const daysInWeek = w===7 ? 6 : 7;
+    for(let i=0;i<daysInWeek;i++){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
-      if(i===0)s=ds; if(i===6)e=ds;
-      days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
-        {base:[],top:[],total:0},
-        {base:[],top:[],total:0},
-        {base:[],top:[],total:0},
-      ]});
+      if(i===0)s=ds; if(i===daysInWeek-1)e=ds;
+      if(d>=T4_MEAL_FILL_START && d<=T4_MEAL_FILL_END){
+        const daysSinceStart=Math.round((d-T4_MEAL_FILL_START)/86400000);
+        const vegSet=(Math.floor(daysSinceStart/3)%2===0) ? T4_VEG_SET1 : T4_VEG_SET2;
+        const newIng=T4_NEW_ING[ds]||null;
+        const meal1Veg=(newIng ? vegSet.slice(0,4).concat([newIng]) : vegSet).map(v=>[v,20]);
+        const restVeg=vegSet.map(v=>[v,20]);
+        const realWeekday=new Date(SCHEDULE_YEAR, d.getMonth(), d.getDate()).getDay();
+        const meal3Meat=T4_FISH_WEEKDAYS.has(realWeekday)?'흰살생선':'닭고기';
+        const meals=[["소고기",meal1Veg],["돼지고기",restVeg],[meal3Meat,restVeg]];
+        days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:meals.map(([meat,veg])=>{
+          const base=T4_BASE.map(b=>b.slice()), top=[[meat,10]].concat(veg);
+          return {base, top, total:sumg(base,top)};
+        })});
+      }else{
+        days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
+          {base:[],top:[],total:0},
+          {base:[],top:[],total:0},
+          {base:[],top:[],total:0},
+        ]});
+      }
       d.setDate(d.getDate()+1); dday++; n++;
     }
     weeks.push({range:s+" ~ "+e, ratioNum:0, days});
@@ -2026,7 +2048,7 @@ function updatePlanTotal(){
 function addItemToList(target){
   const containerId='meal-'+target+'-list';
   const arr=readItemList(containerId);
-  arr.push({name:'',g: target==='base'?'':15, unit:'g'});
+  arr.push({name:'',g: target==='base'?'':20, unit:'g'});
   renderItemList(containerId,arr);
   updatePlanTotal();
   if(target==='base') refreshMealRatios();
@@ -2150,7 +2172,7 @@ mOverlay.addEventListener('click',e=>{ if(e.target===mOverlay) closeMealEdit(); 
 /* ============ 체크리스트 ============ */
 const categories=[
   ["곡류/베이스",["현미","기장","수수","차조","오트밀","찹쌀","귀리","보리","옥수수","퀴노아"]],
-  ["채소",["애호박","양배추","브로콜리","오이","단호박","콜리플라워","감자","고구마","청경채","양파","배추","무","새송이","연근","파프리카","가지","우엉","팽이버섯","토마토","아스파라거스","늙은호박","아욱","숙주","마늘쫑","느타리버섯","파","비타민(채)","당근","시금치","비트"]],
+  ["채소",["애호박","양배추","브로콜리","오이","단호박","콜리플라워","감자","고구마","청경채","양파","배추","무","새송이","연근","파프리카","가지","우엉","팽이버섯","토마토","아스파라거스","늙은호박","아욱","숙주","마늘쫑","느타리버섯","파","비타민(채)","당근","시금치","비트","케일"]],
   ["고기",["소고기","돼지고기","닭고기"]],
   ["콩/두부류",["완두콩","강낭콩","두부","밤"]],
   ["해조류",["미역","다시마"]],
