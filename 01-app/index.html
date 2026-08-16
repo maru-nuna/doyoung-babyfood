@@ -824,10 +824,11 @@
           <div class="item-list" id="meal-allergy-list"></div>
           <button type="button" class="add-item-btn" data-target="allergy">+ 알러지 재료 추가</button>
         </div>
-        <label class="field" id="meal-snack-field">
-          <span class="flabel">간식 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 하루 통합, 자유 입력</span></span>
-          <textarea id="meal-snack" rows="2" placeholder="예: 배 한 조각"></textarea>
-        </label>
+        <div class="field" id="meal-snack-field">
+          <span class="flabel">간식 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 하루 통합, 재료별 입력</span></span>
+          <div class="item-list" id="meal-snack-list"></div>
+          <button type="button" class="add-item-btn" data-target="snack">+ 간식 재료 추가</button>
+        </div>
         <div class="plan-total" id="meal-plan-total"></div>
         <span class="hint">단위는 g 또는 ml. 모두 비우면 원래 계획으로 돌아갑니다.</span>
       </div>
@@ -1265,6 +1266,15 @@ function recomputeFirstAppearances(){
         });
       });
     });
+    if(SNACK_DATES.has(day.date)){
+      parseItemsLocal(State.logs[`${day.date}|s|snack`]||'').forEach(it=>{
+        if(!it.name) return;
+        if(!seen.has(it.name)){
+          seen.add(it.name);
+          firstAppearSet.add(`${day.date}|s|snack|${it.name}`);
+        }
+      });
+    }
   });
 }
 function isFirstAppear(date,mi,field,name){
@@ -1624,7 +1634,7 @@ function snackRow(d){
   let h='<tr class="snack-band"><td colspan="'+(d.length+2)+'"><span class="band-label">간식</span></td></tr>';
   h+='<tr class="row-snack"><td class="rowlabel" colspan="2">간식</td>'+d.map(x=>{
     const key=`${x.date}|s|snack`;
-    return `<td class="snackcell" data-date="${esc(x.date)}"><div class="log-text">${esc(State.logs[key]||'')}</div></td>`;
+    return `<td class="snackcell" data-date="${esc(x.date)}">${cellListFromText(State.logs[key]||'', x.date, 's', 'snack')}</td>`;
   }).join('')+'</tr>';
   return h;
 }
@@ -2048,7 +2058,7 @@ function updatePlanTotal(){
 function addItemToList(target){
   const containerId='meal-'+target+'-list';
   const arr=readItemList(containerId);
-  arr.push({name:'',g: target==='base'?'':20, unit:'g'});
+  arr.push({name:'',g: (target==='base'||target==='snack')?'':20, unit:'g'});
   renderItemList(containerId,arr);
   updatePlanTotal();
   if(target==='base') refreshMealRatios();
@@ -2090,7 +2100,7 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   updatePlanTotal();
   const showSnack=SNACK_DATES.has(date);
   setFieldVisible('meal-snack-field', showSnack);
-  if(showSnack) document.getElementById('meal-snack').value=State.logs[`${date}|s|snack`]||'';
+  if(showSnack) renderItemList('meal-snack-list', parseItems(State.logs[`${date}|s|snack`]||''));
   document.getElementById('meal-eaten').value=State.logs[`${date}|${mi}|eaten`]||'';
   document.getElementById('meal-memo').value=State.logs[`${date}|${mi}|memo`]||'';
   document.getElementById('meal-memo-label').innerHTML='메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
@@ -2101,7 +2111,11 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   setFieldVisible('actual-group',true);
   mOverlay.classList.add('open');
   setTimeout(()=>{
-    if(focusField==='base' || focusField==='top' || focusField==='allergy'){
+    if(focusField==='base' || focusField==='top' || focusField==='allergy' || focusField==='snack'){
+      if(focusField==='snack' && !document.querySelectorAll('#meal-snack-list .item-row').length){
+        addItemToList('snack');
+        return;
+      }
       const rows=[...document.querySelectorAll('#meal-'+focusField+'-list .item-row')];
       let target=rows[0];
       if(focusName){
@@ -2110,7 +2124,7 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
       }
       if(target){ const inp=target.querySelector('.item-name'); inp.focus(); inp.select(); }
     } else {
-      const map={eaten:'meal-eaten',memo:'meal-memo',snack:'meal-snack'};
+      const map={eaten:'meal-eaten',memo:'meal-memo'};
       const el=document.getElementById(map[focusField]||'meal-eaten');
       el && el.focus();
     }
@@ -2125,7 +2139,7 @@ function saveMealEdit(){
   if(!currentMeal) return;
   const {date,mi}=currentMeal;
   if(document.getElementById('meal-snack-field').style.display!=='none'){
-    const snackV=document.getElementById('meal-snack').value.trim();
+    const snackV=itemsToText(readItemList('meal-snack-list'));
     if(snackV) State.logs[`${date}|s|snack`]=snackV; else delete State.logs[`${date}|s|snack`];
   }
   const baseV=itemsToText(readItemList('meal-base-list'));
