@@ -1723,7 +1723,14 @@ function renderTodayMenu(){
         ${memo?`<div class="tm-row"><span class="tm-cat tm-memo-cat">메모</span><span class="tm-memo">${esc(memo)}</span></div>`:''}
       </div>`;
     }).join('');
-    return `<div class="today-slide"><div class="slide-day"><span class="slide-tag${i===0?' today':''}">${tagOf(i)}</span><span class="slide-date">${esc(date)} (${weekdayOf(date)})</span></div><div class="today-meals">${meals}</div></div>`;
+    const snackHtml = SNACK_DATES.has(date) ? (()=>{
+      const snackItems=parseItemsLocal(State.logs[`${date}|s|snack`]||'');
+      return `<div class="today-meal today-snack" data-date="${esc(date)}">
+        <div class="today-meal-head"><span class="tm-label">간식</span></div>
+        <div class="tm-row"><span class="tm-items">${itemSpans(date,snackItems,false,'s','snack')}</span></div>
+      </div>`;
+    })() : '';
+    return `<div class="today-slide"><div class="slide-day"><span class="slide-tag${i===0?' today':''}">${tagOf(i)}</span><span class="slide-date">${esc(date)} (${weekdayOf(date)})</span></div><div class="today-meals">${meals}${snackHtml}</div></div>`;
   };
   groups.forEach(([k])=>{
     const el=document.getElementById(k+'-today');
@@ -1743,8 +1750,11 @@ function renderTodayMenu(){
     setupTodaySwipe(el,k,win.length);
   });
   if(!VIEW_ONLY){
-    document.querySelectorAll('.today-meal').forEach(el=>{
+    document.querySelectorAll('.today-meal:not(.today-snack)').forEach(el=>{
       el.addEventListener('click',()=>{ if(suppressTodayClick) return; openMealEdit(el.dataset.date,parseInt(el.dataset.mi,10),el.dataset.mealName,'eaten'); });
+    });
+    document.querySelectorAll('.today-snack').forEach(el=>{
+      el.addEventListener('click',()=>{ if(suppressTodayClick) return; openSnackEdit(el.dataset.date); });
     });
   }
 }
@@ -1886,7 +1896,8 @@ function renderNewFoods(){
   const out={t1:[],t2:[],t3:[],t4:[]}, seen={t1:new Set(),t2:new Set(),t3:new Set(),t4:new Set()};
   firstAppearSet.forEach(key=>{
     const p=key.split('|'); const date=p[0], mi=p[1], name=p[3];
-    if(!State.logs[`${date}|${mi}|eaten`]) return;
+    /* 간식(mi='s')은 별도 먹은양 필드가 없음 — 로그에 남아있는 것 자체가 실제로 준 근거라 별도 게이트 불필요 */
+    if(mi!=='s' && !State.logs[`${date}|${mi}|eaten`]) return;
     const k = t1Dates.has(date) ? 't1' : (t4Dates.has(date) ? 't4' : (t3Dates.has(date) ? 't3' : 't2'));
     if(seen[k].has(name)) return;
     seen[k].add(name); out[k].push(name);
