@@ -912,9 +912,11 @@ const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자','계란']);
 /* 알러지 재료 중 병원 접근성을 위해 특정 날짜(월~목)로 시작일 고정 */
 const ALLERGEN_STARTS={'밀가루':'6/22'};
 const CAT={meat:['소고기','닭고기','돼지고기','흰살생선'],veg1:['브로콜리','시금치','청경채'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
-/* 토핑 셀 내 재료 표시 순서 — 같은 칸 재료가 날짜마다 뒤바뀌지 않게 고정 (두부는 채소2 맨 앞) */
-const TOPORDER=CAT.meat.concat(CAT.veg1,['두부'],CAT.veg2,CAT.veg3);
+/* 토핑·베이스 셀 내 재료 표시 순서 — 같은 칸 재료가 날짜마다·입력 순서와 무관하게 뒤바뀌지 않게 고정 (두부는 채소2 맨 앞) */
+const TOPORDER=CAT.meat.concat(CAT.veg1,['두부'],CAT.veg2,CAT.veg3,['쌀','오트밀','현미','검은콩','퀴노아']);
 const topOrderIdx=n=>{ const i=TOPORDER.indexOf(n); return i<0?99:i; };
+/* TOPORDER에 없는(신규) 재료끼리는 가나다순으로 — 입력 순서와 무관하게 항상 같은 순서로 표시 */
+const byDisplayOrder=(an,bn)=>{ const d=topOrderIdx(an)-topOrderIdx(bn); return d!==0?d:an.localeCompare(bn,'ko'); };
 function sumg(base,top){return base.concat(top).reduce((a,it)=>a+it[1],0);}
 /* 식단 날짜의 연도(이 식단표는 2026년) — 요일·미래여부 계산용. 날짜 생성 로직(new Date(2025,...))보다 먼저 필요해서 앞에 둠 */
 const SCHEDULE_YEAR=2026;
@@ -1493,13 +1495,14 @@ function migrate713Ratios5(){
 }
 function cellList(items, date, mi, field){
   if(!items||!items.length) return '<span class="empty">·</span>';
+  items=items.slice().sort((a,b)=>byDisplayOrder(a[0],b[0]));
   return '<div class="cell-list">'+items.map(it=>{
     const cls=isFirstAppear(date,mi,field,it[0])?'item new-item':'item';
     return `<span class="${cls}" data-iname="${esc(it[0])}">${esc(it[0])} <span class="g">${it[1]}g</span>${cubeLabel(it[0],it[1],'g')}${ratioLabel(date,mi,field,it[0])}</span>`;
   }).join('')+'</div>';
 }
 function cellListFromText(text, date, mi, field){
-  const parts=parseItemsLocal(text);
+  const parts=parseItemsLocal(text).sort((a,b)=>byDisplayOrder(a.name,b.name));
   if(!parts.length) return '<span class="empty">·</span>';
   return '<div class="cell-list">'+parts.map(p=>{
     const cls = isFirstAppear(date,mi,field,p.name) ? 'item new-item' : 'item';
@@ -1582,7 +1585,7 @@ function makeAllergyCell(allPlanTop, date, mi, mealName){
   const ov=State.overrides[key];
   const eatenOn=!!State.logs[`${date}|${mi}|eaten`];
   const effTop = ov!=null ? parseItemsLocal(ov) : allPlanTop.map(it=>({name:it[0],g:it[1],unit:'g'}));
-  const items = effTop.filter(it=>ALLERGENS.has(it.name));
+  const items = effTop.filter(it=>ALLERGENS.has(it.name)).sort((a,b)=>byDisplayOrder(a.name,b.name));
   const cls=['mealcell','top','allergy',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   const attrs=`data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"`;
   if(!items.length) return `<td class="${cls}" ${attrs}><span class="empty">-</span></td>`;
@@ -1597,7 +1600,7 @@ function makeCatTopCell(allPlanTop, date, mi, mealName, filterFn, defaultG){
   const ov=State.overrides[key];
   const eatenOn=!!State.logs[`${date}|${mi}|eaten`];
   const effTop = ov!=null ? parseItemsLocal(ov) : allPlanTop.map(it=>({name:it[0],g:it[1],unit:'g'}));
-  const catItems = effTop.filter(it=>filterFn(it.name)).sort((a,b)=>topOrderIdx(a.name)-topOrderIdx(b.name));
+  const catItems = effTop.filter(it=>filterFn(it.name)).sort((a,b)=>byDisplayOrder(a.name,b.name));
   const cls=['mealcell','top',eatenOn?'eaten-on':''].filter(Boolean).join(' ');
   if(!catItems.length)
     return `<td class="${cls}" data-date="${esc(date)}" data-mi="${mi}" data-meal-name="${esc(mealName)}"><span class="empty">·</span></td>`;
