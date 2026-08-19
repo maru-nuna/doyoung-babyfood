@@ -1133,6 +1133,9 @@ const T4_FIXED_MEALS_2129=[
   {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["돼지고기",10],["당근",15],["케일",15],["감자",15],["양파",15],["새송이버섯",15],["고구마",15],["배추",15]]},
   {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["소고기",10],["당근",15],["케일",15],["감자",15],["양파",15],["새송이버섯",15],["고구마",15],["오이",15]]},
 ];
+/* 8/20~8/29 구간 신규 재료 테스트 — 하루 1개·1끼(아침)에만·3일 이상 간격, 기존 재료 대체 없이 추가(그날만 220g).
+   콜라비는 3일 간격을 지키기엔 8/29까지 자리가 없어 보류(세정 확인 완료, 다음 구간에서 이어감) */
+const T4_FIXED_NEW_ING={'8/20':'연근','8/23':'콜리플라워','8/26':'파프리카','8/29':'양배추'};
 function buildTab4(){
   const weeks=[]; let d=new Date(2025,7,16); let dday=278,n=94;
   for(let w=0; w<8; w++){
@@ -1142,15 +1145,19 @@ function buildTab4(){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===daysInWeek-1)e=ds;
       if(d>=T4_FIXED_START && d<=T4_FIXED_END){
+        const newVeg=T4_FIXED_NEW_ING[ds]||null;
         const meals = ds==='8/20'
           ? T4_FIXED_MEALS.map((fm,fmi)=>{
               const base=fm.base.map(b=>b.slice());
               let top=fm.top.map(t=>t.slice());
               if(fmi!==0) top=top.filter(t=>t[0]!=='단호박');
+              if(newVeg && fmi===0) top.push([newVeg,15]);
               return {base, top, total:sumg(base,top)};
             })
-          : T4_FIXED_MEALS_2129.map(fm=>{
-              const base=fm.base.map(b=>b.slice()), top=fm.top.map(t=>t.slice());
+          : T4_FIXED_MEALS_2129.map((fm,fmi)=>{
+              const base=fm.base.map(b=>b.slice());
+              const top=fm.top.map(t=>t.slice());
+              if(newVeg && fmi===0) top.push([newVeg,15]);
               return {base, top, total:sumg(base,top)};
             });
         days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals});
