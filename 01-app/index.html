@@ -1120,12 +1120,18 @@ const T4_NEW_ING={'8/17':'연근'};
 const T4_MEAL_FILL_START=new Date(2025,7,16), T4_MEAL_FILL_END=new Date(2025,7,30);
 const T4_FISH_WEEKDAYS=new Set([3,6]); /* 수·토(SCHEDULE_YEAR 기준 실제 요일) */
 /* 8/20~8/29 — 세정 요청으로 끼니별 메뉴를 매일 동일하게 고정 (채소 15g×7종, 끼니당 205g)
-   · 단호박은 8/20 1끼(아침)만 남기고 나머지(8/20 2끼, 8/21~8/29 전체)는 제외(세정 요청, 대체 없이 총량 감소) */
+   · 8/20만 T4_FIXED_MEALS 사용(단호박은 1끼(아침)만 남기고 나머지는 대체 없이 제외)
+   · 8/21~8/29는 T4_FIXED_MEALS_2129로 채소 구성을 새로 지정(1·3끼 동일: 당근·케일·감자·양파·새송이버섯·고구마·오이, 2끼만 오이 대신 배추) */
 const T4_FIXED_START=new Date(2025,7,20), T4_FIXED_END=new Date(2025,7,29);
 const T4_FIXED_MEALS=[
   {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["소고기",10],["브로콜리",15],["당근",15],["감자",15],["단호박",15],["양파",15],["새송이버섯",15],["고구마",15]]},
   {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["돼지고기",10],["케일",15],["무",15],["오이",15],["당근",15],["감자",15],["단호박",15],["양파",15]]},
   {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["소고기",10],["브로콜리",15],["케일",15],["새송이버섯",15],["고구마",15],["오이",15],["무",15],["당근",15]]},
+];
+const T4_FIXED_MEALS_2129=[
+  {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["소고기",10],["당근",15],["케일",15],["감자",15],["양파",15],["새송이버섯",15],["고구마",15],["오이",15]]},
+  {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["돼지고기",10],["당근",15],["케일",15],["감자",15],["양파",15],["새송이버섯",15],["고구마",15],["배추",15]]},
+  {base:[["쌀",30],["오트밀",30],["퀴노아",30]], top:[["소고기",10],["당근",15],["케일",15],["감자",15],["양파",15],["새송이버섯",15],["고구마",15],["오이",15]]},
 ];
 function buildTab4(){
   const weeks=[]; let d=new Date(2025,7,16); let dday=278,n=94;
@@ -1136,12 +1142,18 @@ function buildTab4(){
       const m=d.getMonth()+1, day=d.getDate(), ds=m+"/"+day;
       if(i===0)s=ds; if(i===daysInWeek-1)e=ds;
       if(d>=T4_FIXED_START && d<=T4_FIXED_END){
-        days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:T4_FIXED_MEALS.map((fm,fmi)=>{
-          const base=fm.base.map(b=>b.slice());
-          let top=fm.top.map(t=>t.slice());
-          if(!(ds==='8/20' && fmi===0)) top=top.filter(t=>t[0]!=='단호박');
-          return {base, top, total:sumg(base,top)};
-        })});
+        const meals = ds==='8/20'
+          ? T4_FIXED_MEALS.map((fm,fmi)=>{
+              const base=fm.base.map(b=>b.slice());
+              let top=fm.top.map(t=>t.slice());
+              if(fmi!==0) top=top.filter(t=>t[0]!=='단호박');
+              return {base, top, total:sumg(base,top)};
+            })
+          : T4_FIXED_MEALS_2129.map(fm=>{
+              const base=fm.base.map(b=>b.slice()), top=fm.top.map(t=>t.slice());
+              return {base, top, total:sumg(base,top)};
+            });
+        days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals});
       }else if(d>=T4_MEAL_FILL_START && d<=T4_MEAL_FILL_END){
         const daysSinceStart=Math.round((d-T4_MEAL_FILL_START)/86400000);
         const vegSet=(Math.floor(daysSinceStart/3)%2===0) ? T4_VEG_SET1 : T4_VEG_SET2;
