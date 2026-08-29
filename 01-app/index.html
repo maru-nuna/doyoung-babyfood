@@ -993,7 +993,7 @@ const NEWSEQ=['고구마',null,'닭고기',null,'양파','땅콩','계란 노른
 const ALLERGENS=new Set(['밀가루','땅콩','계란 노른자','계란']);
 /* 알러지 재료 중 병원 접근성을 위해 특정 날짜(월~목)로 시작일 고정 */
 const ALLERGEN_STARTS={'밀가루':'6/22'};
-const CAT={meat:['소고기','닭고기','돼지고기','흰살생선'],veg1:['브로콜리','시금치','청경채'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
+const CAT={meat:['소고기','닭고기','돼지고기','대구살'],veg1:['브로콜리','시금치','청경채'],veg2:['애호박','단호박','양파','무'],veg3:['감자','고구마']};
 /* 토핑·베이스 셀 내 재료 표시 순서 — 같은 칸 재료가 날짜마다·입력 순서와 무관하게 뒤바뀌지 않게 고정 (두부는 채소2 맨 앞) */
 const TOPORDER=CAT.meat.concat(CAT.veg1,['두부'],CAT.veg2,CAT.veg3,['쌀','오트밀','현미','검은콩','퀴노아']);
 const topOrderIdx=n=>{ const i=TOPORDER.indexOf(n); return i<0?99:i; };
@@ -1099,8 +1099,8 @@ function buildTab2(){
 }
 const tab2 = buildTab2();
 /* 후기 이유식 1 — 2끼, 7/13부터(7/10~7/12는 29~56일 탭에 포함).
-   · 돼지고기는 아직 안 넣음(세정 요청) — 소고기·닭고기만 기존 안전 재료, 흰살생선은 신규(고기)
-   · 신규 재료(계란 포함)는 서로 3일 이상 간격을 두고 평일에만 도입 — 당근(7/13)→흰살생선(7/16, 고기)→계란노른자 알러지테스트(7/20)→새송이버섯+오이(7/23)→토마토(7/27)→무(7/30)→검은콩·베이스(8/3)
+   · 돼지고기는 아직 안 넣음(세정 요청) — 소고기·닭고기만 기존 안전 재료, 대구살은 신규(고기)
+   · 신규 재료(계란 포함)는 서로 3일 이상 간격을 두고 평일에만 도입 — 당근(7/13)→대구살(7/16, 고기)→계란노른자 알러지테스트(7/20)→새송이버섯+오이(7/23)→토마토(7/27)→무(7/30)→검은콩·베이스(8/3)
    · 예외: 오이는 세정 요청으로 새송이버섯과 같은 날(7/23)에 같이 도입 — 3일 간격 규칙을 이 건만 의도적으로 예외 처리
    · 신규 재료는 도입일에 1끼(아침)에만 넣고 2끼(저녁)는 원래 로테이션 재료로 대체 — 다음날부터는 양쪽 끼니 로테이션에 정식 합류
    · 고기·채소 모두 매일 바꾸지 않고 1주일 단위로 고정, 신규 재료가 안전해지면 다음 주부터 로테이션에 합류하며 주별로 조합이 바뀜
@@ -1113,7 +1113,7 @@ const tab2 = buildTab2();
 const T3_VEG_BASE=['브로콜리','시금치','단호박','양파','감자','고구마','두부'];
 const T3_VEG_NEW={'7/13':['당근'],'7/23':['새송이버섯','오이'],'7/27':['토마토'],'7/30':['무']};
 const T3_MEAT_BASE=['소고기','닭고기'];
-const T3_MEAT_NEW={'7/16':'흰살생선'};
+const T3_MEAT_NEW={'7/16':'대구살'};
 const T3_BEAN_START='8/3';
 const T3_EGG_TEST='7/20';
 const T3_VEG_COUNT=6;
@@ -1122,7 +1122,7 @@ const FIXED_MEAL_START=new Date(2025,7,8);
 const FIXED_MEAL_END=new Date(2025,7,15);
 const FIXED_MEAL_AM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["소고기",15],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
 const FIXED_MEAL_PM={base:[["쌀",30],["오트밀",30],["검은콩",15],["퀴노아",15]],top:[["닭고기",10],["두부",15],["당근",15],["새송이버섯",15],["오이",15],["토마토",15],["무",15]]};
-/* 8/10~8/15: 세정 요청으로 두부 제외 + 화/목/토 저녁에 흰살생선 10g 추가(기존 닭고기 유지). 원래 8/16까지였으나 8/16부터 3끼로 넘어가며 자연히 8/15까지만 적용됨 */
+/* 8/10~8/15: 세정 요청으로 두부 제외 + 화/목/토 저녁에 대구살 10g 추가(기존 닭고기 유지). 원래 8/16까지였으나 8/16부터 3끼로 넘어가며 자연히 8/15까지만 적용됨 */
 const W0810_START=new Date(2025,7,10), W0810_END=new Date(2025,7,15);
 const FISH_WEEKDAYS=new Set([2,4,6]);
 function buildTab3(){
@@ -1155,7 +1155,7 @@ function buildTab3(){
           pmTop=pmTop.filter(it=>it[0]!=='두부');
           /* 요일은 실제 달력 연도(SCHEDULE_YEAR) 기준 — d는 날짜 계산용 임시 연도(2025)라 요일이 다름 */
           const realWeekday=new Date(SCHEDULE_YEAR, d.getMonth(), d.getDate()).getDay();
-          if(FISH_WEEKDAYS.has(realWeekday)) pmTop=pmTop.concat([["흰살생선",10]]);
+          if(FISH_WEEKDAYS.has(realWeekday)) pmTop=pmTop.concat([["대구살",10]]);
         }
         days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:[
           {base:amBase, top:amTop, total:sumg(amBase,amTop)},
@@ -1190,7 +1190,7 @@ const tab3 = buildTab3();
 /* 후기 이유식 2 — 3끼, 8/16(일)부터(원래 9/12 예정이었으나 세정 요청으로 8/16으로 앞당김, 8/8~8/15 고정 2끼 식단 뒤에 바로 이어짐).
    · 세정 요청 새 식단(8/16~8/30만 우선 채움, 8/31 이후는 빈 칸으로 세정이 직접 입력):
      베이스 90g(쌀30+오트밀30+퀴노아30, 3끼 공통) + 채소 5종×20g(100g, 3끼 공통) + 단백질 10g(끼니별로 다름) = 끼니당 200g
-     1끼 소고기10g · 2끼 돼지고기10g · 3끼 닭고기10g(수·토는 흰살생선10g으로 대체)
+     1끼 소고기10g · 2끼 돼지고기10g · 3끼 닭고기10g(수·토는 대구살10g으로 대체)
    · 채소 로테이션은 8/15까지 이미 안전 확인된 재료만 사용(케일 8/11, 돼지고기 8/13 테스트 완료 — Supabase 실제 override 기록 기준), 3일 간격으로 두 세트 교대
    · 신규 재료(가장 큰 원칙: 하루 1개만·1끼(아침)에만·이전 신규 재료와 3일 이상 간격)는 도입일 1끼에서만 그날 세트의 채소 하나를 대신해 들어가고, 2·3끼는 그날 세트 그대로 유지 —
      8/17 연근(세정이 override로 이미 계획해둔 날짜 유지). 8/20 양배추·8/23 완두콩·8/26 콜리플라워·8/29 아스파라거스는
@@ -1257,7 +1257,7 @@ function buildTab4(){
         const meal1Veg=(newIng ? vegSet.slice(0,4).concat([newIng]) : vegSet).map(v=>[v,20]);
         const restVeg=vegSet.map(v=>[v,20]);
         const realWeekday=new Date(SCHEDULE_YEAR, d.getMonth(), d.getDate()).getDay();
-        const meal3Meat=T4_FISH_WEEKDAYS.has(realWeekday)?'흰살생선':'닭고기';
+        const meal3Meat=T4_FISH_WEEKDAYS.has(realWeekday)?'대구살':'닭고기';
         const meals=[["소고기",meal1Veg],["돼지고기",restVeg],[meal3Meat,restVeg]];
         days.push({date:ds,dday:"D+"+dday,n:n+"일차",meals:meals.map(([meat,veg])=>{
           const base=T4_BASE.map(b=>b.slice()), top=[[meat,10]].concat(veg);
