@@ -498,6 +498,12 @@
   .item-del:hover{border-color:var(--peach);color:var(--peach);background:var(--peach-soft);}
   .add-item-btn{margin-top:2px;font-family:inherit;font-size:13px;background:transparent;border:1px dashed #cdd9c6;color:var(--sage);padding:8px 12px;border-radius:10px;cursor:pointer;width:100%;transition:.15s;}
   .add-item-btn:hover{border-color:var(--sage);background:var(--sage-soft);}
+  .ing-pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:10px;background:#fdfbf7;}
+  .ing-pick[hidden]{display:none;}
+  .ing-chip{cursor:pointer;border:1.5px solid var(--line);background:#fff;font-family:inherit;font-size:12.5px;color:var(--ink);padding:6px 12px;border-radius:999px;transition:.12s;}
+  .ing-chip:hover{border-color:var(--sage);}
+  .ing-chip.on{background:var(--sage);color:#fff;border-color:transparent;font-weight:700;}
+  .ing-chip.ing-etc{border-style:dashed;color:var(--sage);}
   .item-empty{color:var(--muted);font-size:12px;padding:6px 4px;text-align:center;font-style:italic;}
   .modal-group{background:#faf6ee;border:1px solid #ece5d8;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:14px;}
   .modal-group.plan-group{background:linear-gradient(180deg,#fbfdfa,#f7f9f3);border-color:#dee5d6;}
@@ -896,10 +902,17 @@
           <span class="flabel">배죽 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 쌀·오트밀 물 배수</span></span>
           <div class="ratio-list" id="meal-ratio-list"></div>
         </div>
-        <div class="field" id="meal-top-field">
-          <span class="flabel">토핑 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
-          <div class="item-list" id="meal-top-list"></div>
-          <button type="button" class="add-item-btn" data-target="top">+ 토핑 재료 추가</button>
+        <div class="field" id="meal-veg-field">
+          <span class="flabel">채소 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 칩을 눌러 추가 (기본 15g)</span></span>
+          <div class="item-list" id="meal-veg-list"></div>
+          <button type="button" class="add-item-btn" data-target="veg">+ 채소 추가</button>
+          <div class="ing-pick" id="veg-pick" hidden></div>
+        </div>
+        <div class="field" id="meal-meat-field">
+          <span class="flabel">고기 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 칩을 눌러 추가 (기본 10g)</span></span>
+          <div class="item-list" id="meal-meat-list"></div>
+          <button type="button" class="add-item-btn" data-target="meat">+ 고기 추가</button>
+          <div class="ing-pick" id="meat-pick" hidden></div>
         </div>
         <div class="field" id="meal-allergy-field">
           <span class="flabel" style="color:#c0392b;">알러지 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 알러지 테스트 재료 (밀가루·땅콩·계란 등)</span></span>
@@ -2359,11 +2372,56 @@ function renderItemList(containerId, items){
       renderItemList(containerId,arr);
       updatePlanTotal();
       if(containerId==='meal-base-list') refreshMealRatios();
+      refreshIngPick(containerId);
     };
   });
   if(containerId==='meal-base-list'){
     c.querySelectorAll('.item-name').forEach(inp=>{ inp.addEventListener('input', refreshMealRatios); });
   }
+  if(containerId==='meal-veg-list'||containerId==='meal-meat-list'){
+    c.querySelectorAll('.item-name').forEach(inp=>{ inp.addEventListener('input', ()=>refreshIngPick(containerId)); });
+  }
+}
+/* 칩 트레이가 열려 있으면 선택 상태 갱신 */
+function refreshIngPick(containerId){
+  const t = containerId==='meal-veg-list' ? 'veg' : containerId==='meal-meat-list' ? 'meat' : null;
+  if(!t) return;
+  const wrap=document.getElementById(t+'-pick');
+  if(wrap && !wrap.hasAttribute('hidden')) renderIngPick(t);
+}
+const DEF_G={base:30, veg:15, meat:10, allergy:15, snack:''};
+/* 칩으로 고를 재료 이름 목록 */
+function ingPickNames(target){
+  const deleted=new Set(State.deletedBuiltin||[]);
+  if(target==='meat'){
+    const builtin=(categories.find(c=>c[0]==='고기')||[,[]])[1];
+    const customs=(State.customIngredients||[]).filter(c=>c.cat==='고기').map(c=>c.name);
+    return [...new Set([...builtin, ...CAT.meat, ...customs])].filter(n=>!deleted.has(n)).sort((a,b)=>a.localeCompare(b,'ko'));
+  }
+  const cats=['채소','콩/두부류','해조류'];
+  const builtin=categories.filter(c=>cats.includes(c[0])).flatMap(c=>c[1]);
+  const customs=(State.customIngredients||[]).filter(c=>cats.includes(c.cat)).map(c=>c.name);
+  return [...new Set([...builtin, ...customs])].filter(n=>!deleted.has(n)).sort((a,b)=>a.localeCompare(b,'ko'));
+}
+function renderIngPick(target){
+  const wrap=document.getElementById(target+'-pick');
+  const listId='meal-'+target+'-list';
+  const chosen=new Set(readItemList(listId).map(it=>(it.name||'').trim()).filter(Boolean));
+  wrap.innerHTML = ingPickNames(target).map(n=>`<button type="button" class="ing-chip${chosen.has(n)?' on':''}" data-name="${esc(n)}">${esc(n)}</button>`).join('')
+    + `<button type="button" class="ing-chip ing-etc" data-etc="1">+ 직접 입력</button>`;
+  wrap.querySelectorAll('.ing-chip').forEach(btn=>{
+    btn.onclick=()=>{
+      if(btn.dataset.etc){ addItemToList(target); return; }
+      const name=btn.dataset.name;
+      const arr=readItemList(listId);
+      const idx=arr.findIndex(it=>(it.name||'').trim()===name);
+      if(idx>=0) arr.splice(idx,1);
+      else arr.push({name, g:DEF_G[target], unit:'g'});
+      renderItemList(listId, arr);
+      updatePlanTotal();
+      renderIngPick(target);
+    };
+  });
 }
 function renderMealRatios(baseItems, date, mi){
   const field=document.getElementById('meal-ratio-field');
@@ -2374,8 +2432,15 @@ function renderMealRatios(baseItems, date, mi){
   const uniq=[...new Set(baseItems.map(it=>it.name).filter(n=>n&&n.trim()))];
   if(!uniq.length){ field.style.display='none'; list.innerHTML=''; return; }
   field.style.display='';
+  const orig=(currentMeal&&currentMeal.origBaseNames)||new Set();
   list.innerHTML=uniq.map(n=>{
-    const v = (n in typed) ? typed[n] : ratioOf(date, mi, n);
+    let v;
+    if(n in typed) v = typed[n];
+    else {
+      v = ratioOf(date, mi, n);
+      /* 이번 세션에 새로 추가한 베이스는 4배죽을 기본값으로 (기존 재료·과거 데이터엔 미적용) */
+      if((v==null||v==='') && !orig.has(n)) v = 4;
+    }
     return `<div class="ratio-row-edit"><span class="ratio-name">${esc(n)}</span><input type="number" class="ratio-input" data-name="${esc(n)}" inputmode="numeric" min="0" step="1" placeholder="예: 10" value="${(v!=null&&v!=='')?v:''}"><span class="ratio-suffix">배죽</span></div>`;
   }).join('');
 }
@@ -2396,7 +2461,7 @@ function updatePlanTotal(){
   const el=document.getElementById('meal-plan-total');
   if(!el) return;
   if(!currentMeal || currentMeal.snack){ el.innerHTML=''; return; }
-  const items=readItemList('meal-base-list').concat(readItemList('meal-top-list'),readItemList('meal-allergy-list'));
+  const items=readItemList('meal-base-list').concat(readItemList('meal-meat-list'),readItemList('meal-veg-list'),readItemList('meal-allergy-list'));
   const sums={g:0, ml:0};
   items.forEach(it=>{ const u=it.unit||'g'; sums[u]=(sums[u]||0)+(it.g||0); });
   const parts=[]; if(sums.g>0)parts.push(sums.g+'g'); if(sums.ml>0)parts.push(sums.ml+'ml');
@@ -2405,10 +2470,11 @@ function updatePlanTotal(){
 function addItemToList(target){
   const containerId='meal-'+target+'-list';
   const arr=readItemList(containerId);
-  arr.push({name:'',g: (target==='base'||target==='snack')?'':15, unit:'g'});
+  arr.push({name:'', g:(target in DEF_G ? DEF_G[target] : 15), unit:'g'});
   renderItemList(containerId,arr);
   updatePlanTotal();
   if(target==='base') refreshMealRatios();
+  refreshIngPick(containerId);
   setTimeout(()=>{
     const rows=document.querySelectorAll('#'+containerId+' .item-row');
     const last=rows[rows.length-1];
@@ -2416,7 +2482,16 @@ function addItemToList(target){
   },30);
 }
 document.querySelectorAll('.add-item-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>addItemToList(btn.dataset.target));
+  btn.addEventListener('click', ()=>{
+    const t=btn.dataset.target;
+    if(t==='veg'||t==='meat'){
+      const wrap=document.getElementById(t+'-pick');
+      if(wrap.hasAttribute('hidden')){ renderIngPick(t); wrap.removeAttribute('hidden'); }
+      else wrap.setAttribute('hidden','');
+      return;
+    }
+    addItemToList(t);
+  });
 });
 
 function openMealEdit(date,mi,mealName,focusField,focusName){
@@ -2427,10 +2502,13 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   /* 토핑+알러지를 분리 편집 후 재조합하면 순서가 (일반→알러지)로 바뀌므로,
      '변경 없음' 판정 기준도 같은 순서의 계획 텍스트로 맞춘다 */
   const planTopItems=meal.top.map(it=>({name:it[0],g:it[1],unit:'g'}));
+  /* 모달은 고기 → 채소 → 알러지 순으로 편집·재조합하므로 '변경 없음' 기준도 같은 순서로 */
   const planTopRegroup=itemsToText(
-    planTopItems.filter(it=>!ALLERGENS.has(it.name)).concat(planTopItems.filter(it=>ALLERGENS.has(it.name)))
+    planTopItems.filter(it=>CAT.meat.includes(it.name))
+      .concat(planTopItems.filter(it=>!CAT.meat.includes(it.name)&&!ALLERGENS.has(it.name)))
+      .concat(planTopItems.filter(it=>ALLERGENS.has(it.name)))
   );
-  currentMeal={date,mi,mealName,snack:false,planBaseText,planTopText,planTopRegroup};
+  currentMeal={date,mi,mealName,snack:false,planBaseText,planTopText,planTopRegroup,origBaseNames:new Set()};
   document.getElementById('meal-title').textContent=`${date} · ${mealName||'끼니'}`;
   const planLine=`계획 : ${planBaseText||'-'}${planTopText?' / 토핑 '+planTopText:''}`;
   document.getElementById('meal-sub').textContent=planLine;
@@ -2439,10 +2517,15 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   const baseItems = ovBase!=null ? parseItems(ovBase) : meal.base.map(it=>({name:it[0],g:it[1],unit:'g'}));
   const topItems  = ovTop !=null ? parseItems(ovTop ) : meal.top .map(it=>({name:it[0],g:it[1],unit:'g'}));
   const allergyItems = topItems.filter(it=>ALLERGENS.has(it.name));
-  const regularTop   = topItems.filter(it=>!ALLERGENS.has(it.name));
+  const meatItems = topItems.filter(it=>!ALLERGENS.has(it.name) && CAT.meat.includes(it.name));
+  const vegItems  = topItems.filter(it=>!ALLERGENS.has(it.name) && !CAT.meat.includes(it.name));
+  currentMeal.origBaseNames = new Set(baseItems.map(it=>(it.name||'').trim()).filter(Boolean));
   renderItemList('meal-base-list', baseItems);
-  renderItemList('meal-top-list',  regularTop);
+  renderItemList('meal-veg-list',  vegItems);
+  renderItemList('meal-meat-list', meatItems);
   renderItemList('meal-allergy-list', allergyItems);
+  document.getElementById('veg-pick').setAttribute('hidden','');
+  document.getElementById('meat-pick').setAttribute('hidden','');
   renderMealRatios(baseItems, date, mi);
   updatePlanTotal();
   const showSnack=SNACK_DATES.has(date);
@@ -2453,12 +2536,13 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   document.getElementById('meal-memo-label').innerHTML='메모 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 텍스트</span>';
   document.getElementById('meal-memo').rows=3;
   document.getElementById('meal-memo').placeholder='입력하기 (반응, 선호도 등)';
-  ['meal-base-field','meal-top-field','meal-allergy-field','meal-eaten-field','meal-memo-field'].forEach(id=>setFieldVisible(id,true));
+  ['meal-base-field','meal-veg-field','meal-meat-field','meal-allergy-field','meal-eaten-field','meal-memo-field'].forEach(id=>setFieldVisible(id,true));
   setFieldVisible('plan-group',true);
   setFieldVisible('actual-group',true);
   mOverlay.classList.add('open');
   setTimeout(()=>{
-    if(focusField==='base' || focusField==='top' || focusField==='allergy' || focusField==='snack'){
+    if(focusField==='top') focusField = (focusName && CAT.meat.includes(focusName)) ? 'meat' : 'veg';
+    if(focusField==='base' || focusField==='veg' || focusField==='meat' || focusField==='allergy' || focusField==='snack'){
       if(focusField==='snack' && !document.querySelectorAll('#meal-snack-list .item-row').length){
         addItemToList('snack');
         return;
@@ -2492,7 +2576,7 @@ function saveMealEdit(){
   const baseV=itemsToText(readItemList('meal-base-list'));
   if(!baseV || baseV===currentMeal.planBaseText) delete State.overrides[`${date}|${mi}|base`];
   else State.overrides[`${date}|${mi}|base`]=baseV;
-  const topV=itemsToText(readItemList('meal-top-list').concat(readItemList('meal-allergy-list')));
+  const topV=itemsToText(readItemList('meal-meat-list').concat(readItemList('meal-veg-list'),readItemList('meal-allergy-list')));
   if(!topV || topV===currentMeal.planTopText || topV===currentMeal.planTopRegroup) delete State.overrides[`${date}|${mi}|top`];
   else State.overrides[`${date}|${mi}|top`]=topV;
   State.ratios=State.ratios||{};
