@@ -544,9 +544,9 @@
   .wh-row.low{border-color:#e0897b;background:#fdecea;}
   .wh-info{flex:1;min-width:0;}
   .wh-name{font-weight:700;font-size:14.5px;color:var(--ink);}
-  .wh-cubes{display:flex;flex-wrap:wrap;gap:3px;align-items:center;margin:6px 0 4px;min-height:14px;}
+  .wh-cubes{display:grid;grid-template-columns:repeat(10,min-content);gap:3px;align-items:center;margin:6px 0 4px;min-height:14px;width:max-content;max-width:100%;}
   .wh-cube{flex-shrink:0;border-radius:3px;box-shadow:inset 0 1px 2px rgba(255,255,255,.55),0 1px 1px rgba(0,0,0,.14);}
-  .wh-cubes-more{font-size:11px;color:var(--muted);font-weight:700;margin-left:3px;}
+  .wh-cubes-more{grid-column:1/-1;font-size:11px;color:var(--muted);font-weight:700;margin-top:1px;}
   .wh-cubes-none{font-size:11.5px;color:var(--muted);}
   .wh-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
   .wh-low-tag{margin-left:6px;color:#c0392b;font-weight:700;font-size:11px;white-space:nowrap;}
@@ -2154,7 +2154,7 @@ function ingCube(name){
 function whCubesStrip(it){
   const n=whClamp(it.count);
   if(n===0) return '<span class="wh-cubes-none">큐브 없음</span>';
-  const c=ingCube(it.name), sz=whMiniCubePx(it.cubeG), cap=24;
+  const c=ingCube(it.name), sz=whMiniCubePx(it.cubeG), cap=30;
   let h='';
   for(let i=0;i<Math.min(n,cap);i++) h+=`<span class="wh-cube" style="width:${sz}px;height:${sz}px;background:linear-gradient(135deg,${c.light},${c.base})"></span>`;
   if(n>cap) h+=`<span class="wh-cubes-more">+${n-cap}개</span>`;
