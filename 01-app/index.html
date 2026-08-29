@@ -514,12 +514,62 @@
   /* ===== 보기 전용 공유 모드 (?view=1) ===== */
   .viewonly .main-tabs{display:none;}
   .viewonly #open-checklist{display:none;}
+  .viewonly #open-warehouse{display:none;}
   .viewonly .foot{display:none;}
   .viewonly .mealcell,.viewonly .snackcell{cursor:default;-webkit-tap-highlight-color:transparent;}
   .viewonly .mealcell:hover,.viewonly .snackcell:hover{background:transparent;}
   .viewonly .mealcell:active,.viewonly .snackcell:active{background:transparent;}
   /* 빈 칸의 '입력하기' 안내는 보기 전용에서 숨김 (편집 가능 오인 방지) */
   .viewonly .mealcell.log:empty::before,.viewonly .snackcell:empty::before,.viewonly .log-text:empty::before{content:"" !important;}
+
+  /* ===== 재료 창고 ===== */
+  .check-btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .wh-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:14px;border:1px dashed var(--line);border-radius:12px;margin-bottom:14px;background:#fdfbf7;}
+  .wh-form label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);}
+  .wh-form input,.wh-form select{font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);outline:none;}
+  .wh-form input:focus,.wh-form select:focus{border-color:var(--sage);}
+  .wh-form input[type=text]{width:120px;}
+  .wh-form input[type=number]{width:90px;}
+  .wh-form-actions{display:flex;gap:6px;margin-left:auto;}
+  .wh-form .add-btn{font-family:inherit;font-size:13px;cursor:pointer;background:var(--sage);color:#fff;border:none;padding:8px 16px;border-radius:9px;}
+  .modal-foot #wh-add-toggle{margin-top:0;}
+  #wh-list{margin-top:14px;display:flex;flex-direction:column;gap:10px;}
+  .wh-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);}
+  .wh-row.low{border-color:#e0897b;background:#fdecea;}
+  .wh-info{flex:1;min-width:0;}
+  .wh-name{font-weight:700;font-size:14.5px;color:var(--ink);}
+  .wh-cubes{display:flex;flex-wrap:wrap;gap:3px;align-items:center;margin:6px 0 4px;min-height:14px;}
+  .wh-cube{flex-shrink:0;border-radius:3px;box-shadow:inset 0 1px 2px rgba(255,255,255,.55),0 1px 1px rgba(0,0,0,.14);}
+  .wh-cubes-more{font-size:11px;color:var(--muted);font-weight:700;margin-left:3px;}
+  .wh-cubes-none{font-size:11.5px;color:var(--muted);}
+  .wh-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .wh-low-tag{margin-left:6px;color:#c0392b;font-weight:700;font-size:11px;white-space:nowrap;}
+  .wh-count{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .wh-count .cnt{min-width:46px;text-align:center;font-weight:700;font-size:15px;color:var(--ink);}
+  .wh-step{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:16px;line-height:1;cursor:pointer;color:var(--ink);}
+  .wh-step:active{background:var(--sage-soft);}
+  .wh-actions{display:flex;gap:2px;flex-shrink:0;}
+  .wh-edit-btn,.wh-del-btn{border:none;background:transparent;font-size:12px;cursor:pointer;color:var(--muted);padding:4px 6px;font-family:inherit;}
+  .wh-del-btn{color:#cf6b5a;}
+  .wh-break{display:none;}
+  @media (max-width:600px){
+    .wh-row{flex-wrap:wrap;gap:10px 8px;}
+    .wh-break{display:block;flex-basis:100%;height:0;}
+    .wh-count{margin-left:0;}
+    .wh-actions{margin-left:auto;}
+  }
+
+  /* 재료차감 행 */
+  .row-deduct td{padding:6px 4px;text-align:center;background:#faf7f0;}
+  .row-deduct .rowlabel{background:#faf7f0;}
+  .deduct-btn{font-family:inherit;font-size:11px;padding:5px 8px;border:1px solid var(--sage);border-radius:7px;background:#fff;color:var(--sage);cursor:pointer;white-space:nowrap;font-weight:700;}
+  .deduct-btn.done{border-color:var(--line);color:var(--muted);background:#f3efe6;}
+  .deduct-btn:disabled{opacity:.35;cursor:default;border-color:var(--line);color:var(--muted);}
+
+  /* 재료 부족 배너 */
+  .low-stock-bar{margin:10px 0 0;padding:10px 14px;border-radius:10px;background:#fdecea;border:1px solid #e0897b;color:#a5342a;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer;}
+  .low-stock-bar .ls-x{margin-left:auto;background:transparent;border:none;color:#a5342a;font-size:15px;cursor:pointer;padding:0 4px;line-height:1;}
+  .viewonly .low-stock-bar{display:none !important;}
 </style>
 </head>
 <body>
@@ -536,6 +586,8 @@
     </div>
   </header>
 
+  <div id="low-stock-bar" class="low-stock-bar" style="display:none"></div>
+
   <div class="main-tabs">
     <button class="main-tab active" data-main="m1">🥣 이유식</button>
     <button class="main-tab" data-main="m2">🧸 장난감</button>
@@ -549,7 +601,10 @@
       <span class="chip snack">간식</span>
       <span class="chip newc">🆕 새로 먹은 재료</span>
     </div>
-    <button id="open-checklist" class="check-btn">📋 재료 테스트 체크리스트</button>
+    <div class="check-btn-row">
+      <button id="open-checklist" class="check-btn">📋 재료 체크리스트</button>
+      <button id="open-warehouse" class="check-btn">🧊 재료 창고</button>
+    </div>
 
     <div class="tabs">
       <button class="tab active" data-tab="t1">1~28일</button>
@@ -633,13 +688,14 @@
       <div id="book-empty" class="toy-empty" style="display:none">아직 등록한 책이 없어요. <b>+ 책 추가</b> 버튼으로 시작해보세요.</div>
     </div>
   </section>
+
 </div>
 
 <!-- 체크리스트 -->
 <div id="overlay" class="overlay">
   <div class="modal">
     <div class="modal-head">
-      <div style="min-width:0;"><div class="modal-title">재료 테스트 체크리스트</div><div class="modal-sub" id="progress">0개 완료</div></div>
+      <div style="min-width:0;"><div class="modal-title">재료 체크리스트</div><div class="modal-sub" id="progress">0개 완료</div></div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
         <button id="edit-ing-toggle" class="reset-btn" style="padding:6px 12px;font-size:12px;">편집</button>
         <button id="close-checklist" class="close-x">✕</button>
@@ -660,6 +716,32 @@
         <button id="edit-cancel" class="reset-btn">편집 종료</button>
         <button id="edit-delete" class="add-btn" style="background:#cf6b5a;">선택 삭제 (0)</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 재료 창고 -->
+<div id="warehouse-overlay" class="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div style="min-width:0;"><div class="modal-title">재료 창고</div><div class="modal-sub">재료별 남은 큐브 개수 · 3개 미만이면 ⚠ 부족</div></div>
+      <button id="close-warehouse" class="close-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="wh-form" class="wh-form" style="display:none">
+        <label>이름<input type="text" id="wh-new-name" placeholder="예: 당근"></label>
+        <label>1큐브 용량<select id="wh-new-cube"><option value="10">10g</option><option value="15" selected>15g</option><option value="20">20g</option></select></label>
+        <label>시작 큐브 개수<input type="number" id="wh-new-count" min="0" value="0"></label>
+        <div class="wh-form-actions">
+          <button class="reset-btn" id="wh-new-cancel">취소</button>
+          <button class="add-btn" id="wh-new-save">추가</button>
+        </div>
+      </div>
+      <div id="wh-list"></div>
+      <div id="wh-empty" class="toy-empty" style="display:none">아직 등록한 재료가 없어요. <b>+ 재료 추가</b> 버튼으로 시작해보세요.</div>
+    </div>
+    <div class="modal-foot">
+      <button id="wh-add-toggle" class="check-btn">+ 재료 추가</button>
     </div>
   </div>
 </div>
@@ -1202,7 +1284,8 @@ if(window.supabase){
   try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }catch(e){ sb=null; }
 }
 const LS_KEY="doyoung_bbf_state";
-let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,books:[],booksInitialized:false,ratios:{},ratiosInitialized:false};
+let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[],toys:[],toysInitialized:false,books:[],booksInitialized:false,ratios:{},ratiosInitialized:false,inventory:{items:[],deducted:{}}};
+function ensureInventory(o){ o.inventory=o.inventory||{items:[],deducted:{}}; o.inventory.items=o.inventory.items||[]; o.inventory.deducted=o.inventory.deducted||{}; return o; }
 (function loadLocal(){
   try{ Object.assign(State, JSON.parse(localStorage.getItem(LS_KEY))||{}); }catch(e){}
   State.tested=State.tested||{}; State.logs=State.logs||{}; State.overrides=State.overrides||{}; State.customIngredients=State.customIngredients||[];
@@ -1210,6 +1293,7 @@ let State={tested:{},logs:{},overrides:{},customIngredients:[],deletedBuiltin:[]
   State.toys=State.toys||[];
   State.books=State.books||[];
   State.ratios=State.ratios||{};
+  ensureInventory(State);
   try{ const t=JSON.parse(localStorage.getItem('doyoung_tested_ingredients')); if(t&&!Object.keys(State.tested).length) Object.keys(t).forEach(k=>State.tested[k]=t[k]===true?{done:true}:t[k]); }catch(e){}
   try{ const l=JSON.parse(localStorage.getItem('doyoung_food_logs')); if(l&&!Object.keys(State.logs).length) State.logs=l; }catch(e){}
 })();
@@ -1223,6 +1307,8 @@ function stateRichness(s){
        + (Object.keys(s.tested||{}).length)
        + ((s.customIngredients||[]).length)
        + ((s.deletedBuiltin||[]).length)
+       + ((s.inventory&&s.inventory.items||[]).length)
+       + (s.inventory&&Object.keys(s.inventory.deducted||{}).length||0)
        + ((s.toys||[]).filter(t=>t.photo||t.rating>0||(t.reviews||[]).some(r=>r.text&&r.text.trim())).length)
        + ((s.books||[]).filter(t=>t.photo||t.rating>0||(t.reviews||[]).some(r=>r.text&&r.text.trim())).length);
 }
@@ -1255,6 +1341,7 @@ async function syncDown(){
       remote.toys=remote.toys||[];
       remote.books=remote.books||[];
       remote.ratios=remote.ratios||{};
+      ensureInventory(remote);
       /* 보호 규칙: 로컬이 클라우드보다 명백히 풍부하면 덮어쓰지 않고 로컬을 push */
       const localRichness=stateRichness(State);
       const remoteRichness=stateRichness(remote);
@@ -1267,7 +1354,7 @@ async function syncDown(){
       }
       State=remote;
       try{ localStorage.setItem(LS_KEY,JSON.stringify(State)); }catch(e){}
-      renderTables(); renderChecklist(); renderToys(); renderBooks(); setSync('ok');
+      renderTables(); renderChecklist(); renderToys(); renderBooks(); renderWarehouse(); checkLowStock(); setSync('ok');
     }else{ await syncUp(); }
   }catch(e){ setSync('err'); }
   finally{ syncDownInFlight=false; }
@@ -1927,6 +2014,7 @@ function renderWeeks(weeks,withSnack,labels){
       const cut=dateOfMD('6/18'), last=dateOfMD(d[d.length-1].date);
       if(!cut||!last||last.getTime()>cut.getTime()) html+=snackRow(d);
     }
+    if(!VIEW_ONLY) html+=deductRow(d,todayMD);
     html+='</tbody></table></div>';
     return html;
   }).join('');
@@ -2016,8 +2104,208 @@ function renderTables(){
   document.getElementById('t2-weeks').innerHTML=renderWeeks(tab2,false,["1끼 · 오전(단출)","2끼 · 오후(풍성)"]);
   document.getElementById('t3-weeks').innerHTML=renderWeeks(tab3,true,["1끼 · 아침","2끼 · 저녁"]);
   document.getElementById('t4-weeks').innerHTML=renderWeeks(tab4,true,["1끼 · 아침","2끼 · 점심","3끼 · 저녁"]);
-  attachCellClick(); renderNewFoods(); renderAmountTrend(); renderTodayMenu(); markTodayColumn();
+  attachCellClick(); attachDeductBtns(); renderNewFoods(); renderAmountTrend(); renderTodayMenu(); markTodayColumn();
 }
+
+/* ============ 재료 창고 + 재료차감 ============ */
+function whClamp(n){ n=Math.round(Number(n)||0); return n<0?0:n; }
+function whMiniCubePx(cubeG){ return ({10:12,15:14,20:16})[Number(cubeG)] || 14; }
+/* 재료 이름 → 큐브 색(진한색·밝은색) */
+function ingCube(name){
+  const t=String(name||'');
+  const table=[
+    [/당근|파프리카/, ['#e0803c','#f4b382']],
+    [/고구마|단호박|늙은호박|밤호박/, ['#dd7b3c','#f1ac7f']],
+    [/토마토|비트|파프리카레드/, ['#d64f3b','#ec9184']],
+    [/소고기|쇠고기|한우|돼지|안심|등심/, ['#a4653f','#c99c7e']],
+    [/닭|계란|달걀|메추리/, ['#d5a04c','#ecc98d']],
+    [/생선|대구|연어|흰살|가자미|광어|삼치|고등어|동태|명태/, ['#d2bc97','#e8dcc5']],
+    [/시금치|브로콜리|케일|청경채|근대|아욱|부추|완두|깻잎|미나리|셀러리|아스파라거스|얼갈이|시래기/, ['#569a52','#96c792']],
+    [/애호박|오이|주키니|여주|풋고추|피망/, ['#8abb55','#bcda94']],
+    [/양배추|배추|양상추|콜리플라워|콜라비|숙주|무순/, ['#b5cb84','#d6e3b5']],
+    [/버섯|표고|새송이|양송이|느타리|팽이/, ['#c1b093','#ddd1bc']],
+    [/검은콩|서리태|흑임자|미역|다시마|김|톳|파래/, ['#454550','#8a8a93']],
+    [/두부|양파|무|감자|연근|마늘|콩나물|도라지|우엉|더덕|순두부/, ['#e8dec8','#f6efe0']],
+    [/쌀|현미|오트밀|퀴노아|보리|찹쌀|귀리|율무|잡곡|기장/, ['#e1d4b5','#f1e9d2']],
+    [/딸기|사과|수박|참외|자두|복숭아|블루베리|바나나|포도|망고|귤|오렌지|키위|배|자몽|멜론/, ['#e094ab','#f2c3d0']],
+  ];
+  for(const [re,cc] of table){ if(re.test(t)) return {base:cc[0], light:cc[1]}; }
+  let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0;
+  const hue=h%360;
+  return {base:`hsl(${hue} 42% 58%)`, light:`hsl(${hue} 46% 78%)`};
+}
+/* 남은 큐브 개수만큼 색 큐브를 그림 */
+function whCubesStrip(it){
+  const n=whClamp(it.count);
+  if(n===0) return '<span class="wh-cubes-none">큐브 없음</span>';
+  const c=ingCube(it.name), sz=whMiniCubePx(it.cubeG), cap=24;
+  let h='';
+  for(let i=0;i<Math.min(n,cap);i++) h+=`<span class="wh-cube" style="width:${sz}px;height:${sz}px;background:linear-gradient(135deg,${c.light},${c.base})"></span>`;
+  if(n>cap) h+=`<span class="wh-cubes-more">+${n-cap}개</span>`;
+  return h;
+}
+
+/* 하루치 재료별 계획량(g) 합산 — override 반영, g 단위만 */
+function dayIngredientTotals(md){
+  const day=findDay(md); if(!day) return {};
+  const totals={};
+  const add=(items)=>items.forEach(it=>{ if((it.unit||'g')==='g' && it.g>0) totals[it.name]=(totals[it.name]||0)+it.g; });
+  getMeals(day).forEach((m,mi)=>{
+    ['base','top'].forEach(field=>{
+      const ov=State.overrides[`${md}|${mi}|${field}`];
+      if(ov!=null) add(parseItemsLocal(ov));
+      else add(((m[field]||[])).map(it=>({name:it[0],g:it[1],unit:'g'})));
+    });
+  });
+  add(parseItemsLocal(State.logs[`${md}|s|snack`]||''));
+  return totals;
+}
+function applyDeduct(md){
+  const inv=State.inventory;
+  if(inv.deducted[md]) return;
+  const totals=dayIngredientTotals(md);
+  const rec=[];
+  inv.items.forEach(item=>{
+    const g=totals[item.name]; if(!g) return;
+    const cubes=Math.ceil(g/(Number(item.cubeG)||15));
+    item.count=whClamp(item.count-cubes);
+    rec.push({name:item.name,cubes});
+  });
+  inv.deducted[md]=rec;
+  save(); renderTables(); renderWarehouse(); checkLowStock();
+}
+function undoDeduct(md){
+  const inv=State.inventory;
+  const rec=inv.deducted[md]; if(!rec) return;
+  rec.forEach(r=>{ const item=inv.items.find(i=>i.name===r.name); if(item) item.count=whClamp(item.count+r.cubes); });
+  delete inv.deducted[md];
+  save(); renderTables(); renderWarehouse(); checkLowStock();
+}
+function deductRow(d,todayMD){
+  const todayDt=dateOfMD(todayMD);
+  let h='<tr class="row-deduct"><td class="rowlabel" colspan="2">재료차감</td>';
+  h+=d.map(x=>{
+    if(State.inventory.deducted[x.date])
+      return `<td><button class="deduct-btn done" data-deduct="${esc(x.date)}" data-done="1">차감됨 ↩</button></td>`;
+    const dt=dateOfMD(x.date);
+    const usable = todayDt && dt && dt.getTime()>=todayDt.getTime();
+    return usable
+      ? `<td><button class="deduct-btn" data-deduct="${esc(x.date)}">재료차감</button></td>`
+      : `<td><button class="deduct-btn" disabled>재료차감</button></td>`;
+  }).join('');
+  return h+'</tr>';
+}
+function attachDeductBtns(){
+  if(VIEW_ONLY) return;
+  document.querySelectorAll('.deduct-btn[data-deduct]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const md=btn.dataset.deduct;
+      if(btn.dataset.done) undoDeduct(md); else applyDeduct(md);
+    });
+  });
+}
+
+let whEditingId=null;
+function renderWarehouse(){
+  const list=document.getElementById('wh-list');
+  const empty=document.getElementById('wh-empty');
+  if(!list) return;
+  const items=State.inventory.items;
+  empty.style.display=items.length?'none':'block';
+  list.innerHTML=items.map(it=>{
+    if(whEditingId===it.id){
+      return `<div class="wh-row"><div class="wh-form" style="margin:0;border:none;padding:0;flex:1;background:none;">
+        <label>이름<input type="text" class="wh-e-name" value="${esc(it.name)}"></label>
+        <label>1큐브 용량<select class="wh-e-cube">${[10,15,20].map(g=>`<option value="${g}"${g===Number(it.cubeG)?' selected':''}>${g}g</option>`).join('')}</select></label>
+        <div class="wh-form-actions">
+          <button class="reset-btn wh-e-cancel">취소</button>
+          <button class="add-btn wh-e-save">저장</button>
+        </div>
+      </div></div>`;
+    }
+    const low=it.count<3;
+    return `<div class="wh-row${low?' low':''}">
+      <div class="wh-info">
+        <div class="wh-name">${esc(it.name)}${low?'<span class="wh-low-tag">⚠ 부족</span>':''}</div>
+        <div class="wh-cubes">${whCubesStrip(it)}</div>
+        <div class="wh-meta">1큐브 ${esc(it.cubeG)}g</div>
+      </div>
+      <i class="wh-break"></i>
+      <div class="wh-count">
+        <button class="wh-step" data-wh-dec="${esc(it.id)}" aria-label="1개 줄이기">−</button>
+        <span class="cnt">${it.count}개</span>
+        <button class="wh-step" data-wh-inc="${esc(it.id)}" aria-label="1개 늘리기">+</button>
+      </div>
+      <div class="wh-actions">
+        <button class="wh-edit-btn" data-wh-edit="${esc(it.id)}">수정</button>
+        <button class="wh-del-btn" data-wh-del="${esc(it.id)}">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('[data-wh-dec]').forEach(b=>b.onclick=()=>whAdjust(b.dataset.whDec,-1));
+  list.querySelectorAll('[data-wh-inc]').forEach(b=>b.onclick=()=>whAdjust(b.dataset.whInc,1));
+  list.querySelectorAll('[data-wh-del]').forEach(b=>b.onclick=()=>whDelete(b.dataset.whDel));
+  list.querySelectorAll('[data-wh-edit]').forEach(b=>b.onclick=()=>{ whEditingId=b.dataset.whEdit; renderWarehouse(); });
+  const er=list.querySelector('.wh-row .wh-form');
+  if(er){
+    er.querySelector('.wh-e-cancel').onclick=()=>{ whEditingId=null; renderWarehouse(); };
+    er.querySelector('.wh-e-save').onclick=()=>{
+      const it=State.inventory.items.find(i=>i.id===whEditingId); if(!it) return;
+      const nm=er.querySelector('.wh-e-name').value.trim();
+      if(!nm){ alert('재료 이름을 입력해주세요.'); return; }
+      if(State.inventory.items.some(i=>i.name===nm && i.id!==it.id)){ alert('이미 등록된 재료예요.'); return; }
+      it.name=nm; it.cubeG=Number(er.querySelector('.wh-e-cube').value);
+      whEditingId=null; save(); renderWarehouse(); renderTables(); checkLowStock();
+    };
+  }
+}
+function whAdjust(id,delta){
+  const it=State.inventory.items.find(i=>i.id===id); if(!it) return;
+  it.count=whClamp(it.count+delta);
+  save(); renderWarehouse(); checkLowStock();
+}
+function whDelete(id){
+  const it=State.inventory.items.find(i=>i.id===id); if(!it) return;
+  if(!confirm(`"${it.name}"을(를) 창고에서 삭제할까요?`)) return;
+  State.inventory.items=State.inventory.items.filter(i=>i.id!==id);
+  save(); renderWarehouse(); checkLowStock();
+}
+let lowStockDismissed=false;
+function checkLowStock(){
+  const bar=document.getElementById('low-stock-bar');
+  if(!bar) return;
+  const low=State.inventory.items.filter(i=>i.count<3);
+  if(!low.length || lowStockDismissed || VIEW_ONLY){ bar.style.display='none'; return; }
+  bar.innerHTML=`<span>⚠ 재료 부족: ${low.map(i=>esc(i.name)+' '+i.count+'개').join(', ')}</span><button class="ls-x" aria-label="배너 닫기">✕</button>`;
+  bar.style.display='flex';
+  bar.onclick=(e)=>{
+    if(e.target.classList.contains('ls-x')){ lowStockDismissed=true; bar.style.display='none'; return; }
+    openWarehouse();
+  };
+}
+function openWarehouse(){ renderWarehouse(); document.getElementById('warehouse-overlay').classList.add('open'); }
+function closeWarehouse(){ document.getElementById('warehouse-overlay').classList.remove('open'); }
+(function initWarehouseForm(){
+  const t=document.getElementById('wh-add-toggle');
+  const f=document.getElementById('wh-form');
+  if(!t||!f) return;
+  const show=(v)=>{ f.style.display=v?'flex':'none'; if(v){ f.scrollIntoView({block:'nearest'}); document.getElementById('wh-new-name').focus(); } };
+  t.onclick=()=>show(f.style.display==='none');
+  document.getElementById('wh-new-cancel').onclick=()=>show(false);
+  document.getElementById('wh-new-save').onclick=()=>{
+    const nm=document.getElementById('wh-new-name').value.trim();
+    if(!nm){ alert('재료 이름을 입력해주세요.'); return; }
+    if(State.inventory.items.some(i=>i.name===nm)){ alert('이미 등록된 재료예요.'); return; }
+    const cubeG=Number(document.getElementById('wh-new-cube').value);
+    const count=whClamp(document.getElementById('wh-new-count').value);
+    State.inventory.items.push({id:'ing_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:nm,cubeG,count});
+    document.getElementById('wh-new-name').value='';
+    document.getElementById('wh-new-count').value='0';
+    document.getElementById('wh-new-cube').value='15';
+    show(false);
+    save(); renderWarehouse(); checkLowStock();
+  };
+})();
 
 /* ============ 끼니 편집 모달 ============ */
 const mOverlay=document.getElementById('meal-overlay');
@@ -2387,6 +2675,12 @@ document.getElementById('detail-undo').onclick=()=>{ if(!currentName)return; del
 document.getElementById('detail-close').onclick=closeDetail;
 dOverlay.addEventListener('click',e=>{ if(e.target===dOverlay) closeDetail(); });
 document.getElementById('open-checklist').onclick=()=>overlay.classList.add('open');
+(function wireWarehouse(){
+  const wo=document.getElementById('warehouse-overlay');
+  document.getElementById('open-warehouse').onclick=openWarehouse;
+  document.getElementById('close-warehouse').onclick=closeWarehouse;
+  wo.addEventListener('click',e=>{ if(e.target===wo) closeWarehouse(); });
+})();
 document.getElementById('close-checklist').onclick=()=>{ if(isChecklistEditMode) setChecklistEditMode(false); overlay.classList.remove('open'); };
 overlay.addEventListener('click',e=>{ if(e.target===overlay){ if(isChecklistEditMode) setChecklistEditMode(false); overlay.classList.remove('open'); } });
 document.getElementById('reset-checklist').onclick=()=>{ if(confirm('전체 체크 기록을 지울까요?')){ Object.keys(State.tested).forEach(k=>delete State.tested[k]); save(); renderChecklist(); } };
@@ -2413,7 +2707,8 @@ function applyDefaultSubTab(){
   else if(cut2d && today.getTime() >= cut2d.getTime()) selectSubTab('t2');
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){
-  if(toyOverlay.classList.contains('open'))closeToyEdit();
+  if(document.getElementById('warehouse-overlay').classList.contains('open'))closeWarehouse();
+  else if(toyOverlay.classList.contains('open'))closeToyEdit();
   else if(bookOverlay.classList.contains('open'))closeBookEdit();
   else if(mOverlay.classList.contains('open'))closeMealEdit();
   else if(dOverlay.classList.contains('open'))closeDetail();
@@ -2886,7 +3181,7 @@ function applyViewOnly(){
 /* ============ 시작 ============ */
 applyViewOnly();
 applyDefaultSubTab();
-renderTables(); renderChecklist(); renderToys(); renderBooks(); setSync(sb?'ok':'local');
+renderTables(); renderChecklist(); renderToys(); renderBooks(); renderWarehouse(); checkLowStock(); setSync(sb?'ok':'local');
 if(sb) syncDown();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
 </script>
