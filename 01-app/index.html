@@ -292,6 +292,7 @@
   /* 오늘의 식단 카드 */
   .today-card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:22px;box-shadow:0 2px 10px rgba(120,110,90,.04);}
   .today-head{font-size:15px;font-weight:700;color:var(--sage);margin-bottom:12px;display:flex;align-items:baseline;gap:8px;}
+  .today-deduct-btn{margin-left:auto;align-self:center;}
   .today-date{font-size:12.5px;font-weight:400;color:var(--muted);}
   .today-meals{display:flex;gap:12px;align-items:stretch;}
   .today-meal{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:#fbfdfa;cursor:pointer;transition:.15s;}
@@ -895,9 +896,10 @@
       <div class="modal-group plan-group" id="plan-group">
         <div class="modal-group-head"><span class="mg-icon">📋</span> 계획 <span class="mg-hint">실제와 다르게 먹였으면 여기서 수정</span></div>
         <div class="field" id="meal-base-field">
-          <span class="flabel">베이스 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 재료별 입력</span></span>
+          <span class="flabel">베이스 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 칩을 눌러 추가 (기본 30g)</span></span>
           <div class="item-list" id="meal-base-list"></div>
-          <button type="button" class="add-item-btn" data-target="base">+ 베이스 재료 추가</button>
+          <button type="button" class="add-item-btn" data-target="base">+ 베이스 추가</button>
+          <div class="ing-pick" id="base-pick" hidden></div>
         </div>
         <div class="field" id="meal-ratio-field">
           <span class="flabel">배죽 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 쌀·오트밀 물 배수</span></span>
@@ -910,7 +912,7 @@
           <div class="ing-pick" id="veg-pick" hidden></div>
         </div>
         <div class="field" id="meal-meat-field">
-          <span class="flabel">고기 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 칩을 눌러 추가 (기본 10g)</span></span>
+          <span class="flabel">고기 <span style="font-weight:400;color:var(--muted);font-size:11px;">· 칩을 눌러 추가 (기본 20g)</span></span>
           <div class="item-list" id="meal-meat-list"></div>
           <button type="button" class="add-item-btn" data-target="meat">+ 고기 추가</button>
           <div class="ing-pick" id="meat-pick" hidden></div>
@@ -1746,7 +1748,7 @@ function mealRows(d,mi,mealName){
   h+='<tr class="row-base"><td class="rowlabel" colspan="2">베이스</td>'+d.map(x=>makeCell(getMeals(x)[mi].base,x.date,mi,'base',mealName)).join('')+'</tr>';
   h+='<tr class="row-allergy"><td class="rowlabel" colspan="2">알러지</td>'+d.map(x=>makeAllergyCell(getMeals(x)[mi].top,x.date,mi,mealName)).join('')+'</tr>';
   const topCats=[
-    {label:'고기', fn:n=>CAT.meat.includes(n), def:10},
+    {label:'고기', fn:n=>CAT.meat.includes(n), def:20},
     {label:'채소1', fn:n=>CAT.veg1.includes(n), def:15},
     {label:'채소2', fn:n=>!CAT.meat.includes(n)&&!CAT.veg1.includes(n)&&!CAT.veg3.includes(n)&&!ALLERGENS.has(n), def:15},
     {label:'채소3', fn:n=>CAT.veg3.includes(n), def:15},
@@ -1830,7 +1832,25 @@ function renderAmountTrend(){
 }
 /* 오늘의 식단 — 하루 단위 슬라이드(오늘·내일·모레), 우측 스와이프로 다음날 이동(루핑) */
 const todaySlideIdx={t1:0,t2:0,t3:0,t4:0};
+const todayWin={};
 let suppressTodayClick=false;
+/* '오늘의 식단' 헤더 재료차감 버튼을 현재 보고 있는 슬라이드 날짜 기준으로 갱신 */
+function todayDeductBtnHtml(md){
+  if(VIEW_ONLY || !md) return '';
+  const done=!!(State.inventory&&State.inventory.deducted&&State.inventory.deducted[md]);
+  return `<button class="today-deduct-btn deduct-btn${done?' done':''}" data-deduct-today="${esc(md)}"${done?' data-done="1"':''}>${esc(md)} ${done?'차감됨 ↩':'재료차감'}</button>`;
+}
+function updateTodayDeductBtn(el,k){
+  const btn=el&&el.querySelector('.today-deduct-btn'); if(!btn) return;
+  const dates=todayWin[k]||[]; const md=dates[todaySlideIdx[k]||0]; if(!md) return;
+  btn.outerHTML=todayDeductBtnHtml(md);
+  const fresh=el.querySelector('.today-deduct-btn');
+  if(fresh) fresh.addEventListener('click',onTodayDeductClick);
+}
+function onTodayDeductClick(){
+  const md=this.dataset.deductToday;
+  if(this.dataset.done) undoDeduct(md); else applyDeduct(md);
+}
 function renderTodayMenu(){
   const _t=new Date(), todayMD=(_t.getMonth()+1)+'/'+_t.getDate();
   const effItems=(date,mi,field,planArr)=>{
@@ -1883,6 +1903,7 @@ function renderTodayMenu(){
     el.style.display='';
     const win=[order[ti],order[ti+1],order[ti+2]].filter(Boolean);
     let idx=todaySlideIdx[k]||0; if(idx>=win.length) idx=0; todaySlideIdx[k]=idx;
+    todayWin[k]=win.map(o=>o.d.date);
     /* 마지막에서 다음으로 넘어갈 때 되감기 없이 자연스럽게 오늘로 이어지도록 첫 슬라이드 복제본을 끝에 둠 */
     const slides=win.map(renderSlide).join('') + (win.length>1?renderSlide(win[0],0):'');
     const dots=win.length>1 ? `<div class="today-dots">${win.map((_,i)=>`<button class="today-dot${i===idx?' active':''}" data-i="${i}" aria-label="${tagOf(i)}"></button>`).join('')}</div>` : '';
@@ -1890,7 +1911,9 @@ function renderTodayMenu(){
     const wrap=win.length>1
       ? `<div class="today-slidewrap"><button class="today-arrow prev" aria-label="이전날">‹</button>${slider}<button class="today-arrow next" aria-label="다음날">›</button></div>`
       : slider;
-    el.innerHTML=`<div class="today-head">오늘의 식단</div>${wrap}${dots}`;
+    el.innerHTML=`<div class="today-head">오늘의 식단${todayDeductBtnHtml(win[idx]?win[idx].d.date:'')}</div>${wrap}${dots}`;
+    const dedBtn=el.querySelector('.today-deduct-btn');
+    if(dedBtn) dedBtn.addEventListener('click',onTodayDeductClick);
     setupTodaySwipe(el,k,win.length);
   });
   if(!VIEW_ONLY){
@@ -1909,12 +1932,12 @@ function setTrack(el,pos,animate){
   else { track.style.transition='none'; track.style.transform=`translateX(-${pos*100}%)`; void track.offsetWidth; track.style.transition=''; }
 }
 function updateDots(el,idx){ el.querySelectorAll('.today-dot').forEach((d,i)=>d.classList.toggle('active',i===idx)); }
-function todayGoto(el,k,len,idx){ todaySlideIdx[k]=idx; setTrack(el,idx,true); updateDots(el,idx); }
+function todayGoto(el,k,len,idx){ todaySlideIdx[k]=idx; setTrack(el,idx,true); updateDots(el,idx); updateTodayDeductBtn(el,k); }
 function todayNext(el,k,len){
   const cur=todaySlideIdx[k]||0;
   if(cur<len-1){ todayGoto(el,k,len,cur+1); return; }
   /* 마지막 → 복제본(오늘)으로 자연스럽게 전진한 뒤, 보이지 않게 실제 첫 슬라이드로 스냅 */
-  todaySlideIdx[k]=0; updateDots(el,0); setTrack(el,len,true);
+  todaySlideIdx[k]=0; updateDots(el,0); setTrack(el,len,true); updateTodayDeductBtn(el,k);
   const track=el.querySelector('.today-track');
   const onEnd=()=>{ track.removeEventListener('transitionend',onEnd); setTrack(el,0,false); };
   track.addEventListener('transitionend',onEnd);
@@ -2379,18 +2402,18 @@ function renderItemList(containerId, items){
   if(containerId==='meal-base-list'){
     c.querySelectorAll('.item-name').forEach(inp=>{ inp.addEventListener('input', refreshMealRatios); });
   }
-  if(containerId==='meal-veg-list'||containerId==='meal-meat-list'){
+  if(containerId==='meal-veg-list'||containerId==='meal-meat-list'||containerId==='meal-base-list'){
     c.querySelectorAll('.item-name').forEach(inp=>{ inp.addEventListener('input', ()=>refreshIngPick(containerId)); });
   }
 }
 /* 칩 트레이가 열려 있으면 선택 상태 갱신 */
 function refreshIngPick(containerId){
-  const t = containerId==='meal-veg-list' ? 'veg' : containerId==='meal-meat-list' ? 'meat' : null;
+  const t = containerId==='meal-veg-list' ? 'veg' : containerId==='meal-meat-list' ? 'meat' : containerId==='meal-base-list' ? 'base' : null;
   if(!t) return;
   const wrap=document.getElementById(t+'-pick');
   if(wrap && !wrap.hasAttribute('hidden')) renderIngPick(t);
 }
-const DEF_G={base:30, veg:15, meat:10, allergy:15, snack:''};
+const DEF_G={base:30, veg:15, meat:20, allergy:15, snack:''};
 /* 칩으로 고를 재료 이름 목록 */
 function ingPickNames(target){
   const deleted=new Set(State.deletedBuiltin||[]);
@@ -2398,6 +2421,13 @@ function ingPickNames(target){
     const builtin=(categories.find(c=>c[0]==='고기')||[,[]])[1];
     const customs=(State.customIngredients||[]).filter(c=>c.cat==='고기').map(c=>c.name);
     return [...new Set([...builtin, ...CAT.meat, ...customs])].filter(n=>!deleted.has(n)).sort((a,b)=>a.localeCompare(b,'ko'));
+  }
+  if(target==='base'){
+    const canon=['쌀','오트밀','현미','검은콩','퀴노아'];
+    const builtin=(categories.find(c=>c[0]==='곡류/베이스')||[,[]])[1];
+    const customs=(State.customIngredients||[]).filter(c=>c.cat==='곡류/베이스').map(c=>c.name);
+    const rest=[...new Set([...builtin, ...customs])].filter(n=>!canon.includes(n)&&!deleted.has(n)).sort((a,b)=>a.localeCompare(b,'ko'));
+    return [...canon.filter(n=>!deleted.has(n)), ...rest];
   }
   const cats=['채소','콩/두부류','해조류'];
   const builtin=categories.filter(c=>cats.includes(c[0])).flatMap(c=>c[1]);
@@ -2419,6 +2449,7 @@ function renderIngPick(target){
       if(idx>=0) arr.splice(idx,1);
       else arr.push({name, g:DEF_G[target], unit:'g'});
       renderItemList(listId, arr);
+      if(target==='base') refreshMealRatios();
       updatePlanTotal();
       renderIngPick(target);
     };
@@ -2485,7 +2516,7 @@ function addItemToList(target){
 document.querySelectorAll('.add-item-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     const t=btn.dataset.target;
-    if(t==='veg'||t==='meat'){
+    if(t==='veg'||t==='meat'||t==='base'){
       const wrap=document.getElementById(t+'-pick');
       if(wrap.hasAttribute('hidden')){ renderIngPick(t); wrap.removeAttribute('hidden'); }
       else wrap.setAttribute('hidden','');
@@ -2525,6 +2556,7 @@ function openMealEdit(date,mi,mealName,focusField,focusName){
   renderItemList('meal-veg-list',  vegItems);
   renderItemList('meal-meat-list', meatItems);
   renderItemList('meal-allergy-list', allergyItems);
+  document.getElementById('base-pick').setAttribute('hidden','');
   document.getElementById('veg-pick').setAttribute('hidden','');
   document.getElementById('meat-pick').setAttribute('hidden','');
   renderMealRatios(baseItems, date, mi);
