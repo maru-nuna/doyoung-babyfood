@@ -542,6 +542,8 @@
   .wh-form .add-btn{font-family:inherit;font-size:13px;cursor:pointer;background:var(--sage);color:#fff;border:none;padding:8px 16px;border-radius:9px;}
   .modal-foot #wh-add-toggle{margin-top:0;}
   #wh-list{margin-top:14px;display:flex;flex-direction:column;gap:10px;}
+  .wh-cat-head{font-size:12px;font-weight:800;color:var(--sage);letter-spacing:.02em;margin-top:8px;padding-left:2px;}
+  .wh-cat-head:first-child{margin-top:0;}
   .wh-row{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);}
   .wh-row.low{border-color:#e0897b;background:#fdecea;}
   .wh-info{flex:1 1 auto;min-width:184px;}
@@ -553,7 +555,8 @@
   .wh-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
   .wh-low-tag{margin-left:6px;color:#c0392b;font-weight:700;font-size:11px;white-space:nowrap;}
   .wh-count{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-  .wh-count .cnt{min-width:46px;text-align:center;font-weight:700;font-size:15px;color:var(--ink);}
+  .wh-count .cnt{min-width:46px;text-align:center;font-weight:700;font-size:15px;color:var(--ink);background:none;border:none;border-bottom:1px dashed var(--muted);font-family:inherit;cursor:pointer;padding:2px;line-height:1.3;}
+  .wh-count .cnt-input{width:58px;text-align:center;font-weight:700;font-size:15px;font-family:inherit;color:var(--ink);border:1px solid var(--sage);border-radius:8px;padding:4px 2px;outline:none;}
   .wh-step{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:16px;line-height:1;cursor:pointer;color:var(--ink);}
   .wh-step:active{background:var(--sage-soft);}
   .wh-actions{display:flex;gap:2px;flex-shrink:0;}
@@ -738,7 +741,7 @@
     <div class="modal-body">
       <div id="wh-form" class="wh-form" style="display:none">
         <label>이름<input type="text" id="wh-new-name" placeholder="예: 당근"></label>
-        <label>1큐브 용량<select id="wh-new-cube"><option value="10">10g</option><option value="15" selected>15g</option><option value="20">20g</option></select></label>
+        <label>1큐브 용량<select id="wh-new-cube"><option value="10">10g</option><option value="15" selected>15g</option><option value="20">20g</option><option value="30">30g</option></select></label>
         <label>시작 큐브 개수<input type="number" id="wh-new-count" min="0" value="0"></label>
         <div class="wh-form-actions">
           <button class="reset-btn" id="wh-new-cancel">취소</button>
@@ -2144,7 +2147,7 @@ function renderTables(){
 
 /* ============ 재료 창고 + 재료차감 ============ */
 function whClamp(n){ n=Math.round(Number(n)||0); return n<0?0:n; }
-function whMiniCubePx(cubeG){ return ({10:12,15:14,20:16})[Number(cubeG)] || 14; }
+function whMiniCubePx(cubeG){ return ({10:12,15:14,20:16,30:19})[Number(cubeG)] || 14; }
 /* 재료 이름 → 큐브 색(진한색·밝은색) */
 function ingCube(name){
   const t=String(name||'');
@@ -2246,19 +2249,41 @@ function attachDeductBtns(){
 }
 
 let whEditingId=null;
+let whCountEditId=null;
+/* 모달을 열 때 한 번만 표시 순서를 확정 — 열려 있는 동안 +/− 로는 순서를 바꾸지 않음 */
+let whOrderSnap=null;
+function whBuildOrderSnap(){
+  const items=State.inventory.items;
+  const idx={}; items.forEach((it,i)=>{ idx[it.id]=i; });
+  whOrderSnap={};
+  items.slice()
+    .sort((a,b)=>(a.count<3?0:1)-(b.count<3?0:1) || idx[a.id]-idx[b.id])
+    .forEach((it,r)=>{ whOrderSnap[it.id]=r; });
+}
+/* 재료 이름 → 창고 그룹(베이스/채소/고기/기타) */
+function whCategoryOf(name){
+  const n=String(name||'');
+  const inCat=label=>{
+    const c=categories.find(x=>x[0]===label);
+    if(c && c[1].includes(n)) return true;
+    return (State.customIngredients||[]).some(ci=>ci.name===n && ci.cat===label);
+  };
+  if(CAT.meat.includes(n) || inCat('고기')) return '고기';
+  if(['쌀','오트밀','현미','검은콩','퀴노아'].includes(n) || inCat('곡류/베이스')) return '베이스';
+  if(inCat('채소') || inCat('콩/두부류') || inCat('해조류')) return '채소';
+  return '기타';
+}
 function renderWarehouse(){
   const list=document.getElementById('wh-list');
   const empty=document.getElementById('wh-empty');
   if(!list) return;
   const items=State.inventory.items;
   empty.style.display=items.length?'none':'block';
-  /* 부족(3개 미만) 재료를 위로, 그 안에서는 기존 순서 유지 */
-  const ordered=[...items].sort((a,b)=>(a.count<3?0:1)-(b.count<3?0:1));
-  list.innerHTML=ordered.map(it=>{
+  const rowHtml=(it)=>{
     if(whEditingId===it.id){
       return `<div class="wh-row"><div class="wh-form" style="margin:0;border:none;padding:0;flex:1;background:none;">
         <label>이름<input type="text" class="wh-e-name" value="${esc(it.name)}"></label>
-        <label>1큐브 용량<select class="wh-e-cube">${[10,15,20].map(g=>`<option value="${g}"${g===Number(it.cubeG)?' selected':''}>${g}g</option>`).join('')}</select></label>
+        <label>1큐브 용량<select class="wh-e-cube">${[10,15,20,30].map(g=>`<option value="${g}"${g===Number(it.cubeG)?' selected':''}>${g}g</option>`).join('')}</select></label>
         <div class="wh-form-actions">
           <button class="reset-btn wh-e-cancel">취소</button>
           <button class="add-btn wh-e-save">저장</button>
@@ -2275,7 +2300,9 @@ function renderWarehouse(){
       <i class="wh-break"></i>
       <div class="wh-count">
         <button class="wh-step" data-wh-dec="${esc(it.id)}" aria-label="1개 줄이기">−</button>
-        <span class="cnt">${it.count}개</span>
+        ${whCountEditId===it.id
+          ? `<input class="cnt-input" type="number" inputmode="numeric" min="0" value="${it.count}" aria-label="큐브 개수 직접 입력">`
+          : `<button class="cnt" data-wh-cnt="${esc(it.id)}" aria-label="큐브 개수 직접 입력">${it.count}개</button>`}
         <button class="wh-step" data-wh-inc="${esc(it.id)}" aria-label="1개 늘리기">+</button>
       </div>
       <div class="wh-actions">
@@ -2283,11 +2310,39 @@ function renderWarehouse(){
         <button class="wh-del-btn" data-wh-del="${esc(it.id)}">삭제</button>
       </div>
     </div>`;
+  };
+  /* 베이스 → 채소 → 고기 → 기타 순으로 묶고, 각 그룹 안에서는 모달 열 때 확정한 순서(부족 먼저)를 유지 */
+  if(!whOrderSnap) whBuildOrderSnap();
+  const rankOf=(x)=> (whOrderSnap[x.it.id]!=null) ? whOrderSnap[x.it.id] : 1e9+x.i;
+  const CATS=['베이스','채소','고기','기타'];
+  const groups={}; CATS.forEach(c=>groups[c]=[]);
+  items.forEach((it,i)=>{ (groups[whCategoryOf(it.name)]||groups['기타']).push({it,i}); });
+  list.innerHTML=CATS.filter(c=>groups[c].length).map(c=>{
+    const arr=groups[c].slice().sort((a,b)=>rankOf(a)-rankOf(b));
+    return `<div class="wh-cat-head">${c}</div>`+arr.map(x=>rowHtml(x.it)).join('');
   }).join('');
   list.querySelectorAll('[data-wh-dec]').forEach(b=>b.onclick=()=>whAdjust(b.dataset.whDec,-1));
   list.querySelectorAll('[data-wh-inc]').forEach(b=>b.onclick=()=>whAdjust(b.dataset.whInc,1));
   list.querySelectorAll('[data-wh-del]').forEach(b=>b.onclick=()=>whDelete(b.dataset.whDel));
   list.querySelectorAll('[data-wh-edit]').forEach(b=>b.onclick=()=>{ whEditingId=b.dataset.whEdit; renderWarehouse(); });
+  list.querySelectorAll('[data-wh-cnt]').forEach(b=>b.onclick=()=>{
+    whCountEditId=b.dataset.whCnt; renderWarehouse();
+    const inp=list.querySelector('.cnt-input'); if(inp){ inp.focus(); inp.select(); }
+  });
+  const ci=list.querySelector('.cnt-input');
+  if(ci){
+    const commit=()=>{
+      if(whCountEditId===null) return;
+      const it=State.inventory.items.find(i=>i.id===whCountEditId);
+      if(it) it.count=whClamp(ci.value);
+      whCountEditId=null; save(); renderWarehouse(); checkLowStock();
+    };
+    ci.onblur=commit;
+    ci.onkeydown=(e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); ci.blur(); }
+      else if(e.key==='Escape'){ whCountEditId=null; renderWarehouse(); }
+    };
+  }
   const er=list.querySelector('.wh-row .wh-form');
   if(er){
     er.querySelector('.wh-e-cancel').onclick=()=>{ whEditingId=null; renderWarehouse(); };
@@ -2325,7 +2380,7 @@ function checkLowStock(){
     openWarehouse();
   };
 }
-function openWarehouse(){ renderWarehouse(); document.getElementById('warehouse-overlay').classList.add('open'); }
+function openWarehouse(){ whCountEditId=null; whBuildOrderSnap(); renderWarehouse(); document.getElementById('warehouse-overlay').classList.add('open'); }
 function closeWarehouse(){ document.getElementById('warehouse-overlay').classList.remove('open'); }
 (function initWarehouseForm(){
   const t=document.getElementById('wh-add-toggle');
@@ -2345,6 +2400,7 @@ function closeWarehouse(){ document.getElementById('warehouse-overlay').classLis
     document.getElementById('wh-new-count').value='0';
     document.getElementById('wh-new-cube').value='15';
     show(false);
+    whBuildOrderSnap();
     save(); renderWarehouse(); checkLowStock();
   };
 })();
